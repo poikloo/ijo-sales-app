@@ -62,7 +62,7 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
  <div class="card"><h2>⏰ 다가오는 개찰</h2><ul class="up" id="dup"></ul></div></div>
  <div class="card"><div class="calhead"><button onclick="mvd(-1)">◀</button><b id="dym"></b><button onclick="mvd(1)">▶</button><button onclick="dcur=new Date();render()">오늘</button><span class="muted"><span class="chip clc" style="display:inline-block">할 일</span> 체크리스트 마감일</span></div><div class="cal" id="dcal"></div></div>
 </section>
-<section class="page" id="p_check"><div class="grid2b">
+<section class="page" id="p_check"><div class="dgrid" style="grid-template-columns:1.2fr 1fr">
  <div class="card"><div class="calhead"><button onclick="mvc(-1)">◀</button><b id="cym"></b><button onclick="mvc(1)">▶</button><button onclick="ccur=new Date();render()">오늘</button></div><div class="cal" id="ccal"></div><p class="muted">날짜를 누르면 그 날짜의 할 일만 보이고, 새 할 일의 마감일로 지정돼요.</p></div>
  <div class="card"><h2>체크리스트 관리</h2>
   <div class="qa"><input id="cq" placeholder="할 일 빠른 추가 (Enter)" onkeydown="if(event.key==='Enter')quickAdd('cq','cqd')"><input id="cqd" type="date"><button class="p" onclick="quickAdd('cq','cqd')">추가</button><button onclick="openCl()">상세 추가</button></div>
