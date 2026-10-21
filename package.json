@@ -20,7 +20,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "app/**/*"
+      "app/**/*",
+      "!node_modules/exceljs/dist/**"
     ],
     "win": {
       "target": [
@@ -59,6 +60,7 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0"
   }
 }

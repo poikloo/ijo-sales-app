@@ -6,6 +6,10 @@ contextBridge.exposeInMainWorld('api',{
   openFolder:()=>ipcRenderer.invoke('openFolder'),
   saveFile:(n,c)=>ipcRenderer.invoke('saveFile',n,c),
   openFile:()=>ipcRenderer.invoke('openFile'),
+  stmtPDF:(h,n)=>ipcRenderer.invoke('stmtPDF',h,n),
+  stmtPrint:h=>ipcRenderer.invoke('stmtPrint',h),
+  stmtXlsx:(s,sup,n)=>ipcRenderer.invoke('stmtXlsx',s,sup,n),
+  importSupplierXlsx:()=>ipcRenderer.invoke('importSupplierXlsx'),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });

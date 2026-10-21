@@ -53,12 +53,13 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 .st td{padding:4px 8px}.st input{padding:4px;width:100%}.st .num{text-align:right}.st tfoot td{font-weight:bold;background:#fafafa}
 .prow{display:grid;grid-template-columns:24px minmax(0,1.2fr) minmax(0,1.2fr) 100px 104px;gap:6px;align-items:center;margin:5px 0}.prow>input{width:100%;min-width:0}.prow .pbtn{display:flex;gap:3px;white-space:nowrap}.prow .pbtn button{padding:5px 9px}.prow input.shk:disabled{background:#e9ecef;color:#999;cursor:not-allowed}.phead{margin-bottom:0}.phead span{font-size:12px;color:#555;text-align:left;padding-left:2px}.prow .n{text-align:center;font-weight:bold;color:#555}
 .fsec{font-weight:bold;margin:4px 0 8px;padding-bottom:4px;border-bottom:2px solid #2271b1;color:#1d2327}
+table.lot td{padding:2px}table.lot input{width:100%;padding:4px 3px;min-width:0}table.lot .rcw{min-width:46px}table.lot input.rc{text-align:right}table.lot input.bad{border-color:#c53030;background:#fff5f5}table.lot tbody tr:nth-child(4n+1) td,table.lot tbody tr:nth-child(4n+2) td{background:#fafbfd}table.lot .num{text-align:right;font-weight:bold}table.lot tfoot td{font-weight:bold;background:#f6f7f7}
 #toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
 </style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
 <aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
 <nav>
 <a data-p="dash">🏠 대시보드</a><a data-p="check">✅ 체크리스트</a><a data-p="bids">📋 공고 일정</a><div class="sep"></div>
-<a data-p="prod">🏗️ 생산 관리</a><a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서<span class="soon">준비중</span></a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
+<a data-p="prod">🏗️ 생산 관리</a><a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서</a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
 <div class="sep"></div><a data-p="settings">⚙️ 설정</a></nav><div class="foot" id="ver">v1.0.0</div></aside>
 <div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" onclick="openForm()">+ 새 공고</button></div>
 <div id="content">
@@ -94,9 +95,20 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 </section>
 <section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_outwork"><div class="soonbox"><div class="big">🏭</div><h2>외주작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
-<section class="page" id="p_stmt"><div class="soonbox"><div class="big">🧾</div><h2>거래명세서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
+<section class="page" id="p_stmt">
+ <div id="st_tabs" class="tabs"><button class="tab on" data-t="list" onclick="stSetTab('list')">🧾 명세서</button><button class="tab" data-t="cust" onclick="stSetTab('cust')">🏢 거래처</button></div>
+ <div id="st_list"><div class="card"><div class="filters"><input id="sk" placeholder="검색(NO.·오더번호·품명·공급받는자·LOT)" oninput="render()" style="min-width:280px"><select id="scu" onchange="render()"></select><span style="flex:1"></span><button class="p" onclick="newStmt()">+ 새 명세서</button></div>
+  <div class="tw"><table><thead><tr><th>NO.</th><th>날짜</th><th>공급받는자</th><th>오더번호</th><th>품명</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th style="text-align:right">금액</th><th></th></tr></thead><tbody id="stb"></tbody></table></div></div></div>
+ <div id="st_cust" style="display:none"><div class="card"><div class="filters"><input id="ck" placeholder="검색(상호·등록번호·성명·주소)" oninput="render()" style="min-width:260px"><span style="flex:1"></span><button class="p" onclick="openCust()">+ 거래처 등록</button></div><p class="muted" id="cmiss"></p>
+  <div class="tw"><table><thead><tr><th>상호</th><th>등록번호</th><th>성명</th><th>사업장주소</th><th>업태 / 종목</th><th>기본 납품처</th><th>기본 담당자</th></tr></thead><tbody id="ctb"></tbody></table></div></div></div>
+ <div id="st_edit" style="display:none"></div>
+</section>
 <section class="page" id="p_docs"><div class="soonbox"><div class="big">🗂️</div><h2>서류 보관함 — 준비중</h2><p>거래명세서·청구서·계산서·사업자등록증 PDF/이미지를 거래처·공고별로 정리하는 기능이 추가될 예정입니다.</p></div></section>
 <section class="page set" id="p_settings">
+ <div class="card" id="sup_form"><h2>🏷️ 공급자 정보 <span class="muted" style="font-weight:normal">— 거래명세서의 공급자 칸에 인쇄됩니다 (이 PC에만 저장)</span></h2><div class="g">
+  <label>등록번호<input id="sp_reg"></label><label>상호<input id="sp_name"></label><label>성명<input id="sp_ceo"></label><label>업태<input id="sp_biz"></label><label class="w">사업장주소<input id="sp_addr"></label><label>종목<input id="sp_type"></label><label></label>
+  <label class="w">연락처 문구 (한 줄씩, 예: 서울☎ … FAX …)<textarea id="sp_contacts" rows="3"></textarea></label><label class="w">주의사항 문구 (한 줄씩)<textarea id="sp_notice" rows="3"></textarea></label></div>
+  <div style="margin-top:8px"><button class="p" onclick="saveSupplier()">저장</button><button onclick="importSupplier()">엑셀 양식에서 가져오기</button></div></div>
  <div class="card"><h2>💾 백업 / 복원</h2><button class="p" onclick="exportJSON()">백업 파일 저장 (JSON)</button><button onclick="importJSON()">백업에서 복원 (JSON)</button>
  <p class="muted">예전 HTML 버전(공고일정관리.html)에서 받은 JSON 백업 파일도 그대로 복원할 수 있습니다.</p></div>
  <div class="card"><h2>📊 엑셀 내보내기</h2><button onclick="exportCSV(true)">전체 공고 내보내기 (CSV)</button><p class="muted">엑셀에서 바로 열 수 있습니다 (한글 깨짐 없음, UTF-8 BOM).</p></div>
@@ -110,4 +122,4 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 <datalist id="procs"><option>생지</option><option>염색</option><option>FR PU</option><option>FR LAMI</option><option>코팅</option><option>라미네이팅</option><option>봉제</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
-<script src="app.js"></script></body></html>
+<script src="stmt.js"></script><script src="app.js"></script></body></html>
