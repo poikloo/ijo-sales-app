@@ -48,7 +48,7 @@ app.whenReady().then(()=>{
   if(process.env.IJO_SHOT){win.webContents.on('console-message',(e,l,m)=>console.log('[renderer]',m));
     win.webContents.on('did-finish-load',()=>setTimeout(async()=>{
       const errs=await win.webContents.executeJavaScript('window.__errs||[]');console.log('ERRORS:',JSON.stringify(errs));
-      for(const ent of (process.env.IJO_PAGES||'dashboard=go("dash")').split(';')){const [fn,js]=ent.split(/=(.*)/s);await win.webContents.executeJavaScript(js);await new Promise(r=>setTimeout(r,400));
+      for(const ent of (process.env.IJO_PAGES||'dashboard=go("dash")').split(process.env.IJO_SEP||';')){const [fn,js]=ent.split(/=(.*)/s);await win.webContents.executeJavaScript(js);await new Promise(r=>setTimeout(r,400));
         const img=await win.webContents.capturePage();fs.mkdirSync(process.env.IJO_SHOT,{recursive:true});fs.writeFileSync(path.join(process.env.IJO_SHOT,fn+'.png'),img.toPNG())}
       console.log('ERRORS2:',JSON.stringify(await win.webContents.executeJavaScript('window.__errs||[]')));app.quit()},1200))}
 });
