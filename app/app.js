@@ -1,6 +1,7 @@
-const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',bids:'공고 일정',results:'개찰 결과',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',docs:'서류 보관함',settings:'설정'};
+const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',docs:'서류 보관함',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
-let data=[],cur=new Date(),mcur=new Date(),page='dash';
+let data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash';
+const PR=['높음','보통','낮음'];
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const won=n=>n?Number(n).toLocaleString('ko-KR')+'원':'',fdt=s=>s?String(s).replace('T',' ').slice(0,16):'';
 const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -10,8 +11,18 @@ function examples(){return [{id:'ex1',example:true,name:'(예시) 2026년 군(�
  {id:'ex2',example:true,name:'(예시) 2026년 해군 방한복 원단 구매',no:'R26BK00000000-000',org:'해군군수사령부',pub:'2026-10-10T09:00',open:'2026-10-23T10:00',price:480000000,rep:'(예시)이조아이엔디',cos:[{n:'(예시)이조아이엔디',s:100}],status:'진행중',result:'',memo:'예시 데이터입니다.',updated:now()}]}
 function normalize(d){const arr=Array.isArray(d)?d:(d&&Array.isArray(d.bids)?d.bids:null);if(!arr)return null;
  return arr.filter(x=>x&&typeof x==='object').map(x=>({id:String(x.id||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),example:!!x.example,name:x.name||'',no:x.no||'',org:x.org||'',pub:x.pub||'',open:x.open||'',price:+x.price||0,rep:x.rep||'',cos:Array.isArray(x.cos)?x.cos.map(c=>({n:c.n||'',s:+c.s||0})):[],status:ST.includes(x.status)?x.status:'진행중',result:x.result||'',memo:x.memo||'',updated:x.updated||''}))}
-function load(){const r=A.load();data=r?normalize(r):null;if(!data){data=examples();save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data}).catch(e=>alert('저장 실패: '+e))}
+function exCl(){const t=new Date(),d=k=>ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()+k)),u=now();
+ return [{id:'cx1',example:true,title:'(예시) 개찰 전 투찰 서류 최종 확인',due:d(0),pri:'높음',cat:'입찰',memo:'예시 항목입니다.',done:false,updated:u},
+ {id:'cx2',example:true,title:'(예시) 외주 가공처 납기 확인 전화',due:d(2),pri:'보통',cat:'외주',memo:'',done:false,updated:u},
+ {id:'cx3',example:true,title:'(예시) 거래명세서 발송',due:d(-1),pri:'높음',cat:'출고',memo:'',done:false,updated:u},
+ {id:'cx4',example:true,title:'(예시) 원단 샘플 정리',due:'',pri:'낮음',cat:'생산',memo:'',done:false,updated:u}]}
+function normalizeCl(arr){return (Array.isArray(arr)?arr:[]).filter(x=>x&&typeof x==='object'&&x.title).map(x=>({id:String(x.id||uid()),example:!!x.example,title:String(x.title),due:/^\d{4}-\d{2}-\d{2}$/.test(x.due||'')?x.due:'',pri:PR.includes(x.pri)?x.pri:'보통',cat:x.cat||'',memo:x.memo||'',done:!!x.done,updated:x.updated||''}))}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function load(){const r=A.load();data=r?normalize(r):null;
+ if(!data){data=examples();cl=exCl();save();return}
+ if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
+ else{cl=data.some(x=>x.example)?exCl():[];save()}}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];render()}
@@ -22,28 +33,34 @@ function filtered(){const k=$('fk').value.trim().toLowerCase(),o=$('fo').value,s
  return data.filter(x=>(!o||x.org===o)&&(!s||x.status===s)&&(!k||[x.name,x.no,x.rep,x.org,...x.cos.map(c=>c.n)].join(' ').toLowerCase().includes(k))).sort((a,b)=>(a.open||'').localeCompare(b.open||''))}
 function upList(){return data.filter(x=>x.open&&dday(x.open)>=0&&x.status==='진행중').sort((a,b)=>a.open.localeCompare(b.open))}
 function upHTML(list){return list.length?list.map(x=>{const n=dday(x.open);return `<li onclick="view('${x.id}')"><span class="badge ${n===0?'hot':n<=3?'warm':''}">${ddLabel(n)}</span>${tag(x)}<b>${esc(x.name)}</b><br><small>${fdt(x.open)} · ${esc(x.org)}${x.price?' · '+won(x.price):''}</small></li>`}).join(''):'<li>예정된 개찰이 없습니다.</li>'}
-function calHTML(y,m,mini){let h='일월화수목금토'.split('').map(d=>`<div class="dn">${d}</div>`).join('');
+function clChip(c){const od=!c.done&&c.due<ymd(new Date());return `<span class="chip clc${od?' od':''}${c.done?' dn':''}" title="${esc(c.title)}" onclick="event.stopPropagation();openCl('${c.id}')">☐ ${esc(c.title)}</span>`}
+function calHTML(y,m,mini,mode){let h='일월화수목금토'.split('').map(d=>`<div class="dn">${d}</div>`).join('');
  const st=new Date(y,m,1-new Date(y,m,1).getDay()),today=new Date().toDateString(),sp=!mini&&$('spub').checked;
  for(let i=0;i<42;i++){const d=new Date(st.getFullYear(),st.getMonth(),st.getDate()+i),ds=ymd(d),cls=`c${d.getMonth()!==m?' o':''}${d.toDateString()===today?' t':''}`;
   const hits=data.filter(x=>x.open&&x.open.startsWith(ds));
   if(mini){h+=`<div class="${cls}${hits.length?' has':''}" ${hits.length?`onclick="view('${hits[0].id}')" title="${esc(hits.map(x=>x.name).join('\n'))}"`:''}>${d.getDate()}${hits.length?'<span class="dot"></span>':''}</div>`;continue}
+  if(mode==='cl'){const its=cl.filter(c=>c.due===ds);h+=`<div class="${cls}${csel===ds?' sel':''}" onclick="pickDay('${ds}')"><div>${d.getDate()}</div>${its.map(clChip).join('')}</div>`;continue}
   let c=hits.map(x=>`<span class="chip s${ST.indexOf(x.status)}" title="${esc(x.name)}" onclick="view('${x.id}')">${x.open.slice(11,16)} ${esc(x.name)}</span>`).join('');
   if(sp)data.forEach(x=>{if(x.pub&&x.pub.startsWith(ds))c+=`<span class="chip pub" onclick="view('${x.id}')">게시 ${esc(x.name)}</span>`});
+  if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
 function render(){
- const ex=data.filter(x=>x.example).length;$('exbtn').style.display=ex?'':'none';$('excnt').textContent=`현재 예시 ${ex}건`;
- if(page==='dash'){const t=new Date();t.setHours(0,0,0,0);const ws=new Date(t);ws.setDate(t.getDate()-t.getDay());const we=new Date(ws);we.setDate(ws.getDate()+7);
-  $('k1').textContent=data.filter(x=>{if(!x.open)return false;const d=new Date(x.open.slice(0,10)+'T00:00');return d>=ws&&d<we}).length;
-  $('k2').textContent=data.filter(x=>x.open&&x.status==='진행중'&&dday(x.open)>=0&&dday(x.open)<=3).length;
-  $('k3').textContent=data.filter(x=>x.status==='진행중').length;
-  const ym=ymd(t).slice(0,7);$('k4').textContent=data.filter(x=>x.status==='낙찰'&&(x.open||'').startsWith(ym)).length;
-  $('dup').innerHTML=upHTML(upList().slice(0,8));$('mym').textContent=`${mcur.getFullYear()}년 ${mcur.getMonth()+1}월`;$('mcal').innerHTML=calHTML(mcur.getFullYear(),mcur.getMonth(),true);
-  const rec=[...data].sort((a,b)=>(b.updated||'').localeCompare(a.updated||'')).slice(0,5);
-  $('drecent').innerHTML=rec.length?rec.map(x=>`<li onclick="view('${x.id}')">${tag(x)}<b>${esc(x.name)}</b> <span class="chip s${ST.indexOf(x.status)}" style="display:inline-block">${x.status}</span><br><small>개찰 ${fdt(x.open)} · ${esc(x.org)}</small></li>`).join(''):'<li>등록된 공고가 없습니다.</li>'}
+ const ex=data.filter(x=>x.example).length+cl.filter(x=>x.example).length;$('exbtn').style.display=ex?'':'none';$('excnt').textContent=`현재 예시 ${ex}건`;
+ if(page==='dash'){const td=ymd(new Date()),wk=ymd(new Date(Date.now()+7*864e5)),open=cl.filter(c=>!c.done);
+  const od=open.filter(c=>c.due&&c.due<td),tdy=open.filter(c=>c.due===td),up=open.filter(c=>c.due>td&&c.due<=wk).sort((a,b)=>a.due.localeCompare(b.due)),nd=open.filter(c=>!c.due);
+  const sec=(t,l)=>l.length?`<li class="sec">${t} (${l.length})</li>`+l.map(clItem).join(''):'';
+  $('dcl').innerHTML=(sec('⚠️ 지난 할 일',od)+sec('📌 오늘',tdy)+sec('🗓️ 7일 이내',up)+sec('📝 마감일 없음',nd))||'<li>남은 할 일이 없습니다. 👍</li>';
+  $('dup').innerHTML=upHTML(upList().slice(0,10));$('dym').textContent=`${dcur.getFullYear()}년 ${dcur.getMonth()+1}월`;$('dcal').innerHTML=calHTML(dcur.getFullYear(),dcur.getMonth(),false,'dash')}
+ if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
+  const cats=[...new Set(['영업','생산','외주','출고','입찰','기타',...cl.map(c=>c.cat).filter(Boolean)])],cc=$('cc'),cv=cc.value;cc.innerHTML='<option value="">전체 분류</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join('');cc.value=cv;
+  const f=$('cf').value,l=cl.filter(c=>(!f||(f==='done')===c.done)&&(!cv||c.cat===cv)&&(!csel||c.due===csel)).sort((a,b)=>a.done-b.done||(a.due||'9').localeCompare(b.due||'9')||PR.indexOf(a.pri)-PR.indexOf(b.pri));
+  $('cday').innerHTML=csel?`<span class="badge">${csel}</span><button onclick="pickDay('${csel}')">날짜 선택 해제</button>`:'';
+  $('clist').innerHTML=l.length?l.map(clItem).join(''):'<li>항목이 없습니다.</li>'}
  if(page==='bids'){$('ym').textContent=`${cur.getFullYear()}년 ${cur.getMonth()+1}월`;$('cal').innerHTML=calHTML(cur.getFullYear(),cur.getMonth(),false);$('up').innerHTML=upHTML(upList());
   const orgs=[...new Set(data.map(x=>x.org).filter(Boolean))],fo=$('fo'),ov=fo.value;fo.innerHTML='<option value="">전체 수요기관</option>'+orgs.map(o=>`<option>${esc(o)}</option>`).join('');fo.value=ov;
   const f=filtered();$('tb').innerHTML=f.length?f.map(x=>`<tr class="r" onclick="view('${x.id}')"><td>${fdt(x.open)}</td><td>${tag(x)}${esc(x.name)}</td><td>${esc(x.no)}</td><td>${esc(x.org)}</td><td>${won(x.price)}</td><td>${esc(x.rep)}</td><td><span class="chip s${ST.indexOf(x.status)}" style="display:inline-block">${esc(x.status)}</span></td></tr>`).join(''):'<tr><td colspan="7">데이터가 없습니다.</td></tr>'}
- if(page==='results'){const s=$('rs').value,r=data.filter(x=>x.status!=='진행중'&&(!s||x.status===s)).sort((a,b)=>(b.open||'').localeCompare(a.open||''));
+ if(page==='bids'){document.querySelectorAll('.btab').forEach(e=>e.style.display=e.id==='bt_'+bt?'':'none');document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.dataset.t===bt))}
+ if(page==='bids'){const s=$('rs').value,r=data.filter(x=>x.status!=='진행중'&&(!s||x.status===s)).sort((a,b)=>(b.open||'').localeCompare(a.open||''));
   const c=k=>data.filter(x=>x.status===k).length;$('rsum').textContent=`개찰완료 ${c('개찰완료')} · 낙찰 ${c('낙찰')} · 유찰 ${c('유찰')}`;
   $('rtb').innerHTML=r.length?r.map(x=>`<tr class="r" onclick="view('${x.id}')"><td>${fdt(x.open)}</td><td>${tag(x)}${esc(x.name)}</td><td>${esc(x.org)}</td><td>${won(x.price)}</td><td>${esc(x.rep)}</td><td><span class="chip s${ST.indexOf(x.status)}" style="display:inline-block">${x.status}</span></td><td>${esc(x.result)}</td></tr>`).join(''):'<tr><td colspan="7">개찰 결과가 없습니다.</td></tr>'}
 }
@@ -51,7 +68,7 @@ function view(id){const x=data.find(e=>e.id===id);if(!x)return;$('dt').textConte
  $('dbody').innerHTML=`<dl class="dv"><dt>입찰공고번호</dt><dd>${esc(x.no)}</dd><dt>수요기관</dt><dd>${esc(x.org)}</dd><dt>게시일시</dt><dd>${fdt(x.pub)}</dd><dt>개찰일시</dt><dd>${fdt(x.open)} ${x.open?'('+ddLabel(dday(x.open))+')':''}</dd><dt>가격</dt><dd>${won(x.price)}</dd><dt>계약대표업체</dt><dd>${esc(x.rep)}</dd><dt>계약업체<br><small>(합계 ${tot}%)</small></dt><dd>${x.cos.map(c=>esc(c.n)+' — '+c.s+'%').join('\n')}</dd><dt>상태</dt><dd>${esc(x.status)}</dd><dt>개찰결과 메모</dt><dd>${esc(x.result)}</dd><dt>비고</dt><dd>${esc(x.memo)}</dd></dl>`;
  $('dfoot').innerHTML=`<button class="d" onclick="del('${id}')">삭제</button><button onclick="openForm('${id}')">수정</button><button onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
 function del(id){if(confirm('삭제하시겠습니까?')){data=data.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
-function delExamples(){const n=data.filter(e=>e.example).length;if(!n)return toast('예시 데이터가 없습니다');if(confirm(`예시 데이터 ${n}건을 모두 삭제할까요?`)){data=data.filter(e=>!e.example);save();render();toast('예시를 삭제했습니다')}}
+function delExamples(){const n=data.filter(e=>e.example).length+cl.filter(e=>e.example).length;if(!n)return toast('예시 데이터가 없습니다');if(confirm(`예시 데이터 ${n}건(공고·체크리스트)을 모두 삭제할까요?`)){data=data.filter(e=>!e.example);cl=cl.filter(e=>!e.example);save();render();toast('예시를 삭제했습니다')}}
 function coRow(n='',s=''){return `<div class="cr"><input placeholder="업체명" value="${esc(n)}" class="cn"><input class="sh cs" type="number" step="0.01" placeholder="지분 %" value="${esc(s)}" oninput="chk()"><button type="button" onclick="this.parentNode.remove();chk()">✕</button></div>`}
 function chk(){const v=[...document.querySelectorAll('.cs')].map(i=>+i.value||0),t=Math.round(v.reduce((a,b)=>a+b,0)*100)/100,w=$('sw');if(w){w.className=t===100?'ok':'warn';w.textContent=`지분율 합계: ${t}%`+(t===100?' ✓':' — 100%가 아닙니다!')}}
 function openForm(id){const x=id?data.find(e=>e.id===id):{status:'진행중',cos:[]};$('dt').textContent=id?'공고 수정':'새 공고';
@@ -69,9 +86,10 @@ function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
-async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data},null,2));if(p)toast('백업 저장: '+p)}
+async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
- if(!d)return alert('올바른 백업 파일이 아닙니다.');if(confirm(`${d.length}건을 불러옵니다. 현재 데이터(${data.length}건)를 대체할까요?\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;save();render();toast(`${d.length}건 복원 완료`)}}
+ if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl;
+ if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;save();render();toast('복원 완료')}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
@@ -80,3 +98,20 @@ const dlg=$('dlg');load();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk
 const UPD={checking:'새 버전 확인 중…',none:'최신 버전입니다',available:'새 버전 내려받는 중…',error:'업데이트 확인 실패(오프라인?)'};
 if(A.onUpdate)A.onUpdate(d=>{$('updst').textContent=d.s==='progress'?`새 버전 내려받는 중… ${d.pct}%`:d.s==='ready'?`v${d.v} 준비 완료 — 재시작하면 적용돼요`:d.s==='available'?`v${d.v} 내려받는 중…`:(UPD[d.s]||'')});
 async function checkUpd(){if(!A.checkUpdate)return toast('업데이트 기능을 사용할 수 없습니다');const r=await A.checkUpdate();if(r&&r.dev)toast('개발 모드에서는 업데이트를 확인하지 않습니다')}
+
+function btab(t){bt=t;render()}
+function mvd(k){dcur=new Date(dcur.getFullYear(),dcur.getMonth()+k,1);render()}
+function mvc(k){ccur=new Date(ccur.getFullYear(),ccur.getMonth()+k,1);render()}
+function pickDay(ds){csel=csel===ds?'':ds;$('cqd').value=csel;if(csel)$('cf').value='';render()}
+function clItem(c){const td=ymd(new Date()),od=!c.done&&c.due&&c.due<td;
+ return `<li class="${od?'od':''}${c.done?' dn':''}"><input type="checkbox" ${c.done?'checked':''} onchange="toggleCl('${c.id}')" title="완료"><div class="t" onclick="openCl('${c.id}')"><span class="pr pr${PR.indexOf(c.pri)}">${c.pri}</span>${c.cat?`<span class="cat">${esc(c.cat)}</span>`:''}${tag(c)}<b>${esc(c.title)}</b><br><small class="due">${c.due?(c.due===td?'오늘 마감':'마감 '+c.due+(od?' (지남)':'')):'마감일 없음'}${c.memo?' · '+esc(c.memo):''}</small></div></li>`}
+function toggleCl(id){const c=cl.find(x=>x.id===id);if(!c)return;c.done=!c.done;c.updated=now();save();render();if(c.done)toast('완료했습니다 ✓')}
+function quickAdd(i,d){const t=$(i).value.trim();if(!t){$(i).focus();return}cl.push({id:uid(),example:false,title:t,due:$(d).value||'',pri:'보통',cat:'',memo:'',done:false,updated:now()});save();$(i).value='';render();toast('추가했습니다')}
+function openCl(id){const x=id?cl.find(e=>e.id===id):{title:'',due:csel||'',pri:'보통',cat:'',memo:'',done:false};if(!x)return;$('dt').textContent=id?'할 일 수정':'새 할 일';
+ $('dbody').innerHTML=`<div class="g"><label class="w">할 일 *<input id="c_title" value="${esc(x.title)}"></label><label>마감일<input id="c_due" type="date" value="${esc(x.due)}"></label>
+ <label>우선순위<select id="c_pri">${PR.map(p=>`<option${p===x.pri?' selected':''}>${p}</option>`).join('')}</select></label><label>분류<input id="c_cat" list="cats" value="${esc(x.cat)}"></label>
+ <label style="flex-direction:row;align-items:center;gap:6px;font-size:14px"><input id="c_done" type="checkbox" ${x.done?'checked':''}> 완료</label><label class="w">메모<textarea id="c_memo" rows="3">${esc(x.memo)}</textarea></label></div>`;
+ $('dfoot').innerHTML=(id?`<button class="d" onclick="delCl('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCl('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('c_title').focus()}
+function saveCl(id){const o={title:$('c_title').value.trim(),due:$('c_due').value,pri:$('c_pri').value,cat:$('c_cat').value.trim(),memo:$('c_memo').value.trim(),done:$('c_done').checked,updated:now()};
+ if(!o.title)return alert('할 일을 입력하세요.');if(id){const i=cl.findIndex(e=>e.id===id);cl[i]={...cl[i],...o}}else cl.push({id:uid(),example:false,...o});save();render();dlg.close();toast('저장했습니다')}
+function delCl(id){if(confirm('이 할 일을 삭제할까요?')){cl=cl.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}

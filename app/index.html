@@ -39,29 +39,47 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 .dv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;margin:0}.dv dt{font-weight:bold;color:#555}.dv dd{margin:0;white-space:pre-wrap}
 .soonbox{background:#fff;border-radius:10px;padding:60px 20px;text-align:center;color:#666;box-shadow:0 1px 3px #0001}.soonbox .big{font-size:44px}
 .set button{margin:4px 6px 4px 0}.muted{color:#777;font-size:12px}code{background:#f0f0f1;padding:1px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tabs{display:flex;gap:4px;margin-bottom:12px}.tab{border-radius:6px 6px 0 0;background:#e9ecef}.tab.on{background:#2271b1;color:#fff;border-color:#2271b1}
+.qa{display:flex;gap:6px;margin-bottom:10px}.qa input:first-child{flex:1;min-width:0}.qa input[type=date]{width:145px;flex:none}.qa button{white-space:nowrap;flex:none}
+.cl{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}#clist{max-height:none}.cl li{display:flex;align-items:flex-start;gap:8px;padding:8px;border-bottom:1px solid #eee}.cl li:hover{background:#f6f8fb}
+.cl li input[type=checkbox]{width:18px;height:18px;margin-top:2px;cursor:pointer}.cl .t{flex:1;cursor:pointer}.cl .t small{color:#777}.cl li.od{background:#fff5f5}.cl li.od .due{color:#c53030;font-weight:bold}.cl li.dn .t b{text-decoration:line-through;color:#999}
+.pr{font-size:11px;border-radius:4px;padding:0 5px;margin-right:4px;color:#fff}.pr0{background:#c53030}.pr1{background:#718096}.pr2{background:#a0aec0}.cat{font-size:11px;background:#e6fffa;color:#234e52;border-radius:4px;padding:0 5px;margin-right:4px}
+.chip.clc{background:#fff;color:#6b46c1;border:1px dashed #6b46c1}.chip.clc.od{color:#c53030;border-color:#c53030}.chip.clc.dn{text-decoration:line-through;opacity:.6}
+.cal .c.sel{background:#fffbea;border:2px solid #d69e2e}#ccal .c{cursor:pointer;min-height:70px}.sec{font-size:12px;color:#555;font-weight:bold;padding:6px 8px;background:#f6f7f7}
 #toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
 </style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
 <aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
 <nav>
-<a data-p="dash">🏠 대시보드</a><a data-p="bids">📋 공고 일정</a><a data-p="results">🏆 개찰 결과</a><div class="sep"></div>
+<a data-p="dash">🏠 대시보드</a><a data-p="check">✅ 체크리스트</a><a data-p="bids">📋 공고 일정</a><div class="sep"></div>
 <a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서<span class="soon">준비중</span></a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
 <div class="sep"></div><a data-p="settings">⚙️ 설정</a></nav><div class="foot" id="ver">v1.0.0</div></aside>
 <div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" onclick="openForm()">+ 새 공고</button></div>
 <div id="content">
 <section class="page" id="p_dash">
- <div class="cards"><div class="sc" onclick="go('bids')"><div class="l">이번 주 개찰</div><div class="n" id="k1">0</div></div><div class="sc c2" onclick="go('bids')"><div class="l">D-3 이내 개찰</div><div class="n" id="k2">0</div></div><div class="sc c3" onclick="go('bids')"><div class="l">진행중 공고</div><div class="n" id="k3">0</div></div><div class="sc c4" onclick="go('results')"><div class="l">이번 달 낙찰</div><div class="n" id="k4">0</div></div></div>
- <div class="grid2"><div class="card"><h2>⏰ 다가오는 개찰</h2><ul class="up" id="dup"></ul></div>
- <div class="card"><div class="calhead"><button onclick="mvm(-1)">◀</button><b id="mym"></b><button onclick="mvm(1)">▶</button></div><div class="cal mini" id="mcal"></div></div></div>
- <div class="card"><h2>🕘 최근 등록·수정 공고</h2><ul class="up" id="drecent"></ul></div>
+ <div class="dgrid"><div class="card"><h2>✅ 체크리스트 <span class="muted" style="font-weight:normal">(오늘·예정·지난 미완료)</span></h2>
+  <div class="qa"><input id="dq" placeholder="할 일을 입력하고 Enter (예: 견적서 발송)" onkeydown="if(event.key==='Enter')quickAdd('dq','dqd')"><input id="dqd" type="date"><button class="p" onclick="quickAdd('dq','dqd')">추가</button></div>
+  <ul class="cl" id="dcl"></ul></div>
+ <div class="card"><h2>⏰ 다가오는 개찰</h2><ul class="up" id="dup"></ul></div></div>
+ <div class="card"><div class="calhead"><button onclick="mvd(-1)">◀</button><b id="dym"></b><button onclick="mvd(1)">▶</button><button onclick="dcur=new Date();render()">오늘</button><span class="muted"><span class="chip clc" style="display:inline-block">할 일</span> 체크리스트 마감일</span></div><div class="cal" id="dcal"></div></div>
+</section>
+<section class="page" id="p_check"><div class="grid2b">
+ <div class="card"><div class="calhead"><button onclick="mvc(-1)">◀</button><b id="cym"></b><button onclick="mvc(1)">▶</button><button onclick="ccur=new Date();render()">오늘</button></div><div class="cal" id="ccal"></div><p class="muted">날짜를 누르면 그 날짜의 할 일만 보이고, 새 할 일의 마감일로 지정돼요.</p></div>
+ <div class="card"><h2>체크리스트 관리</h2>
+  <div class="qa"><input id="cq" placeholder="할 일 빠른 추가 (Enter)" onkeydown="if(event.key==='Enter')quickAdd('cq','cqd')"><input id="cqd" type="date"><button class="p" onclick="quickAdd('cq','cqd')">추가</button><button onclick="openCl()">상세 추가</button></div>
+  <div class="filters"><select id="cf" onchange="render()"><option value="open">미완료</option><option value="">전체</option><option value="done">완료</option></select><select id="cc" onchange="render()"></select><span id="cday"></span></div>
+  <ul class="cl" id="clist"></ul></div></div>
 </section>
 <section class="page" id="p_bids">
+ <div class="tabs"><button class="tab on" data-t="sched" onclick="btab('sched')">📅 일정</button><button class="tab" data-t="results" onclick="btab('results')">🏆 개찰 결과</button></div>
+ <div id="bt_sched" class="btab">
  <div class="grid2b"><div class="card"><div class="calhead"><button onclick="mv(-1)">◀</button><b id="ym"></b><button onclick="mv(1)">▶</button><button onclick="cur=new Date();render()">오늘</button><label style="font-size:12px"><input type="checkbox" id="spub" onchange="render()"> 게시일 표시</label></div><div class="cal" id="cal"></div></div>
  <div class="card"><h2>⏰ D-day 목록</h2><ul class="up" id="up"></ul></div></div>
  <div class="card"><h2>전체 공고</h2><div class="filters"><input id="fk" placeholder="검색(공고명·번호·업체)" oninput="render()" style="min-width:240px"><select id="fo" onchange="render()"></select><select id="fs" onchange="render()"><option value="">전체 상태</option><option>진행중</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select></div>
  <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>공고번호</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>상태</th></tr></thead><tbody id="tb"></tbody></table></div></div>
+ </div>
+ <div id="bt_results" class="btab"><div class="card"><h2>개찰 결과 (개찰완료 · 낙찰 · 유찰)</h2><div class="filters"><select id="rs" onchange="render()"><option value="">전체</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select><span class="muted" id="rsum"></span></div>
+ <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>결과</th><th>개찰결과 메모</th></tr></thead><tbody id="rtb"></tbody></table></div><p class="muted">공고의 상태를 '개찰완료/낙찰/유찰'로 바꾸면 이곳에 표시됩니다.</p></div></div>
 </section>
-<section class="page" id="p_results"><div class="card"><h2>개찰 결과 (개찰완료 · 낙찰 · 유찰)</h2><div class="filters"><select id="rs" onchange="render()"><option value="">전체</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select><span class="muted" id="rsum"></span></div>
- <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>결과</th><th>개찰결과 메모</th></tr></thead><tbody id="rtb"></tbody></table></div><p class="muted">공고의 상태를 '개찰완료/낙찰/유찰'로 바꾸면 이곳에 표시됩니다.</p></div></section>
 <section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_outwork"><div class="soonbox"><div class="big">🏭</div><h2>외주작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_stmt"><div class="soonbox"><div class="big">🧾</div><h2>거래명세서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
@@ -76,6 +94,7 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 </section>
 </div></div>
 <dialog id="dlg"><div class="dh" id="dt">공고</div><div class="db" id="dbody"></div><div class="df" id="dfoot"></div></dialog>
+<datalist id="cats"><option>영업</option><option>생산</option><option>외주</option><option>출고</option><option>입찰</option><option>기타</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
 <script src="app.js"></script></body></html>
