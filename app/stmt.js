@@ -128,13 +128,13 @@ function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierI
 function stmtHTML(s){const S=supOf(s),c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(window.MINLOTS_TEST||MIN_LOTS,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
  const pty=(lab,p)=>`<td rowspan="5" class="hd vt">${lab}</td><td class="hd">등록<br>번호</td><td colspan="5" class="b big">${E(p.reg)}</td>`;
  let lots='';for(let k=0;k<n;k++){const l=s.lots[k]||{lotNo:'',color:'',rolls:Array(20).fill('')};
-  lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
+  lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2" class="cl">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
  const notice=String(S.notice||'').split(/\r?\n/).filter(Boolean),cts=String(S.contacts||'').split(/\r?\n/).filter(Boolean);
  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>거래명세서 NO.${s.no}</title><style>
 @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000}
 table{border-collapse:collapse;width:99.5%;table-layout:fixed}td{border:1px solid #000;padding:1px 3px;height:18px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}.wr{white-space:normal;word-break:keep-all}
 .nb td{border:none}.hd{background:#f2f2f2;font-weight:bold}.vt{writing-mode:vertical-rl;letter-spacing:6px}.b{font-weight:bold}.big{font-size:11pt}.r{text-align:right}.l{text-align:left}
-h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:13pt;font-weight:normal;height:26px}
+h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:12pt;font-weight:normal;height:30px;padding:3px 4px}.ft tr.sp td{border:none;height:8px;padding:0}.lt td.cl{font-size:8.5pt;line-height:1.1;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;overflow:visible;padding:1px 2px}
 </style></head><body><table>
 <colgroup>${[8,8,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6,9].map(w=>`<col style="width:${(w/97*100).toFixed(2)}%">`).join('')}</colgroup>
 <tr class="nb"><td class="b">NO.</td><td class="l">${s.no}</td><td colspan="12"></td></tr>
@@ -151,7 +151,7 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 <tr><td rowspan="2" class="hd">LOT NO.</td><td rowspan="2" class="hd">COLOR</td><td colspan="10" class="hd">수량(YD)</td><td rowspan="2" class="hd">절</td><td rowspan="2" class="hd">수량(YD)</td></tr>
 <tr>${Array.from({length:10},(_,i)=>`<td class="hd">${i+1}</td>`).join('')}</tr>
 <tbody class="lt">${lots}</tbody>
-<tbody class="ft"><tr><td colspan="14" class="big2">납품처: ${E(s.dest)}</td></tr><tr><td colspan="14" class="big2">담당자: ${E(s.contact)}</td></tr>
+<tbody class="ft"><tr class="sp"><td colspan="14"></td></tr><tr><td colspan="14" class="big2">납품처: ${E(s.dest)}</td></tr><tr><td colspan="14" class="big2">담당자: ${E(s.contact)}</td></tr><tr class="sp"><td colspan="14"></td></tr>
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table></body></html>`}
