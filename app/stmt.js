@@ -78,7 +78,7 @@ function dupStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=normStmt
 function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!confirm(`거래명세서 NO.${s.no}을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
 function orderLabel(o){return `${o.no} · ${o.item}${o.client?' · '+o.client:''}`}
 function stPickOrder(id){const o=orders.find(x=>x.id===id);if(!o)return;const e=stEd;e.orderId=o.id;e.orderNo=o.no;e.item=o.item;e.spec=o.fabric||'';e.linkShip=true;
- e.lots.forEach(l=>{if(!l.color)l.color=o.color});const c=custs.find(x=>x.name===o.client);if(c)stPick(c.id);else if(o.client&&!e.cust.name)e.cust.name=o.client}
+ e.lots.forEach(l=>{if(!l.color)l.color=(o.lines[0]||{}).color||''});const c=custs.find(x=>x.name===o.client);if(c)stPick(c.id);else if(o.client&&!e.cust.name)e.cust.name=o.client}
 function stPick(cid){const c=custs.find(x=>x.id===cid);if(!c)return;stEd.customerId=c.id;stEd.cust=party(c);if(c.dest)stEd.dest=c.dest;if(c.contact)stEd.contact=c.contact}
 function stOrderInput(v){const o=orders.find(x=>orderLabel(x)===v||x.no===v);if(o){stPickOrder(o.id);renderEditor()}}
 function stCustInput(v){const c=custs.find(x=>x.name===v);if(c){stPick(c.id);renderEditor()}else stEd.cust.name=v}
@@ -116,7 +116,7 @@ function stKey(ev,el){if(ev.key!=='Enter')return;ev.preventDefault();let k=+el.d
 function stPaste(ev,el){const t=(ev.clipboardData||window.clipboardData).getData('text');const parts=t.split(/[\s,\t]+/).filter(x=>x!=='');if(parts.length<2)return;ev.preventDefault();
  const k=+el.dataset.k;let i=+el.dataset.i,n=0;for(const p of parts){if(i>19)break;const v=+p;stEd.lots[k].rolls[i]=isNaN(v)?'':v;const c=cellAt(k,i);if(c)c.value=isNaN(v)?'':v;i++;n++}
  stRecalc();if(n<parts.length)toast(`한 LOT는 최대 20절입니다. ${parts.length-n}개 값은 붙여넣지 않았어요.`);else toast(`${n}개 값을 붙여넣었어요`)}
-function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderId&&orders.find(x=>x.id===stEd.orderId);stEd.lots.push(emptyLot(last&&last.color||o&&o.color||''));renderEditor();const c=document.querySelectorAll('.lot tbody tr');c[c.length-2].querySelector('input').focus()}
+function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderId&&orders.find(x=>x.id===stEd.orderId);stEd.lots.push(emptyLot(last&&last.color||o&&(o.lines[0]||{}).color||''));renderEditor();const c=document.querySelectorAll('.lot tbody tr');c[c.length-2].querySelector('input').focus()}
 function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!confirm('이 LOT에 입력된 수량이 있습니다. 삭제할까요?'))return;stEd.lots.splice(k,1);if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor()}
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
 function stCancel(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
