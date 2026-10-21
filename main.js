@@ -59,7 +59,7 @@ ipcMain.handle('stmtXlsx',async(e,s,sup,name)=>{const ExcelJS=require('exceljs')
   mg('A12:B13',s.orderNo||'');mg('C12:G12',s.item||'');mg('C13:G13',s.spec||'');mg('H12:H13',tc||'');mg('I12:I13',tq||'',{fmt:'#,##0.##'});mg('J12:J13',s.price||'',{fmt:'#,##0.##'});
   mg('K12:L13',s.price&&tq?Math.round(tq*s.price):'',{fmt:'#,##0'});mg('M12:N13',s.note||'');
   mg('A14:A15','LOT NO.',H);mg('B14:B15','COLOR',H);mg('C14:L14','수량(YD)',H);for(let i=0;i<10;i++)mg(ws.getCell(15,3+i).address,i+1,H);mg('M14:M15','절',H);mg('N14:N15','수량(YD)',H);
-  const n=Math.max(11,lots.length);for(let k=0;k<n;k++){const r=16+k*2,l=lots[k];
+  const n=Math.max(14,lots.length);for(let k=0;k<n;k++){const r=16+k*2,l=lots[k];
     mg(`A${r}:A${r+1}`,l?l.lotNo||'':'');mg(`B${r}:B${r+1}`,l?l.color||'':'');
     for(let i=0;i<20;i++){const v=l?l.rolls[i]:'';mg(ws.getCell(r+(i>=10?1:0),3+i%10).address,v===''||v==null?null:+v,{fmt:'#,##0.##'})}
     mg(`M${r}:M${r+1}`,l&&cnt(l)?cnt(l):'');mg(`N${r}:N${r+1}`,l&&sm(l)?sm(l):'',{fmt:'#,##0.##'})}

@@ -1,5 +1,6 @@
 // ===== 거래명세서 / 거래처 / 공급자 정보 =====
 let stmts=[],custs=[],sup={},stTab='list',stEd=null,stQ='';
+const MIN_LOTS=14;
 const DEF_NOTICE='본제품 인수 후 재단 또는 다른 가공을 했을 경우에는 반품이나 변제는 할 수 없음.\n반드시 LOT별 구분하여 작업할 것.';
 const P_FIELDS=[['reg','등록번호'],['name','상호'],['ceo','성명'],['addr','사업장주소'],['biz','업태'],['type','종목']];
 const sid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -111,7 +112,7 @@ function stSave(silent){const s=stClean(stEd);if(stmts.some(x=>x.no===s.no&&x.id
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
  const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 출고에 반영됨':''))}return true}
 // ---- 출력 ----
-function stmtHTML(s){const S=sup,c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(11,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
+function stmtHTML(s){const S=sup,c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(window.MINLOTS_TEST||MIN_LOTS,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
  const pty=(lab,p)=>`<td rowspan="5" class="hd vt">${lab}</td><td class="hd">등록<br>번호</td><td colspan="5" class="b big">${E(p.reg)}</td>`;
  let lots='';for(let k=0;k<n;k++){const l=s.lots[k]||{lotNo:'',color:'',rolls:Array(20).fill('')};
   lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
@@ -120,7 +121,7 @@ function stmtHTML(s){const S=sup,c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(11,s.
 @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000}
 table{border-collapse:collapse;width:99.5%;table-layout:fixed}td{border:1px solid #000;padding:1px 3px;height:18px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}.wr{white-space:normal;word-break:keep-all}
 .nb td{border:none}.hd{background:#f2f2f2;font-weight:bold}.vt{writing-mode:vertical-rl;letter-spacing:6px}.b{font-weight:bold}.big{font-size:11pt}.r{text-align:right}.l{text-align:left}
-h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}
+h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:17pt;font-weight:bold;height:34px}
 </style></head><body><table>
 <colgroup>${[8,8,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6,9].map(w=>`<col style="width:${(w/97*100).toFixed(2)}%">`).join('')}</colgroup>
 <tr class="nb"><td class="b">NO.</td><td class="l">${s.no}</td><td colspan="12"></td></tr>
@@ -132,12 +133,12 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 <tr><td class="hd">업태</td><td colspan="2">${E(S.biz)}</td><td class="hd">종목</td><td colspan="2">${E(S.type)}</td><td class="hd">업태</td><td colspan="2">${E(c.biz)}</td><td class="hd">종목</td><td colspan="2">${E(c.type)}</td></tr>
 <tr class="gap"><td colspan="14"></td></tr>
 <tr class="hd"><td colspan="2" class="hd">오 더 번 호</td><td colspan="5" class="hd">품 명 &nbsp;및&nbsp; 규 격</td><td class="hd">절</td><td class="hd">수량<br>(YD)</td><td class="hd">단 가</td><td colspan="2" class="hd">금 액</td><td colspan="2" class="hd">비 고</td></tr>
-<tr><td rowspan="2" colspan="2" class="b">${E(s.orderNo)}</td><td colspan="5" style="height:24px">${E(s.item)}</td><td rowspan="2" class="r b">${t.c||''}</td><td rowspan="2" class="r b">${N(t.q||'')}</td><td rowspan="2" class="r">${N(s.price)}</td><td rowspan="2" colspan="2" class="r b">${a?a.toLocaleString('ko-KR'):''}</td><td rowspan="2" colspan="2">${E(s.note)}</td></tr>
-<tr><td colspan="5" style="height:24px">${E(s.spec)}</td></tr><tr class="gap"><td colspan="14"></td></tr>
+<tr><td rowspan="2" colspan="2" class="b">${E(s.orderNo)}</td><td colspan="5" style="height:24px;border-bottom:1px dotted #000">${E(s.item)}</td><td rowspan="2" class="r b">${t.c||''}</td><td rowspan="2" class="r b">${N(t.q||'')}</td><td rowspan="2" class="r">${N(s.price)}</td><td rowspan="2" colspan="2" class="r b">${a?a.toLocaleString('ko-KR'):''}</td><td rowspan="2" colspan="2">${E(s.note)}</td></tr>
+<tr><td colspan="5" style="height:24px;border-top:1px dotted #000">${E(s.spec)}</td></tr><tr class="gap"><td colspan="14"></td></tr>
 <tr><td rowspan="2" class="hd">LOT NO.</td><td rowspan="2" class="hd">COLOR</td><td colspan="10" class="hd">수량(YD)</td><td rowspan="2" class="hd">절</td><td rowspan="2" class="hd">수량(YD)</td></tr>
 <tr>${Array.from({length:10},(_,i)=>`<td class="hd">${i+1}</td>`).join('')}</tr>
 <tbody class="lt">${lots}</tbody>
-<tbody class="ft"><tr><td colspan="14" style="height:30px">납품처: ${E(s.dest)}</td></tr><tr><td colspan="14" style="height:30px">담당자: ${E(s.contact)}</td></tr>
+<tbody class="ft"><tr><td colspan="14" class="big2">납품처: ${E(s.dest)}</td></tr><tr><td colspan="14" class="big2">담당자: ${E(s.contact)}</td></tr>
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table></body></html>`}
