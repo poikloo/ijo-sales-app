@@ -3,6 +3,8 @@ let stmts=[],custs=[],sups=[],supDef='',stTab='list',stEd=null,stQ='';
 const MIN_LOTS=14;
 const DEF_NOTICE='본제품 인수 후 재단 또는 다른 가공을 했을 경우에는 반품이나 변제는 할 수 없음.\n반드시 LOT별 구분하여 작업할 것.';
 const P_FIELDS=[['reg','등록번호'],['name','상호'],['ceo','성명'],['addr','사업장주소'],['biz','업태'],['type','종목']];
+const F_ORDER=['name','reg','ceo','','addr','biz','type'];
+const pForm=(pre,x,req)=>F_ORDER.map(k=>{if(!k)return '<label></label>';const l=P_FIELDS.find(f=>f[0]===k)[1];return `<label class="${k==='addr'?'w':''}">${l}${req&&k==='name'?' *':''}<input id="${pre}${k}" value="${esc(x[k])}"></label>`}).join('');
 const sid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const party=p=>{const o={};P_FIELDS.forEach(([k])=>o[k]=String(p&&p[k]||''));return o};
 const emptyLot=(color='')=>({id:sid(),lotNo:'',color,rolls:Array(20).fill('')});
@@ -60,7 +62,7 @@ function renderStmt(){document.querySelectorAll('#p_stmt .tab').forEach(e=>e.cla
   $('ctb').innerHTML=l.length?l.map(c=>`<tr class="r" onclick="openCust('${c.id}')"><td>${tag(c)}<b>${esc(c.name)}</b></td><td>${esc(c.reg)}</td><td>${esc(c.ceo)}</td><td>${esc(c.addr)}</td><td>${esc(c.biz)} / ${esc(c.type)}</td><td>${esc(c.dest)}</td><td>${esc(c.contact)}</td></tr>`).join(''):'<tr><td colspan="7">등록된 거래처가 없습니다.</td></tr>'}}
 // ---- 거래처 ----
 function openCust(id,name){const c=id?custs.find(x=>x.id===id):normCust({name:name||''});if(!c)return;$('dt').textContent=id?'거래처 수정':'거래처 등록';
- $('dbody').innerHTML=`<div class="g">${P_FIELDS.map(([k,l])=>`<label class="${k==='addr'?'w':''}">${l}${k==='name'?' *':''}<input id="cu_${k}" value="${esc(c[k])}"></label>`).join('')}
+ $('dbody').innerHTML=`<div class="g">${pForm('cu_',c,true)}
  <label>기본 납품처<input id="cu_dest" value="${esc(c.dest)}"></label><label>기본 담당자<input id="cu_contact" value="${esc(c.contact)}"></label><label class="w">메모<textarea id="cu_memo" rows="2">${esc(c.memo)}</textarea></label></div>`;
  $('dfoot').innerHTML=(id?`<button class="d" onclick="delCust('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCust('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal()}
 function saveCust(id){const o={};[...P_FIELDS.map(x=>x[0]),'dest','contact','memo'].forEach(k=>o[k]=$('cu_'+k).value.trim());if(!o.name)return alert('상호를 입력하세요.');
@@ -171,9 +173,9 @@ function renderSuppliers(){const el=$('suplist');if(!el)return;
  <td style="text-align:right;white-space:nowrap">${x.id===supDef?'':`<button onclick="setSupDef('${x.id}')">기본값으로</button> `}<button onclick="openSup('${x.id}')">수정</button> <button class="d" onclick="delSup('${x.id}')">삭제</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">등록된 공급자가 없습니다. [+ 공급자 추가]로 등록하세요.</p>'}
 function setSupDef(id){supDef=id;save();renderSuppliers();toast('기본 공급자를 바꿨습니다')}
 function openSup(id){const x=id?sups.find(y=>y.id===id):normSupRec({});if(!x)return;$('dt').textContent=id?'공급자 수정':'공급자 추가';
- $('dbody').innerHTML=`<div class="g">${P_FIELDS.map(([k,l])=>`<label class="${k==='addr'?'w':''}">${l}<input id="sp_${k}" value="${esc(x[k])}"></label>`).join('')}
+ $('dbody').innerHTML=`<div class="g">${pForm('sp_',x)}
  <label class="w">연락처 문구 (한 줄씩, 예: 본사☎ … FAX …)<textarea id="sp_contacts" rows="3">${esc(x.contacts)}</textarea></label><label class="w">주의사항 문구 (한 줄씩)<textarea id="sp_notice" rows="3">${esc(x.notice)}</textarea></label></div>`;
- $('dfoot').innerHTML=`<button onclick="importSupplier()" style="margin-right:auto">엑셀 양식에서 가져오기</button><button onclick="dlg.close()">취소</button><button class="p" onclick="saveSup('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('sp_reg').focus()}
+ $('dfoot').innerHTML=`<button onclick="importSupplier()" style="margin-right:auto">엑셀 양식에서 가져오기</button><button onclick="dlg.close()">취소</button><button class="p" onclick="saveSup('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('sp_name').focus()}
 function saveSup(id){const o={};P_FIELDS.forEach(([k])=>o[k]=$('sp_'+k).value.trim());o.contacts=$('sp_contacts').value.replace(/\s+$/,'');o.notice=$('sp_notice').value.replace(/\s+$/,'');
  if(!supHas({...o,notice:null}))return toast('상호나 등록번호 등 한 가지 이상 입력해 주세요.');
  if(id)Object.assign(sups.find(y=>y.id===id),o);else{const x=normSupRec(o);sups.push(x);if(!supDef||!sups.some(y=>y.id===supDef))supDef=x.id}
