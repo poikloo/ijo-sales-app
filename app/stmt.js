@@ -1,5 +1,5 @@
 // ===== 거래명세서 / 거래처 / 공급자 정보 =====
-let stmts=[],custs=[],sup={},stTab='list',stEd=null,stQ='';
+let stmts=[],custs=[],sups=[],supDef='',stTab='list',stEd=null,stQ='';
 const MIN_LOTS=14;
 const DEF_NOTICE='본제품 인수 후 재단 또는 다른 가공을 했을 경우에는 반품이나 변제는 할 수 없음.\n반드시 LOT별 구분하여 작업할 것.';
 const P_FIELDS=[['reg','등록번호'],['name','상호'],['ceo','성명'],['addr','사업장주소'],['biz','업태'],['type','종목']];
@@ -12,7 +12,15 @@ const stAmt=s=>{const q=stTot(s).q;return s.price&&q?Math.round(q*s.price):0};
 const fnum=v=>v===''||v==null?'':(+v).toLocaleString('ko-KR',{maximumFractionDigits:2});
 function normLot(l){const r=Array.isArray(l&&l.rolls)?l.rolls.slice(0,20):[];while(r.length<20)r.push('');return {id:String(l&&l.id||sid()),lotNo:String(l&&l.lotNo||''),color:String(l&&l.color||''),rolls:r.map(v=>v===''||v==null||isNaN(+v)?'':+v)}}
 function normStmt(s){return {id:String(s.id||sid()),example:!!s.example,no:+s.no||1,date:s.date||'',orderId:s.orderId||'',orderNo:s.orderNo||'',item:s.item||'',spec:s.spec||'',customerId:s.customerId||'',cust:party(s.cust),
- dest:s.dest||'',contact:s.contact||'',price:s.price===''||s.price==null?'':+s.price||'',note:s.note||'',lots:(Array.isArray(s.lots)?s.lots:[]).map(normLot),linkShip:!!s.linkShip,shipId:s.shipId||'',updated:s.updated||''}}
+ dest:s.dest||'',contact:s.contact||'',price:s.price===''||s.price==null?'':+s.price||'',note:s.note||'',lots:(Array.isArray(s.lots)?s.lots:[]).map(normLot),linkShip:!!s.linkShip,shipId:s.shipId||'',supplierId:String(s.supplierId||''),sup:s.sup?normSup(s.sup):null,updated:s.updated||''}}
+const supHas=x=>x&&(P_FIELDS.some(([k])=>String(x[k]||'').trim())||String(x.contacts||'').trim()||(x.notice!=null&&String(x.notice)!==DEF_NOTICE));
+const normSupRec=x=>({id:String(x&&x.id||sid()),...normSup(x)});
+const defSup=()=>sups.find(x=>x.id===supDef)||sups[0]||null;
+const supSnap=x=>x?normSup(x):null;
+function supOf(s){return s.sup||supSnap(sups.find(x=>x.id===s.supplierId))||supSnap(defSup())||normSup({})}
+function supMigrate(o){if(Array.isArray(o.suppliers)){sups=o.suppliers.map(normSupRec);supDef=sups.some(x=>x.id===o.supplierDefault)?o.supplierDefault:(sups[0]?sups[0].id:'');return false}
+ if(supHas(o.supplier)){const x=normSupRec(o.supplier);sups=[x];supDef=x.id}else{sups=[];supDef=''}return true}
+function stAssignSup(){const d=defSup();let ch=false;if(d)stmts.forEach(s=>{if(!s.sup){s.supplierId=d.id;s.sup=supSnap(d);ch=true}});return ch}
 function normCust(c){return {id:String(c.id||sid()),example:!!c.example,...party(c),dest:c.dest||'',contact:c.contact||'',memo:c.memo||''}}
 function normSup(s){s=s&&typeof s==='object'?s:{};return {...party(s),contacts:String(s.contacts||''),notice:s.notice==null?DEF_NOTICE:String(s.notice)}}
 function exStmt(){const c={id:'xc1',example:true,reg:'000-00-00000',name:'예시거래처',ceo:'홍길동',addr:'(예시) 주소',biz:'제조',type:'섬유',dest:'(예시) 납품 창고',contact:'(예시) 담당자',memo:'예시 데이터입니다.'};
@@ -20,10 +28,11 @@ function exStmt(){const c={id:'xc1',example:true,reg:'000-00-00000',name:'예시
  return {c,s:{id:'xs1',example:true,no:1,date:'2025-11-03',orderId:'xo1',orderNo:'2509-0328',item:'지휘소용 다기능천막 외피',spec:'',customerId:'xc1',cust:party(c),dest:c.dest,contact:c.contact,price:'',note:'예시',
   lots:[normLot({lotNo:'A-2510-01',color:'진국방',rolls:r1}),normLot({lotNo:'A-2510-02',color:'진국방',rolls:r2})],linkShip:false,shipId:'',updated:now()}}}
 function stLoad(r){const o=r&&!Array.isArray(r)?r:{};
- sup=normSup(o.supplier);custs=Array.isArray(o.customers)?o.customers.map(normCust):[];stmts=Array.isArray(o.statements)?o.statements.map(normStmt):[];
- if(!Array.isArray(o.statements)){if(!r||(Array.isArray(r.bids)&&r.bids.some(x=>x.example))||(Array.isArray(r.orders)&&r.orders.some(x=>x.example))){const e=exStmt();custs.push(normCust(e.c));stmts.push(normStmt(e.s))}setTimeout(save,0)}}
-const stPayload=()=>({statements:stmts,customers:custs,supplier:sup});
-function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.statements))stmts=raw.statements.map(normStmt);if(Array.isArray(raw.customers))custs=raw.customers.map(normCust);if(raw.supplier)sup=normSup(raw.supplier);stEd=null}
+ const mig=supMigrate(o);custs=Array.isArray(o.customers)?o.customers.map(normCust):[];stmts=Array.isArray(o.statements)?o.statements.map(normStmt):[];
+ if(!Array.isArray(o.statements)){if(!r||(Array.isArray(r.bids)&&r.bids.some(x=>x.example))||(Array.isArray(r.orders)&&r.orders.some(x=>x.example))){const e=exStmt();custs.push(normCust(e.c));stmts.push(normStmt(e.s))}setTimeout(save,0)}
+ if(stAssignSup()||mig)setTimeout(save,0)}
+const stPayload=()=>({statements:stmts,customers:custs,suppliers:sups,supplierDefault:supDef,supplier:normSup(defSup()||{})});
+function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.statements))stmts=raw.statements.map(normStmt);if(Array.isArray(raw.customers))custs=raw.customers.map(normCust);if(Array.isArray(raw.suppliers)||raw.supplier)supMigrate(raw);stAssignSup();stEd=null}
 const stExCount=()=>stmts.filter(x=>x.example).length+custs.filter(x=>x.example).length;
 function stDelExamples(){stmts.filter(x=>x.example).forEach(unlinkShip);stmts=stmts.filter(x=>!x.example);custs=custs.filter(x=>!x.example);if(stEd&&stEd.example)stEd=null}
 // ---- 생산 관리 출고 연동 ----
@@ -41,9 +50,10 @@ function renderStmt(){document.querySelectorAll('#p_stmt .tab').forEach(e=>e.cla
  if(stEd)return;
  if(stTab==='list'){const k=$('sk').value.trim().toLowerCase(),cv=$('scu').value,cs=[...new Set(stmts.map(s=>s.cust.name).filter(Boolean))];
   $('scu').innerHTML='<option value="">전체 공급받는자</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');$('scu').value=cs.includes(cv)?cv:'';
-  const l=stmts.filter(s=>(!$('scu').value||s.cust.name===$('scu').value)&&(!k||[s.no,s.orderNo,s.item,s.spec,s.cust.name,s.dest,s.note,...s.lots.map(x=>x.lotNo)].join(' ').toLowerCase().includes(k))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.no-a.no);
-  $('stb').innerHTML=l.length?l.map(s=>{const t=stTot(s),a=stAmt(s);return `<tr class="r" onclick="editStmt('${s.id}')"><td><b>${s.no}</b></td><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td>${esc(s.orderNo)}</td><td>${esc(s.item)}${s.spec?' '+esc(s.spec):''}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td style="text-align:right">${a?a.toLocaleString('ko-KR'):''}</td>
-   <td style="white-space:nowrap" onclick="event.stopPropagation()"><button onclick="dupStmt('${s.id}')">복제</button> <button class="d" onclick="delStmt('${s.id}')">삭제</button></td></tr>`}).join(''):'<tr><td colspan="9">거래명세서가 없습니다. [+ 새 명세서]로 작성하세요.</td></tr>'}
+  const sv=$('ssu').value,sn=[...new Set(stmts.map(x=>supOf(x).name).filter(Boolean))];$('ssu').innerHTML='<option value="">전체 공급자</option>'+sn.map(c=>`<option>${esc(c)}</option>`).join('');$('ssu').value=sn.includes(sv)?sv:'';$('ssu').style.display=sn.length>1?'':'none';
+  const l=stmts.filter(s=>(!$('ssu').value||supOf(s).name===$('ssu').value)&&(!$('scu').value||s.cust.name===$('scu').value)&&(!k||[s.no,s.orderNo,s.item,s.spec,s.cust.name,s.dest,s.note,...s.lots.map(x=>x.lotNo)].join(' ').toLowerCase().includes(k))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.no-a.no);
+  $('stb').innerHTML=l.length?l.map(s=>{const t=stTot(s),a=stAmt(s);return `<tr class="r" onclick="editStmt('${s.id}')"><td><b>${s.no}</b></td><td>${esc(s.date)}</td><td>${esc(supOf(s).name)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td>${esc(s.orderNo)}</td><td>${esc(s.item)}${s.spec?' '+esc(s.spec):''}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td style="text-align:right">${a?a.toLocaleString('ko-KR'):''}</td>
+   <td style="white-space:nowrap" onclick="event.stopPropagation()"><button onclick="dupStmt('${s.id}')">복제</button> <button class="d" onclick="delStmt('${s.id}')">삭제</button></td></tr>`}).join(''):'<tr><td colspan="10">거래명세서가 없습니다. [+ 새 명세서]로 작성하세요.</td></tr>'}
  if(stTab==='cust'){const k=$('ck').value.trim().toLowerCase(),l=custs.filter(c=>!k||[c.name,c.reg,c.ceo,c.addr,c.dest,c.contact,c.memo].join(' ').toLowerCase().includes(k)).sort((a,b)=>a.name.localeCompare(b.name));
   const miss=[...new Set(orders.map(o=>o.client).filter(n=>n&&!custs.some(c=>c.name===n)))];
   $('cmiss').innerHTML=miss.length?`생산 관리에 있지만 거래처로 등록되지 않은 이름: ${miss.map(n=>`<button onclick="openCust('',${esc(JSON.stringify(n))})">+ ${esc(n)}</button>`).join(' ')}`:'';
@@ -60,7 +70,7 @@ function saveCust(id){const o={};[...P_FIELDS.map(x=>x[0]),'dest','contact','mem
 function delCust(id){if(confirm('이 거래처를 삭제할까요? (이미 발행한 명세서 내용은 그대로 남습니다)')){custs=custs.filter(x=>x.id!==id);save();dlg.close();render()}}
 // ---- 편집기 ----
 const nextNo=()=>stmts.reduce((a,s)=>Math.max(a,+s.no||0),0)+1;
-function newStmt(orderId){stEd=normStmt({no:nextNo(),date:ymd(new Date()),lots:[emptyLot()]});stEd._new=true;stEd.id=sid();if(page!=='stmt'){page='';go('stmt')}if(orderId)stPickOrder(orderId);renderEditor();render()}
+function newStmt(orderId){stEd=normStmt({no:nextNo(),date:ymd(new Date()),lots:[emptyLot()]});stEd._new=true;stEd.id=sid();{const d=defSup();if(d){stEd.supplierId=d.id;stEd.sup=supSnap(d)}}if(page!=='stmt'){page='';go('stmt')}if(orderId)stPickOrder(orderId);renderEditor();render()}
 function editStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor();render();$('content').scrollTop=0}
 function dupStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=normStmt({...JSON.parse(JSON.stringify(s)),id:sid(),no:nextNo(),date:ymd(new Date()),shipId:'',example:false});stEd._new=true;renderEditor();render();toast('복제본을 편집 중입니다 (저장해야 반영돼요)')}
 function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!confirm(`거래명세서 NO.${s.no}을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
@@ -78,6 +88,7 @@ function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderI
   <button onclick="stOut('print')">인쇄</button><button onclick="stOut('pdf')">PDF 저장</button><button onclick="stOut('xlsx')">엑셀로 내보내기</button>${e._new?'':`<button onclick="dupStmt('${e.id}')">복제</button><button class="d" onclick="delStmt('${e.id}')">삭제</button>`}<button class="p" onclick="stSave()">저장</button></div></div>
  <div class="dgrid"><div class="card"><h2>기본 정보</h2><div class="g">
   <label>NO.<input type="number" min="1" value="${e.no}" oninput="stF('no',+this.value||1)"></label><label>날짜<input type="date" value="${esc(e.date)}" oninput="stF('date',this.value)"></label>
+  <label class="w">공급자<span style="display:flex;gap:6px;align-items:center"><select style="flex:1" onchange="stSupPick(this.value)">${sups.length?'':'<option value="">(설정에서 공급자를 먼저 등록하세요)</option>'}${sups.map(x=>`<option value="${x.id}"${x.id===e.supplierId?' selected':''}>${esc(x.name||'(상호 없음)')}${x.id===supDef?' (기본)':''}</option>`).join('')}${e.supplierId&&!sups.some(x=>x.id===e.supplierId)?`<option value="${esc(e.supplierId)}" selected>${esc(e.sup&&e.sup.name||'')} (삭제된 공급자)</option>`:''}</select>${stSupStale(e)?'<button onclick="stSupRefresh()" title="설정의 최신 공급자 정보로 바꿉니다">최신 정보로 갱신</button>':''}</span>${stSupStale(e)?'<span class="muted">이 명세서는 저장 당시의 공급자 정보로 인쇄됩니다.</span>':''}</label>
   <label class="w">생산 오더에서 불러오기<span style="display:flex;gap:6px"><input list="st_orders" style="flex:1" placeholder="오더번호·품목·거래처 검색 후 선택" value="${o?esc(orderLabel(o)):''}" onchange="stOrderInput(this.value)">${e.orderId?'<button onclick="stClearOrder()">연결 해제</button>':''}</span></label>
   ${inp('orderNo','오더번호')}${inp('price','단가 (원, 비워도 됨)','inputmode="decimal"')}
   <label class="w">품명 및 규격<input value="${esc(e.item)}" oninput="stF('item',this.value)" placeholder="품목"></label><label class="w"><input value="${esc(e.spec)}" oninput="stF('spec',this.value)" placeholder="아이템명 / 규격 (둘째 줄)"></label>
@@ -108,11 +119,11 @@ function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!confirm('이 LOT에 입
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
 function stCancel(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
 function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.updated=now();return s}
-function stSave(silent){const s=stClean(stEd);if(stmts.some(x=>x.no===s.no&&x.id!==s.id)&&!confirm(`NO.${s.no} 명세서가 이미 있습니다. 그래도 저장할까요?`))return false;
+function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);if(stmts.some(x=>x.no===s.no&&x.id!==s.id)&&!confirm(`NO.${s.no} 명세서가 이미 있습니다. 그래도 저장할까요?`))return false;
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
  const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 출고에 반영됨':''))}return true}
 // ---- 출력 ----
-function stmtHTML(s){const S=sup,c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(window.MINLOTS_TEST||MIN_LOTS,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
+function stmtHTML(s){const S=supOf(s),c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(window.MINLOTS_TEST||MIN_LOTS,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
  const pty=(lab,p)=>`<td rowspan="5" class="hd vt">${lab}</td><td class="hd">등록<br>번호</td><td colspan="5" class="b big">${E(p.reg)}</td>`;
  let lots='';for(let k=0;k<n;k++){const l=s.lots[k]||{lotNo:'',color:'',rolls:Array(20).fill('')};
   lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
@@ -143,11 +154,30 @@ ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">$
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table></body></html>`}
 async function stOut(mode){if(!stEd)return;const s=stClean(stEd),nm=`거래명세서_NO${s.no}_${(s.cust.name||'').replace(/[\\/:*?"<>|]/g,'')}_${s.date}`;
- if(!sup.name&&!confirm('설정 > 공급자 정보가 비어 있습니다. 그래도 출력할까요?'))return;
+ if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
  try{if(mode==='pdf'){const p=await A.stmtPDF(stmtHTML(s),nm+'.pdf');if(p)toast('PDF 저장: '+p)}
   else if(mode==='print')await A.stmtPrint(stmtHTML(s));
-  else{const p=await A.stmtXlsx(s,sup,nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}}catch(e){alert('출력 실패: '+(e.message||e))}}
+  else{const p=await A.stmtXlsx(s,supOf(s),nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}}catch(e){alert('출력 실패: '+(e.message||e))}}
 // ---- 설정: 공급자 정보 ----
-function renderSupplier(){const f=$('sup_form');if(!f||f.contains(document.activeElement))return;P_FIELDS.forEach(([k])=>$('sp_'+k).value=sup[k]||'');$('sp_contacts').value=sup.contacts||'';$('sp_notice').value=sup.notice||''}
-function saveSupplier(){P_FIELDS.forEach(([k])=>sup[k]=$('sp_'+k).value.trim());sup.contacts=$('sp_contacts').value.replace(/\s+$/,'');sup.notice=$('sp_notice').value.replace(/\s+$/,'');save();toast('공급자 정보를 저장했습니다')}
+function renderSupplier(){renderSuppliers()}
 async function importSupplier(){try{const r=await A.importSupplierXlsx();if(!r)return;P_FIELDS.forEach(([k])=>{if(r[k])$('sp_'+k).value=r[k]});if(r.contacts)$('sp_contacts').value=r.contacts;if(r.notice)$('sp_notice').value=r.notice;toast('엑셀에서 불러왔어요. 확인 후 [저장]을 누르세요')}catch(e){alert('엑셀을 읽지 못했습니다: '+(e.message||e))}}
+
+function stSupStale(e){const x=sups.find(y=>y.id===e.supplierId);return !!(x&&e.sup&&JSON.stringify(supSnap(x))!==JSON.stringify(normSup(e.sup)))}
+function stSupPick(id){const x=sups.find(y=>y.id===id);stEd.supplierId=id;stEd.sup=supSnap(x);renderEditor()}
+function stSupRefresh(){stSupPick(stEd.supplierId);toast('최신 공급자 정보로 갱신했어요 (저장해야 반영돼요)')}
+// ---- 설정: 공급자 목록 ----
+function renderSuppliers(){const el=$('suplist');if(!el)return;
+ el.innerHTML=sups.length?`<table><thead><tr><th style="width:70px"></th><th>상호</th><th>등록번호</th><th>성명</th><th style="width:250px"></th></tr></thead><tbody>${sups.map(x=>`<tr><td>${x.id===supDef?'<span class="badge" style="background:#2271b1;color:#fff">기본값</span>':''}</td><td><b>${esc(x.name)||'(상호 없음)'}</b></td><td>${esc(x.reg)}</td><td>${esc(x.ceo)}</td>
+ <td style="text-align:right;white-space:nowrap">${x.id===supDef?'':`<button onclick="setSupDef('${x.id}')">기본값으로</button> `}<button onclick="openSup('${x.id}')">수정</button> <button class="d" onclick="delSup('${x.id}')">삭제</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">등록된 공급자가 없습니다. [+ 공급자 추가]로 등록하세요.</p>'}
+function setSupDef(id){supDef=id;save();renderSuppliers();toast('기본 공급자를 바꿨습니다')}
+function openSup(id){const x=id?sups.find(y=>y.id===id):normSupRec({});if(!x)return;$('dt').textContent=id?'공급자 수정':'공급자 추가';
+ $('dbody').innerHTML=`<div class="g">${P_FIELDS.map(([k,l])=>`<label class="${k==='addr'?'w':''}">${l}<input id="sp_${k}" value="${esc(x[k])}"></label>`).join('')}
+ <label class="w">연락처 문구 (한 줄씩, 예: 본사☎ … FAX …)<textarea id="sp_contacts" rows="3">${esc(x.contacts)}</textarea></label><label class="w">주의사항 문구 (한 줄씩)<textarea id="sp_notice" rows="3">${esc(x.notice)}</textarea></label></div>`;
+ $('dfoot').innerHTML=`<button onclick="importSupplier()" style="margin-right:auto">엑셀 양식에서 가져오기</button><button onclick="dlg.close()">취소</button><button class="p" onclick="saveSup('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('sp_reg').focus()}
+function saveSup(id){const o={};P_FIELDS.forEach(([k])=>o[k]=$('sp_'+k).value.trim());o.contacts=$('sp_contacts').value.replace(/\s+$/,'');o.notice=$('sp_notice').value.replace(/\s+$/,'');
+ if(!supHas({...o,notice:null}))return toast('상호나 등록번호 등 한 가지 이상 입력해 주세요.');
+ if(id)Object.assign(sups.find(y=>y.id===id),o);else{const x=normSupRec(o);sups.push(x);if(!supDef||!sups.some(y=>y.id===supDef))supDef=x.id}
+ if(stAssignSup()){}save();dlg.close();renderSuppliers();toast('공급자 정보를 저장했습니다')}
+function delSup(id){const x=sups.find(y=>y.id===id);if(!x)return;const n=stmts.filter(s=>s.supplierId===id).length;
+ if(!confirm(`공급자 '${x.name||'(상호 없음)'}'을(를) 삭제할까요?${n?`\n이 공급자로 작성한 명세서 ${n}건은 저장된 정보로 그대로 인쇄됩니다.`:''}`))return;
+ sups=sups.filter(y=>y.id!==id);if(supDef===id)supDef=sups[0]?sups[0].id:'';save();renderSuppliers();toast('삭제했습니다')}

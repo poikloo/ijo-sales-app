@@ -54,7 +54,7 @@ function calHTML(y,m,mini,mode){let h='일월화수목금토'.split('').map(d=>`
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
 function render(){
- const ex=data.filter(x=>x.example).length+cl.filter(x=>x.example).length+orders.filter(x=>x.example).length+stExCount()+ctExCount();$('exbtn').style.display=ex?'':'none';$('excnt').textContent=`현재 예시 ${ex}건`;
+ const ex=data.filter(x=>x.example).length+cl.filter(x=>x.example).length+orders.filter(x=>x.example).length+stExCount()+ctExCount();$('exbtn').style.display=ex?'':'none';
  if(page==='dash'){const td=ymd(new Date()),wk=ymd(new Date(Date.now()+7*864e5)),open=cl.filter(c=>!c.done);
   const od=open.filter(c=>c.due&&c.due<td),tdy=open.filter(c=>c.due===td),up=open.filter(c=>c.due>td&&c.due<=wk).sort((a,b)=>a.due.localeCompare(b.due)),nd=open.filter(c=>!c.due);
   const sec=(t,l)=>l.length?`<li class="sec">${t} (${l.length})</li>`+l.map(clItem).join(''):'';
