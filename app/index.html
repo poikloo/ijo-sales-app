@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>이조 영업관리</title><style>
+*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;background:#f0f2f5;color:#222;font-size:14px;display:flex;height:100vh;overflow:hidden}
+#side{width:220px;background:#1d2327;color:#c3c4c7;display:flex;flex-direction:column;flex-shrink:0}
+#side .logo{display:flex;align-items:center;gap:10px;padding:16px 14px;color:#fff;font-weight:bold;font-size:16px;border-bottom:1px solid #2c3338}
+#side .logo img{width:34px;height:34px}#side .logo small{display:block;font-size:11px;color:#8c8f94;font-weight:normal}
+#side nav{flex:1;padding:8px 0}#side a{display:flex;align-items:center;gap:10px;padding:11px 16px;color:#c3c4c7;text-decoration:none;cursor:pointer;border-left:4px solid transparent}
+#side a:hover{background:#2c3338;color:#72aee6}#side a.on{background:#2271b1;color:#fff;border-left-color:#72aee6}
+#side a .soon{margin-left:auto;font-size:10px;background:#3c434a;color:#aaa;border-radius:8px;padding:1px 6px}
+#side .sep{height:1px;background:#2c3338;margin:6px 0}#side .foot{padding:10px 14px;font-size:11px;color:#8c8f94}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{background:#fff;border-bottom:1px solid #dcdcde;padding:12px 22px;display:flex;align-items:center;gap:10px}#top h1{font-size:20px;margin:0 auto 0 0}
+#content{flex:1;overflow:auto;padding:20px 22px}
+button{cursor:pointer;border:1px solid #c3c4c7;background:#fff;border-radius:6px;padding:7px 12px;font:inherit}button:hover{border-color:#2271b1}
+button.p{background:#2271b1;color:#fff;border-color:#2271b1}button.d{background:#c53030;color:#fff;border-color:#c53030}
+.page{display:none}.page.on{display:block}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.sc{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px #0001;border-left:5px solid #2271b1;cursor:pointer}.sc .n{font-size:30px;font-weight:bold;margin-top:4px}.sc .l{color:#666}
+.sc.c2{border-color:#e53e3e}.sc.c3{border-color:#718096}.sc.c4{border-color:#2f855a}
+.grid2{display:grid;grid-template-columns:3fr 2fr;gap:14px}.grid2b{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px #0001;margin-bottom:14px}.card h2{font-size:15px;margin:0 0 10px}
+.calhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}.calhead b{flex:1;text-align:center;font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}.cal .dn{text-align:center;font-weight:bold;padding:4px;font-size:12px}.cal .dn:first-child{color:#c53030}.cal .dn:last-child{color:#2b6cb0}
+.cal .c{min-height:86px;background:#fafbfd;border:1px solid #e3e6ee;padding:2px;font-size:11px;overflow:hidden}.cal .c.o{opacity:.4}.cal .c.t{border:2px solid #2271b1}
+.mini .c{min-height:34px;text-align:center;font-size:12px;cursor:pointer}.mini .c.has{background:#ebf4ff;font-weight:bold}.mini .dot{display:block;width:6px;height:6px;border-radius:3px;background:#e53e3e;margin:2px auto 0}
+.chip{display:block;border-radius:4px;padding:1px 4px;margin:1px 0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.s0{background:#2b6cb0}.s1{background:#718096}.s2{background:#2f855a}.s3{background:#b7791f}.pub{background:#e2e8f0;color:#333}
+.up{list-style:none;padding:0;margin:0}.up li{padding:9px;border-bottom:1px solid #eee;cursor:pointer}.up li:hover{background:#f0f4fa}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;font-weight:bold;background:#e2e8f0;margin-right:6px}.badge.hot{background:#e53e3e;color:#fff}.badge.warm{background:#ed8936;color:#fff}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}input,select,textarea{font:inherit;padding:6px;border:1px solid #c3c4c7;border-radius:6px}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:760px}th,td{border-bottom:1px solid #eee;padding:7px;text-align:left}th{background:#f6f7f7}tr.r:hover{background:#f0f4fa;cursor:pointer}
+.ex{background:#fefcbf;color:#744210;border-radius:4px;padding:0 4px;font-size:11px;margin-right:4px}
+dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::backdrop{background:#0006}
+.dh{background:#1d2327;color:#fff;padding:11px 14px;font-weight:bold}.db{padding:14px;max-height:72vh;overflow:auto}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.g label{display:flex;flex-direction:column;font-size:12px;color:#555;gap:3px}.g .w{grid-column:1/-1}
+.cr{display:flex;gap:6px;margin:4px 0}.cr input:first-child{flex:1}.cr input.sh{width:100px}.warn{color:#c53030;font-size:12px}.ok{color:#2f855a;font-size:12px}
+.df{display:flex;gap:6px;justify-content:flex-end;padding:10px 14px;border-top:1px solid #eee}
+.dv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;margin:0}.dv dt{font-weight:bold;color:#555}.dv dd{margin:0;white-space:pre-wrap}
+.soonbox{background:#fff;border-radius:10px;padding:60px 20px;text-align:center;color:#666;box-shadow:0 1px 3px #0001}.soonbox .big{font-size:44px}
+.set button{margin:4px 6px 4px 0}.muted{color:#777;font-size:12px}code{background:#f0f0f1;padding:1px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+#toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
+</style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
+<aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
+<nav>
+<a data-p="dash">🏠 대시보드</a><a data-p="bids">📋 공고 일정</a><a data-p="results">🏆 개찰 결과</a><div class="sep"></div>
+<a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서<span class="soon">준비중</span></a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
+<div class="sep"></div><a data-p="settings">⚙️ 설정</a></nav><div class="foot" id="ver">v1.0.0</div></aside>
+<div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" onclick="openForm()">+ 새 공고</button></div>
+<div id="content">
+<section class="page" id="p_dash">
+ <div class="cards"><div class="sc" onclick="go('bids')"><div class="l">이번 주 개찰</div><div class="n" id="k1">0</div></div><div class="sc c2" onclick="go('bids')"><div class="l">D-3 이내 개찰</div><div class="n" id="k2">0</div></div><div class="sc c3" onclick="go('bids')"><div class="l">진행중 공고</div><div class="n" id="k3">0</div></div><div class="sc c4" onclick="go('results')"><div class="l">이번 달 낙찰</div><div class="n" id="k4">0</div></div></div>
+ <div class="grid2"><div class="card"><h2>⏰ 다가오는 개찰</h2><ul class="up" id="dup"></ul></div>
+ <div class="card"><div class="calhead"><button onclick="mvm(-1)">◀</button><b id="mym"></b><button onclick="mvm(1)">▶</button></div><div class="cal mini" id="mcal"></div></div></div>
+ <div class="card"><h2>🕘 최근 등록·수정 공고</h2><ul class="up" id="drecent"></ul></div>
+</section>
+<section class="page" id="p_bids">
+ <div class="grid2b"><div class="card"><div class="calhead"><button onclick="mv(-1)">◀</button><b id="ym"></b><button onclick="mv(1)">▶</button><button onclick="cur=new Date();render()">오늘</button><label style="font-size:12px"><input type="checkbox" id="spub" onchange="render()"> 게시일 표시</label></div><div class="cal" id="cal"></div></div>
+ <div class="card"><h2>⏰ D-day 목록</h2><ul class="up" id="up"></ul></div></div>
+ <div class="card"><h2>전체 공고</h2><div class="filters"><input id="fk" placeholder="검색(공고명·번호·업체)" oninput="render()" style="min-width:240px"><select id="fo" onchange="render()"></select><select id="fs" onchange="render()"><option value="">전체 상태</option><option>진행중</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select></div>
+ <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>공고번호</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>상태</th></tr></thead><tbody id="tb"></tbody></table></div></div>
+</section>
+<section class="page" id="p_results"><div class="card"><h2>개찰 결과 (개찰완료 · 낙찰 · 유찰)</h2><div class="filters"><select id="rs" onchange="render()"><option value="">전체</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select><span class="muted" id="rsum"></span></div>
+ <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>결과</th><th>개찰결과 메모</th></tr></thead><tbody id="rtb"></tbody></table></div><p class="muted">공고의 상태를 '개찰완료/낙찰/유찰'로 바꾸면 이곳에 표시됩니다.</p></div></section>
+<section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
+<section class="page" id="p_outwork"><div class="soonbox"><div class="big">🏭</div><h2>외주작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
+<section class="page" id="p_stmt"><div class="soonbox"><div class="big">🧾</div><h2>거래명세서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
+<section class="page" id="p_docs"><div class="soonbox"><div class="big">🗂️</div><h2>서류 보관함 — 준비중</h2><p>거래명세서·청구서·계산서·사업자등록증 PDF/이미지를 거래처·공고별로 정리하는 기능이 추가될 예정입니다.</p></div></section>
+<section class="page set" id="p_settings">
+ <div class="card"><h2>💾 백업 / 복원</h2><button class="p" onclick="exportJSON()">백업 파일 저장 (JSON)</button><button onclick="importJSON()">백업에서 복원 (JSON)</button>
+ <p class="muted">예전 HTML 버전(공고일정관리.html)에서 받은 JSON 백업 파일도 그대로 복원할 수 있습니다.</p></div>
+ <div class="card"><h2>📊 엑셀 내보내기</h2><button onclick="exportCSV(true)">전체 공고 내보내기 (CSV)</button><p class="muted">엑셀에서 바로 열 수 있습니다 (한글 깨짐 없음, UTF-8 BOM).</p></div>
+ <div class="card"><h2>🧹 예시 데이터</h2><button class="d" onclick="delExamples()">예시 데이터 모두 삭제</button> <span class="muted" id="excnt"></span></div>
+ <div class="card"><h2>🔄 프로그램 정보 / 업데이트</h2><p>현재 버전: <b id="curver">-</b> <span class="muted" id="updst"></span></p><button class="p" onclick="checkUpd()">업데이트 확인</button><p class="muted">인터넷에 연결되어 있으면 프로그램을 열 때 자동으로 새 버전을 확인하고 내려받아요.</p></div>
+ <div class="card"><h2>📁 저장 위치</h2><p>데이터 파일: <code id="dfile"></code></p><p>자동 백업 폴더 (저장할 때마다 사본 생성, 최근 50개 보관): <code id="dbk"></code></p><button onclick="api.openFolder()">폴더 열기</button></div>
+</section>
+</div></div>
+<dialog id="dlg"><div class="dh" id="dt">공고</div><div class="db" id="dbody"></div><div class="df" id="dfoot"></div></dialog>
+<datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
+<div id="toast"></div>
+<script src="app.js"></script></body></html>
