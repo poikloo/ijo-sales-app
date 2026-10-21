@@ -121,7 +121,7 @@ function stmtHTML(s){const S=sup,c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(windo
 @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000}
 table{border-collapse:collapse;width:99.5%;table-layout:fixed}td{border:1px solid #000;padding:1px 3px;height:18px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}.wr{white-space:normal;word-break:keep-all}
 .nb td{border:none}.hd{background:#f2f2f2;font-weight:bold}.vt{writing-mode:vertical-rl;letter-spacing:6px}.b{font-weight:bold}.big{font-size:11pt}.r{text-align:right}.l{text-align:left}
-h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:14pt;font-weight:bold;height:28px}
+h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:13pt;font-weight:normal;height:26px}
 </style></head><body><table>
 <colgroup>${[8,8,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6,9].map(w=>`<col style="width:${(w/97*100).toFixed(2)}%">`).join('')}</colgroup>
 <tr class="nb"><td class="b">NO.</td><td class="l">${s.no}</td><td colspan="12"></td></tr>
