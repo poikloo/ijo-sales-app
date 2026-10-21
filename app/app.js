@@ -34,7 +34,7 @@ function load(){const r=A.load();stLoad(r);ctLoad(r);data=r?normalize(r):null;
 function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload()}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
-function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';$('ctadd').style.display=p==='contacts'?'':'none';render()}
+function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
 document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>go(a.dataset.p));
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
@@ -130,6 +130,7 @@ function saveCl(id){const o={title:$('c_title').value.trim(),due:$('c_due').valu
 function delCl(id){if(confirm('이 할 일을 삭제할까요?')){cl=cl.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
 
 // ===== 생산 관리 =====
+const PCOL=['#1f6feb','#1a7f37','#d4620a','#8250df','#0f8a8a','#c2255c'],pcol=i=>PCOL[i%PCOL.length];
 const num=n=>(+n||0).toLocaleString('ko-KR'),sum=p=>p.ships.reduce((a,s)=>a+(+s.qty||0),0);
 const pct=v=>(v>0?'+':'')+v.toFixed(1)+'%';
 function progress(o){const last=o.procs[o.procs.length-1],cur=[...o.procs].reverse().find(p=>p.ships.length);
@@ -140,7 +141,7 @@ function renderProd(){const v=pv&&orders.find(o=>o.id===pv);$('pl_wrap').style.d
  const k=$('pk').value.trim().toLowerCase(),st=$('pst').value;
  const l=orders.filter(o=>{const g=progress(o);return (!cv||o.client===cv)&&(!st||(st==='done')===(g.rate>=100))&&(!k||[o.no,o.item,o.fabric,o.color,o.client,...o.procs.flatMap(p=>[p.name,p.vendor])].join(' ').toLowerCase().includes(k))}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
  $('ptb').innerHTML=l.length?l.map(o=>{const g=progress(o);return `<tr class="r" onclick="openDetail('${o.id}')"><td><b>${esc(o.no)}</b></td><td>${tag(o)}${esc(o.item)}${o.fabric?`<br><small class="muted">${esc(o.fabric)}</small>`:''}</td><td>${esc(o.color)}</td><td style="text-align:right">${num(o.qty)} ${esc(o.unit)}</td><td>${esc(o.client)}</td><td>${esc(o.date)}</td><td class="${o.due&&o.due<ymd(new Date())&&g.rate<100?'neg':''}" style="${o.due&&o.due<ymd(new Date())&&g.rate<100?'font-weight:bold':''}">${esc(o.due)}${o.due&&o.due<ymd(new Date())&&g.rate<100?' (지연)':''}</td>
-  <td>${g.cur?`<span class="badge">${esc(g.cur.name)}</span><small>${num(sum(g.cur))} ${esc(o.unit)}</small>`:'<small class="muted">출고 없음</small>'}</td>
+  <td>${g.cur?`<span class="badge" style="background:${pcol(o.procs.indexOf(g.cur))};color:#fff">${esc(g.cur.name)}</span><small>${num(sum(g.cur))} ${esc(o.unit)}</small>`:'<small class="muted">출고 없음</small>'}</td>
   <td><div class="bar"><i class="${g.rate>=100?'full':''}" style="width:${Math.min(100,g.rate)}%"></i></div><small>${g.last?esc(g.last.name)+' ':''}${num(g.fin)} / ${num(o.qty)} (${g.rate.toFixed(1)}%)</small></td></tr>`}).join(''):'<tr><td colspan="9">생산 오더가 없습니다. [+ 추가]로 등록하세요.</td></tr>'}
 function openDetail(id){pv=id;render();$('content').scrollTop=0}
 function renderOrder(o){const g=progress(o);let prev=null;
@@ -148,7 +149,7 @@ function renderOrder(o){const g=progress(o);let prev=null;
  <div class="oh">${[['오더번호',esc(o.no)],['품목',tag(o)+esc(o.item)],['아이템명',esc(o.fabric)],['색상',esc(o.color)],['발주량',num(o.qty)+' '+esc(o.unit)],['거래처',esc(o.client)],['발주일',esc(o.date)],['납기일',o.due?`<span class="${o.due<ymd(new Date())&&g.rate<100?'neg':''}">${esc(o.due)}</span>`:'']].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${v||'-'}</div></div>`).join('')}
  <div style="flex:1;min-width:220px"><div class="k">최종 공정 출고 (${g.last?esc(g.last.name):'-'})</div><div class="bar"><i class="${g.rate>=100?'full':''}" style="width:${Math.min(100,g.rate)}%"></i></div><small>${num(g.fin)} / ${num(o.qty)} ${esc(o.unit)} (${g.rate.toFixed(1)}%)</small></div></div></div>`;
  const body=o.procs.map((p,i)=>{const s=sum(p),base=prev==null?o.qty:prev,chg=prev?((s-prev)/prev*100):null,exp=p.shrink!=null&&!isRaw(p)&&base?base*(1-p.shrink/100):null;prev=s;
-  return `<div class="pc"><div class="pch"><span class="no">${i+1}</span><b>${esc(p.name)||'(공정명 없음)'}</b><span class="stat">가공 업체 <b>${esc(p.vendor)||'-'}</b></span><span class="stat">가공 축 <b>${p.shrink!=null&&!isRaw(p)?p.shrink+'%':'-'}</b></span><span class="sp"></span>
+  const pc=pcol(i);return `<div class="pc" style="border-left:4px solid ${pc}"><div class="pch"><span class="no" style="background:${pc}">${i+1}</span><b style="color:${pc}">${esc(p.name)||'(공정명 없음)'}</b><span class="stat">가공 업체 <b style="color:${pc}">${esc(p.vendor)||'-'}</b></span><span class="stat">가공 축 <b style="color:${pc}">${p.shrink!=null&&!isRaw(p)?p.shrink+'%':'-'}</b></span><span class="sp"></span>
   <span class="stat">소계 <b>${num(s)} ${esc(o.unit)}</b></span><span class="stat">변화율 <b class="${chg==null?'':chg<0?'neg':'pos'}">${chg==null?'-':pct(chg)}</b></span>
   <span class="stat">예상 수율 <b>${exp!=null?num(Math.round(exp))+' '+esc(o.unit):'-'}</b>${exp!=null&&s?` <small>(실제 ${pct((s-exp)/exp*100)})</small>`:''}</span><button class="p" onclick="addShip('${o.id}','${p.id}')" title="출고 추가">+ 출고</button></div>
   <table class="st" style="min-width:0"><thead><tr><th style="width:170px">출고일</th><th style="width:160px" class="num">출고량 (${esc(o.unit)})</th><th>메모</th><th style="width:44px"></th></tr></thead><tbody>
