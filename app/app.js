@@ -30,13 +30,13 @@ function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
 function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}))}
-function load(){const r=A.load();stLoad(r);ctLoad(r);data=r?normalize(r):null;
+function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload()}).catch(e=>alert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload()}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
@@ -48,12 +48,12 @@ function filtered(){const k=$('fk').value.trim().toLowerCase(),o=$('fo').value,s
 function upList(){return data.filter(x=>x.open&&dday(x.open)>=0&&x.status==='진행중').sort((a,b)=>a.open.localeCompare(b.open))}
 function upHTML(list){return list.length?list.map(x=>{const n=dday(x.open);return `<li onclick="view('${x.id}')"><span class="badge ${n===0?'hot':n<=3?'warm':''}">${ddLabel(n)}</span>${tag(x)}<b>${esc(x.name)}</b><br><small>${fdt(x.open)} · ${esc(x.org)}${x.price?' · '+won(x.price):''}</small></li>`}).join(''):'<li>예정된 개찰이 없습니다.</li>'}
 function clChip(c){const od=!c.done&&c.due<ymd(new Date());return `<span class="chip clc${od?' od':''}${c.done?' dn':''}" title="${esc(c.title)}" onclick="event.stopPropagation();openCl('${c.id}')">☐ ${esc(c.title)}</span>`}
-function calHTML(y,m,mini,mode){let h='일월화수목금토'.split('').map(d=>`<div class="dn">${d}</div>`).join('');
+function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일월화수목금토'.split('').map(d=>`<div class="dn">${d}</div>`).join('');
  const st=new Date(y,m,1-new Date(y,m,1).getDay()),today=new Date().toDateString(),sp=!mini&&$('spub').checked;
  for(let i=0;i<42;i++){const d=new Date(st.getFullYear(),st.getMonth(),st.getDate()+i),ds=ymd(d),cls=`c${d.getMonth()!==m?' o':''}${d.toDateString()===today?' t':''}`;
   const hits=data.filter(x=>x.open&&x.open.startsWith(ds));
   if(mini){h+=`<div class="${cls}${hits.length?' has':''}" ${hits.length?`onclick="view('${hits[0].id}')" title="${esc(hits.map(x=>x.name).join('\n'))}"`:''}>${d.getDate()}${hits.length?'<span class="dot"></span>':''}</div>`;continue}
-  if(mode==='cl'){const its=cl.filter(c=>c.due===ds);h+=`<div class="${cls}${csel===ds?' sel':''}" onclick="pickDay('${ds}')"><div>${d.getDate()}</div>${its.map(clChip).join('')}</div>`;continue}
+  if(mode==='cl'){const its=calTg.cl?cl.filter(c=>c.due===ds):[];h+=`<div class="${cls}${csel===ds?' sel':''}" onclick="pickDay('${ds}')"><div>${d.getDate()}</div>${its.map(clChip).join('')}${prodChipsFor(ds,pev)}</div>`;continue}
   let c=hits.map(x=>`<span class="chip s${ST.indexOf(x.status)}" title="${esc(x.name)}" onclick="view('${x.id}')">${x.open.slice(11,16)} ${esc(x.name)}</span>`).join('');
   if(sp)data.forEach(x=>{if(x.pub&&x.pub.startsWith(ds))c+=`<span class="chip pub" onclick="view('${x.id}')">게시 ${esc(x.name)}</span>`});
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
@@ -64,7 +64,7 @@ function render(){
   const od=open.filter(c=>c.due&&c.due<td),tdy=open.filter(c=>c.due===td),up=open.filter(c=>c.due>td&&c.due<=wk).sort((a,b)=>a.due.localeCompare(b.due)),nd=open.filter(c=>!c.due);
   const sec=(t,l)=>l.length?`<li class="sec">${t} (${l.length})</li>`+l.map(clItem).join(''):'';
   $('dcl').innerHTML=(sec('지난 할 일',od)+sec('오늘',tdy)+sec('7일 이내',up)+sec('마감일 없음',nd))||'<li>남은 할 일이 없습니다. </li>';
-  $('dup').innerHTML=upHTML(upList().slice(0,10));$('dym').textContent=`${dcur.getFullYear()}년 ${dcur.getMonth()+1}월`;$('dcal').innerHTML=calHTML(dcur.getFullYear(),dcur.getMonth(),false,'dash')}
+  $('dup').innerHTML=upHTML(upList().slice(0,10));$('ddue').innerHTML=dueHTML();$('dym').textContent=`${dcur.getFullYear()}년 ${dcur.getMonth()+1}월`;$('dcal').innerHTML=calHTML(dcur.getFullYear(),dcur.getMonth(),false,'dash')}
  if(page==='prod')renderProd();
  if(page==='stmt')renderStmt();
  if(page==='contacts')renderContacts();
@@ -72,8 +72,8 @@ function render(){
  if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
   const cats=[...new Set(['영업','생산','외주','출고','입찰','기타',...cl.map(c=>c.cat).filter(Boolean)])],cc=$('cc'),cv=cc.value;cc.innerHTML='<option value="">전체 분류</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join('');cc.value=cv;
   const f=$('cf').value,l=cl.filter(c=>(!f||(f==='done')===c.done)&&(!cv||c.cat===cv)&&(!csel||c.due===csel)).sort((a,b)=>a.done-b.done||(a.due||'9').localeCompare(b.due||'9')||PR.indexOf(a.pri)-PR.indexOf(b.pri));
-  $('cday').innerHTML=csel?`<span class="badge">${csel}</span><button onclick="pickDay('${csel}')">날짜 선택 해제</button>`:'';
-  $('clist').innerHTML=l.length?l.map(clItem).join(''):'<li>항목이 없습니다.</li>'}
+  $('ctgl').innerHTML=calToggleHTML();$('cdue').innerHTML=dueHTML();$('cday').innerHTML=csel?`<span class="badge">${csel}</span><button onclick="pickDay('${csel}')">날짜 선택 해제</button>`:'';
+  {const pd=csel?prodDayHTML(csel):'';$('clist').innerHTML=(l.length?(pd?`<li class="sec">체크리스트 (${l.length})</li>`:'')+l.map(clItem).join(''):(pd?'':'<li>항목이 없습니다.</li>'))+pd}}
  if(page==='bids'){$('ym').textContent=`${cur.getFullYear()}년 ${cur.getMonth()+1}월`;$('cal').innerHTML=calHTML(cur.getFullYear(),cur.getMonth(),false);$('up').innerHTML=upHTML(upList());
   const orgs=[...new Set(data.map(x=>x.org).filter(Boolean))],fo=$('fo'),ov=fo.value;fo.innerHTML='<option value="">전체 수요기관</option>'+orgs.map(o=>`<option>${esc(o)}</option>`).join('');fo.value=ov;
   const f=filtered();$('tb').innerHTML=f.length?f.map(x=>`<tr class="r" onclick="view('${x.id}')"><td>${fdt(x.open)}</td><td>${tag(x)}${esc(x.name)}</td><td>${esc(x.no)}</td><td>${esc(x.org)}</td><td>${won(x.price)}</td><td>${esc(x.rep)}</td><td><span class="chip s${ST.indexOf(x.status)}" style="display:inline-block">${esc(x.status)}</span></td></tr>`).join(''):'<tr><td colspan="7">데이터가 없습니다.</td></tr>'}
@@ -104,10 +104,10 @@ function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
-async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload()},null,2));if(p)toast('백업 저장: '+p)}
+async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload()},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
  if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
- if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);save();render();toast('복원 완료')}}
+ if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);pcImport(raw);save();render();toast('복원 완료')}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}

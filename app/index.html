@@ -56,6 +56,8 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 table.lot td{padding:2px}table.lot input{width:100%;padding:4px 3px;min-width:0}table.lot .rcw{min-width:46px}table.lot input.rc{text-align:right}table.lot input.bad{border-color:#c53030;background:#fff5f5}table.lot tbody tr:nth-child(4n+1) td,table.lot tbody tr:nth-child(4n+2) td{background:#fafbfd}table.lot .num{text-align:right;font-weight:bold}table.lot tfoot td{font-weight:bold;background:#f6f7f7}
 button.mini{padding:1px 7px;font-size:12px;margin-left:4px}
 .lrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) 90px 36px;gap:6px;align-items:center;margin:5px 0}.lrow>*{min-width:0;width:100%}.lhead{margin-bottom:0}.lhead span{font-size:12px;color:#555}.ln{line-height:1.5}.ln.tot{font-size:12px;color:#666;border-top:1px dashed #ccc}
+.tgls{display:flex;gap:6px;margin:-2px 0 8px}.tgl{font-size:12px;padding:3px 12px;border-radius:14px;background:#fff;color:#777}.tgl.on{background:#1d2327;color:#fff;border-color:#1d2327}
+.chip.pchip{background:#fff;border:1px solid #c3c4c7;color:#333;display:flex;align-items:center;gap:4px}.chip.pchip.dn{opacity:.5;text-decoration:line-through}.rdot{display:inline-block;flex:none;width:7px;height:7px;border-radius:4px;background:#e53e3e}
 #toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
 </style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
 <aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
@@ -66,15 +68,16 @@ button.mini{padding:1px 7px;font-size:12px;margin-left:4px}
  <div class="dgrid"><div class="card"><h2>체크리스트 <span class="muted" style="font-weight:normal">(오늘·예정·지난 미완료)</span></h2>
   <div class="qa"><input id="dq" placeholder="할 일을 입력하고 Enter (예: 견적서 발송)" onkeydown="if(event.key==='Enter')quickAdd('dq','dqd')"><input id="dqd" type="date"><button class="p" onclick="quickAdd('dq','dqd')">추가</button></div>
   <ul class="cl" id="dcl"></ul></div>
- <div class="card"><h2>다가오는 개찰</h2><ul class="up" id="dup"></ul></div></div>
+ <div><div class="card"><h2>다가오는 개찰</h2><ul class="up" id="dup"></ul></div><div class="card"><h2>납기 전 오더</h2><ul class="up" id="ddue"></ul></div></div></div>
  <div class="card"><div class="calhead"><button onclick="mvd(-1)">◀</button><b id="dym"></b><button onclick="mvd(1)">▶</button><button onclick="dcur=new Date();render()">오늘</button><span class="muted"><span class="chip clc" style="display:inline-block">할 일</span> 체크리스트 마감일</span></div><div class="cal" id="dcal"></div></div>
 </section>
 <section class="page" id="p_check"><div class="dgrid" style="grid-template-columns:1.2fr 1fr">
- <div class="card"><div class="calhead"><button onclick="mvc(-1)">◀</button><b id="cym"></b><button onclick="mvc(1)">▶</button><button onclick="ccur=new Date();render()">오늘</button></div><div class="cal" id="ccal"></div><p class="muted">날짜를 누르면 그 날짜의 할 일만 보이고, 새 할 일의 마감일로 지정돼요.</p></div>
+ <div class="card"><div class="calhead"><button onclick="mvc(-1)">◀</button><b id="cym"></b><button onclick="mvc(1)">▶</button><button onclick="ccur=new Date();render()">오늘</button></div><div class="tgls" id="ctgl"></div><div class="cal" id="ccal"></div><p class="muted">날짜를 누르면 그 날짜의 할 일만 보이고, 새 할 일의 마감일로 지정돼요.</p></div>
  <div class="card"><h2>체크리스트 관리</h2>
   <div class="qa"><input id="cq" placeholder="할 일 빠른 추가 (Enter)" onkeydown="if(event.key==='Enter')quickAdd('cq','cqd')"><input id="cqd" type="date"><button class="p" onclick="quickAdd('cq','cqd')">추가</button><button onclick="openCl()">상세 추가</button></div>
   <div class="filters"><select id="cf" onchange="render()"><option value="open">미완료</option><option value="">전체</option><option value="done">완료</option></select><select id="cc" onchange="render()"></select><span id="cday"></span></div>
   <ul class="cl" id="clist"></ul></div></div>
+ <div class="card"><h2>납기 전 오더 <span class="muted" style="font-weight:normal">(납기일이 오늘 이후인 생산 오더)</span></h2><ul class="up" id="cdue"></ul></div>
 </section>
 <section class="page" id="p_bids">
  <div class="tabs"><button class="tab on" data-t="sched" onclick="btab('sched')">일정</button><button class="tab" data-t="results" onclick="btab('results')">개찰 결과</button></div>
@@ -118,4 +121,4 @@ button.mini{padding:1px 7px;font-size:12px;margin-left:4px}
 <datalist id="procs"><option>생지</option><option>염색</option><option>FR PU</option><option>FR LAMI</option><option>코팅</option><option>라미네이팅</option><option>봉제</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
-<script src="stmt.js"></script><script src="contacts.js"></script><script src="app.js"></script></body></html>
+<script src="stmt.js"></script><script src="contacts.js"></script><script src="prodcal.js"></script><script src="app.js"></script></body></html>
