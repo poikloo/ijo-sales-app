@@ -19,9 +19,9 @@ function exCl(){const t=new Date(),d=k=>ymd(new Date(t.getFullYear(),t.getMonth(
 function normalizeCl(arr){return (Array.isArray(arr)?arr:[]).filter(x=>x&&typeof x==='object'&&x.title).map(x=>({id:String(x.id||uid()),example:!!x.example,title:String(x.title),due:/^\d{4}-\d{2}-\d{2}$/.test(x.due||'')?x.due:'',pri:PR.includes(x.pri)?x.pri:'보통',cat:x.cat||'',memo:x.memo||'',done:!!x.done,updated:x.updated||''}))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function exOrders(){let k=0;const P=(name,vendor,shrink,sh)=>({id:'xp'+(++k),name,vendor,shrink,ships:sh.map(([d,q])=>({id:'xs'+(++k),date:d,qty:q,memo:''}))});
- return [{id:'xo1',example:true,no:'2509-0328',item:'지휘소용 다기능천막 외피',color:'진국방',qty:2650,unit:'YD',client:'제이투',date:'2025-09-09',due:'',fabric:'',updated:now(),procs:[
-  P('생지','산찬',null,[['2025-09-29',1200],['2025-10-01',2000],['2025-10-05',1120]]),P('염색','명화',13,[['2025-10-06',883],['2025-10-08',1000],['2025-10-10',1000]]),
-  P('FR PU','완성',3,[['2025-10-20',1889],['2025-10-24',1000]]),P('FR LAMI','목화',3,[['2025-10-31',2862]])]}]}
+ return [{id:'xo1',example:true,no:'2509-0328',item:'지휘소용 다기능천막 외피',color:'진국방',qty:2650,unit:'YD',client:'(예시)가나상사',date:'2025-09-09',due:'',fabric:'',updated:now(),procs:[
+  P('생지','(예시)A직물',null,[['2025-09-29',1200],['2025-10-01',2000],['2025-10-05',1120]]),P('염색','(예시)B염색',13,[['2025-10-06',883],['2025-10-08',1000],['2025-10-10',1000]]),
+  P('FR PU','(예시)C가공',3,[['2025-10-20',1889],['2025-10-24',1000]]),P('FR LAMI','(예시)D라미',3,[['2025-10-31',2862]])]}]}
 const numOrNull=v=>v===''||v==null||isNaN(+v)?null:+v;
 const UNITS=['YD','M','KG','EA'];
 function normLines(o){const L=Array.isArray(o.lines)&&o.lines.length?o.lines:[{color:o.color,qty:o.qty,unit:o.unit}];return L.map(l=>({color:String(l&&l.color||'').trim(),qty:+(l&&l.qty)||0,unit:UNITS.includes(l&&l.unit)?l.unit:'YD'}))}
