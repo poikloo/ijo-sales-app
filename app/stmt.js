@@ -155,7 +155,7 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table></body></html>`}
-async function stOut(mode){if(!stEd)return;const s=stClean(stEd),nm=`거래명세서_NO${s.no}_${(s.cust.name||'').replace(/[\\/:*?"<>|]/g,'')}_${s.date}`;
+async function stOut(mode){if(!stEd)return;const s=stClean(stEd),fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_');
  if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
  try{if(mode==='pdf'){const p=await A.stmtPDF(stmtHTML(s),nm+'.pdf');if(p)toast('PDF 저장: '+p)}
   else if(mode==='print')await A.stmtPrint(stmtHTML(s));
