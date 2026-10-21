@@ -88,8 +88,8 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
  <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>결과</th><th>개찰결과 메모</th></tr></thead><tbody id="rtb"></tbody></table></div><p class="muted">공고의 상태를 '개찰완료/낙찰/유찰'로 바꾸면 이곳에 표시됩니다.</p></div></div>
 </section>
 <section class="page" id="p_prod">
- <div id="pl_wrap"><div class="card"><div class="filters"><input id="pk" placeholder="검색(오더번호·품목·색상·거래처·업체)" oninput="render()" style="min-width:280px"><select id="pc" onchange="render()"></select><select id="pst" onchange="render()"><option value="">전체 진행</option><option value="ing">진행중</option><option value="done">최종 출고 완료(100%↑)</option></select><span style="flex:1"></span><button onclick="exportOrdersCSV()">엑셀(CSV) 내보내기</button><button class="p" onclick="openOrder()">+ 추가</button></div>
- <div class="tw"><table><thead><tr><th>오더번호</th><th>품목</th><th>색상</th><th style="text-align:right">발주량</th><th>거래처</th><th>발주일</th><th>현재 공정</th><th style="width:220px">최종 공정 출고</th></tr></thead><tbody id="ptb"></tbody></table></div></div></div>
+ <div id="pl_wrap"><div class="card"><div class="filters"><input id="pk" placeholder="검색(오더번호·품목·아이템명·색상·거래처·업체)" oninput="render()" style="min-width:280px"><select id="pc" onchange="render()"></select><select id="pst" onchange="render()"><option value="">전체 진행</option><option value="ing">진행중</option><option value="done">최종 출고 완료(100%↑)</option></select><span style="flex:1"></span><button onclick="exportOrdersCSV()">엑셀(CSV) 내보내기</button><button class="p" onclick="openOrder()">+ 추가</button></div>
+ <div class="tw"><table><thead><tr><th>오더번호</th><th>품목</th><th>색상</th><th style="text-align:right">발주량</th><th>거래처</th><th>발주일</th><th>납기일</th><th>현재 공정</th><th style="width:220px">최종 공정 출고</th></tr></thead><tbody id="ptb"></tbody></table></div></div></div>
  <div id="pd_wrap" style="display:none"></div>
 </section>
 <section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
