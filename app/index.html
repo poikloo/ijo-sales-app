@@ -46,12 +46,19 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 .pr{font-size:11px;border-radius:4px;padding:0 5px;margin-right:4px;color:#fff}.pr0{background:#c53030}.pr1{background:#718096}.pr2{background:#a0aec0}.cat{font-size:11px;background:#e6fffa;color:#234e52;border-radius:4px;padding:0 5px;margin-right:4px}
 .chip.clc{background:#fff;color:#6b46c1;border:1px dashed #6b46c1}.chip.clc.od{color:#c53030;border-color:#c53030}.chip.clc.dn{text-decoration:line-through;opacity:.6}
 .cal .c.sel{background:#fffbea;border:2px solid #d69e2e}#ccal .c{cursor:pointer;min-height:70px}.sec{font-size:12px;color:#555;font-weight:bold;padding:6px 8px;background:#f6f7f7}
+.bar{height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:#2271b1}.bar i.full{background:#2f855a}
+.oh{display:flex;flex-wrap:wrap;gap:8px 28px;align-items:flex-end}.oh .k{font-size:12px;color:#777}.oh .v{font-size:16px;font-weight:bold}
+.pc{border:1px solid #e3e6ee;border-radius:10px;margin-bottom:12px;overflow:hidden}.pch{display:flex;align-items:center;gap:10px;background:#f6f7f7;padding:9px 12px;flex-wrap:wrap}.pch .no{background:#1d2327;color:#fff;border-radius:12px;padding:0 8px;font-size:12px}
+.pch b{font-size:15px}.pch .sp{flex:1}.stat{font-size:12px;color:#555}.stat b{font-size:13px;color:#222}.neg{color:#c53030!important}.pos{color:#2f855a!important}
+.st td{padding:4px 8px}.st input{padding:4px;width:100%}.st .num{text-align:right}.st tfoot td{font-weight:bold;background:#fafafa}
+.prow{display:grid;grid-template-columns:28px 1.2fr 1.2fr 90px auto;gap:6px;align-items:center;margin:5px 0}.prow .n{text-align:center;font-weight:bold;color:#555}
+.fsec{font-weight:bold;margin:4px 0 8px;padding-bottom:4px;border-bottom:2px solid #2271b1;color:#1d2327}
 #toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
 </style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
 <aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
 <nav>
 <a data-p="dash">🏠 대시보드</a><a data-p="check">✅ 체크리스트</a><a data-p="bids">📋 공고 일정</a><div class="sep"></div>
-<a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서<span class="soon">준비중</span></a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
+<a data-p="prod">🏗️ 생산 관리</a><a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서<span class="soon">준비중</span></a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
 <div class="sep"></div><a data-p="settings">⚙️ 설정</a></nav><div class="foot" id="ver">v1.0.0</div></aside>
 <div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" onclick="openForm()">+ 새 공고</button></div>
 <div id="content">
@@ -80,6 +87,11 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
  <div id="bt_results" class="btab"><div class="card"><h2>개찰 결과 (개찰완료 · 낙찰 · 유찰)</h2><div class="filters"><select id="rs" onchange="render()"><option value="">전체</option><option>개찰완료</option><option>낙찰</option><option>유찰</option></select><span class="muted" id="rsum"></span></div>
  <div class="tw"><table><thead><tr><th>개찰일시</th><th>공고명</th><th>수요기관</th><th>가격</th><th>대표업체</th><th>결과</th><th>개찰결과 메모</th></tr></thead><tbody id="rtb"></tbody></table></div><p class="muted">공고의 상태를 '개찰완료/낙찰/유찰'로 바꾸면 이곳에 표시됩니다.</p></div></div>
 </section>
+<section class="page" id="p_prod">
+ <div id="pl_wrap"><div class="card"><div class="filters"><input id="pk" placeholder="검색(오더번호·품목·색상·거래처·업체)" oninput="render()" style="min-width:280px"><select id="pc" onchange="render()"></select><select id="pst" onchange="render()"><option value="">전체 진행</option><option value="ing">진행중</option><option value="done">최종 출고 완료(100%↑)</option></select><span style="flex:1"></span><button onclick="exportOrdersCSV()">엑셀(CSV) 내보내기</button><button class="p" onclick="openOrder()">+ 추가</button></div>
+ <div class="tw"><table><thead><tr><th>오더번호</th><th>품목</th><th>색상</th><th style="text-align:right">발주량</th><th>거래처</th><th>발주일</th><th>현재 공정</th><th style="width:220px">최종 공정 출고</th></tr></thead><tbody id="ptb"></tbody></table></div></div></div>
+ <div id="pd_wrap" style="display:none"></div>
+</section>
 <section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_outwork"><div class="soonbox"><div class="big">🏭</div><h2>외주작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_stmt"><div class="soonbox"><div class="big">🧾</div><h2>거래명세서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
@@ -95,6 +107,7 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 </div></div>
 <dialog id="dlg"><div class="dh" id="dt">공고</div><div class="db" id="dbody"></div><div class="df" id="dfoot"></div></dialog>
 <datalist id="cats"><option>영업</option><option>생산</option><option>외주</option><option>출고</option><option>입찰</option><option>기타</option></datalist>
+<datalist id="procs"><option>생지</option><option>염색</option><option>FR PU</option><option>FR LAMI</option><option>코팅</option><option>라미네이팅</option><option>봉제</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
 <script src="app.js"></script></body></html>
