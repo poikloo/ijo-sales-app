@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('api',{
   stmtPrint:h=>ipcRenderer.invoke('stmtPrint',h),
   stmtXlsx:(s,sup,n)=>ipcRenderer.invoke('stmtXlsx',s,sup,n),
   importSupplierXlsx:()=>ipcRenderer.invoke('importSupplierXlsx'),
+  openExternal:u=>ipcRenderer.invoke('openExternal',u),
+  copyText:t=>ipcRenderer.invoke('copyText',t),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });

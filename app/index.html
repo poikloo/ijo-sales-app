@@ -54,14 +54,15 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 .prow{display:grid;grid-template-columns:24px minmax(0,1.2fr) minmax(0,1.2fr) 100px 104px;gap:6px;align-items:center;margin:5px 0}.prow>input{width:100%;min-width:0}.prow .pbtn{display:flex;gap:3px;white-space:nowrap}.prow .pbtn button{padding:5px 9px}.prow input.shk:disabled{background:#e9ecef;color:#999;cursor:not-allowed}.phead{margin-bottom:0}.phead span{font-size:12px;color:#555;text-align:left;padding-left:2px}.prow .n{text-align:center;font-weight:bold;color:#555}
 .fsec{font-weight:bold;margin:4px 0 8px;padding-bottom:4px;border-bottom:2px solid #2271b1;color:#1d2327}
 table.lot td{padding:2px}table.lot input{width:100%;padding:4px 3px;min-width:0}table.lot .rcw{min-width:46px}table.lot input.rc{text-align:right}table.lot input.bad{border-color:#c53030;background:#fff5f5}table.lot tbody tr:nth-child(4n+1) td,table.lot tbody tr:nth-child(4n+2) td{background:#fafbfd}table.lot .num{text-align:right;font-weight:bold}table.lot tfoot td{font-weight:bold;background:#f6f7f7}
+button.mini{padding:1px 7px;font-size:12px;margin-left:4px}
 #toast{position:fixed;right:20px;bottom:20px;background:#1d2327;color:#fff;padding:10px 16px;border-radius:8px;display:none}
 </style><script>window.__errs=[];window.addEventListener('error',e=>__errs.push(String(e.message)));window.addEventListener('unhandledrejection',e=>__errs.push(String(e.reason)));</script></head><body>
 <aside id="side"><div class="logo"><img src="icon.png" alt=""><div>이조 영업관리<small>이조아이엔디</small></div></div>
 <nav>
 <a data-p="dash">🏠 대시보드</a><a data-p="check">✅ 체크리스트</a><a data-p="bids">📋 공고 일정</a><div class="sep"></div>
-<a data-p="prod">🏗️ 생산 관리</a><a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서</a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
+<a data-p="prod">🏗️ 생산 관리</a><a data-p="work">📝 작업의뢰서<span class="soon">준비중</span></a><a data-p="outwork">🏭 외주작업의뢰서<span class="soon">준비중</span></a><a data-p="stmt">🧾 거래명세서</a><a data-p="contacts">📇 거래처 정보</a><a data-p="docs">🗂️ 서류 보관함<span class="soon">준비중</span></a>
 <div class="sep"></div><a data-p="settings">⚙️ 설정</a></nav><div class="foot" id="ver">v1.0.0</div></aside>
-<div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" onclick="openForm()">+ 새 공고</button></div>
+<div id="main"><div id="top"><h1 id="ptitle">대시보드</h1><button onclick="delExamples()" id="exbtn">예시 삭제</button><button class="p" id="bidadd" onclick="openForm()">+ 새 공고</button><button class="p" id="ctadd" onclick="openContact()" style="display:none">+ 추가</button></div>
 <div id="content">
 <section class="page" id="p_dash">
  <div class="dgrid"><div class="card"><h2>✅ 체크리스트 <span class="muted" style="font-weight:normal">(오늘·예정·지난 미완료)</span></h2>
@@ -93,6 +94,8 @@ table.lot td{padding:2px}table.lot input{width:100%;padding:4px 3px;min-width:0}
  <div class="tw"><table><thead><tr><th>오더번호</th><th>품목</th><th>색상</th><th style="text-align:right">발주량</th><th>거래처</th><th>발주일</th><th>납기일</th><th>현재 공정</th><th style="width:220px">최종 공정 출고</th></tr></thead><tbody id="ptb"></tbody></table></div></div></div>
  <div id="pd_wrap" style="display:none"></div>
 </section>
+<section class="page" id="p_contacts"><div class="card"><div class="filters"><input id="ctq" placeholder="검색(회사명·성함·주소·전화번호)" oninput="render()" style="min-width:300px"><select id="ctc" onchange="render()"></select><span class="muted" id="ctcnt"></span><span style="flex:1"></span><button onclick="exportContactsCSV()">엑셀(CSV) 내보내기</button></div>
+ <div class="tw"><table><thead><tr><th>회사명</th><th>성함</th><th>팀명</th><th>직급</th><th>휴대폰</th><th>회사 전화</th><th>메일</th></tr></thead><tbody id="cttb"></tbody></table></div></div></section>
 <section class="page" id="p_work"><div class="soonbox"><div class="big">📝</div><h2>작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_outwork"><div class="soonbox"><div class="big">🏭</div><h2>외주작업의뢰서 — 준비중</h2><p>다음 업데이트에서 작성·출력 기능이 추가됩니다.</p></div></section>
 <section class="page" id="p_stmt">
@@ -122,4 +125,4 @@ table.lot td{padding:2px}table.lot input{width:100%;padding:4px 3px;min-width:0}
 <datalist id="procs"><option>생지</option><option>염색</option><option>FR PU</option><option>FR LAMI</option><option>코팅</option><option>라미네이팅</option><option>봉제</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
-<script src="stmt.js"></script><script src="app.js"></script></body></html>
+<script src="stmt.js"></script><script src="contacts.js"></script><script src="app.js"></script></body></html>

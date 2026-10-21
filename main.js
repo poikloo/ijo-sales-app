@@ -74,6 +74,8 @@ ipcMain.handle('importSupplierXlsx',async()=>{const r=await dialog.showOpenDialo
   const v=a=>{const c=ws.getCell(a).value;if(c==null)return '';if(typeof c==='object'){if(c.richText)return c.richText.map(t=>t.text).join('');if('result' in c)return String(c.result??'');if(c.text)return c.text}return String(c).trim()};
   return {reg:v('C5'),name:v('C6'),ceo:v('F6'),addr:v('C7'),biz:v('C9'),type:v('F9'),notice:[v('B40'),v('B41')].filter(Boolean).join('\n'),
     contacts:[v('A42'),v('A43')].filter(Boolean).map(t=>t.replace(/\s*인수자\s*\(인\)\s*$/,'').trimEnd()).join('\n')}});
+ipcMain.handle('openExternal',(e,u)=>{if(/^(https?:|mailto:)/i.test(String(u)))return shell.openExternal(String(u))});
+ipcMain.handle('copyText',(e,t)=>{require('electron').clipboard.writeText(String(t))});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));
