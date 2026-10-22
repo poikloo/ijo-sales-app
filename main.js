@@ -88,7 +88,7 @@ ipcMain.handle('owXlsx',async(e,q,sup,name)=>{const ExcelJS=require('exceljs');c
   mg(`A${r}:B${r}`,'TOTAL',H);mg(`C${r}:D${r}`,tq||null,{fmt:'#,##0.##',h:'right',font:{bold:true}});mg(`E${r}:F${r}`,tq&&tu.length===1?tu[0]:'');mg(`G${r}`,'');
   const work=[q.shrink!==''?`가공 축: ${q.shrink}%`:'',q.src?`원단 입고처: ${q.src}`:'',q.work||''].filter(Boolean).join('\n');
   r++;mg(`A${r}:G${r+3}`,q.notes||'',{h:'left',v:'top'});mg(`H12:O${r+3}`,work,{h:'left',v:'top'});r+=5;
-  mg(`A${r}:G${r}`,'비 고',H);mg(`H${r}:O${r}`,'SHIPPING MARK',H);r++;mg(`A${r}:G${r+10}`,q.memo||'',{h:'left',v:'top'});mg(`H${r}:O${r+10}`,q.mark||'',{font:{size:12}});r+=11;
+  mg(`A${r}:I${r}`,'비 고',H);mg(`J${r}:O${r}`,'SHIPPING MARK',H);r++;mg(`A${r}:I${r+10}`,q.memo||'',{h:'left',v:'top'});mg(`J${r}:O${r+10}`,q.mark||'',{font:{size:12}});r+=11;
   String(q.terms||'').split(/\r?\n/).filter(x=>x.trim()).forEach(t=>{ws.mergeCells(`A${r}:O${r}`);cell(`A${r}`,t,{h:'left',font:{size:8.5}});r++});
   r++;mg(`H${r}:O${r}`,(sup&&sup.name)||'',{nb:1,h:'right',font:{size:12,bold:true}});
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}

@@ -54,20 +54,20 @@ h1{text-align:center;font-size:26pt;letter-spacing:12pt;color:#1f3a93;margin:4mm
 .ft{text-align:right;font-weight:bold;font-size:12pt;margin-top:5mm}
 </style></head><body>
 <h1>작업의뢰서</h1>
-<div class="top"><div><div class="to"><span>${E(r.to)}</span> 귀하</div><div style="margin:3mm 0 0 18mm">${E(dt)}</div></div>
+<div class="top"><div style="flex:1;margin-right:8mm"><div class="to"><span>${E(r.to)}</span> 귀하</div><div style="margin-top:3mm;text-align:center">${E(dt)}</div></div>
 <table class="sg" style="width:auto"><tr><td rowspan="2" style="width:7mm" class="hd">결<br>재</td><td class="hd">담당</td><td class="hd">과장</td><td class="hd">부장</td><td class="hd">상무</td><td class="hd">사장</td></tr><tr><td></td><td></td><td></td><td></td><td></td></tr></table></div>
 <table>
 <colgroup><col span="15"></colgroup>
 <tr><td colspan="2" class="hd">LI NO.</td><td colspan="2">${E(r.liNo)}</td><td colspan="2" class="hd">원발주처</td><td colspan="2" class="wr">${E(r.origin)}</td><td colspan="2" class="hd">납기일</td><td colspan="2">${E(r.due)}</td><td rowspan="2" class="hd">납품처</td><td colspan="2" rowspan="2" class="wr"><b>${E(r.dest)}</b></td></tr>
 <tr><td colspan="2" class="hd">PO NO.</td><td colspan="2">${E(r.poNo)}</td><td colspan="2" class="hd">담당자</td><td colspan="2">${E(r.manager)}</td><td colspan="2" class="hd">참조</td><td colspan="2" class="wr">${E(r.ref)}</td></tr>
 <tr><td colspan="15" class="sp"></td></tr>
-<tr><td colspan="2" class="hd">품명</td><td colspan="8" class="tl wr" style="vertical-align:middle"><b>${E(r.item)}</b></td><td colspan="2" class="hd">가공구분</td><td colspan="3"><b>${E(r.procType)}</b></td></tr>
+<tr><td colspan="2" class="hd">품명</td><td colspan="7" class="tl wr" style="vertical-align:middle"><b>${E(r.item)}</b></td><td colspan="2" class="hd">가공구분</td><td colspan="4" class="wr" style="line-height:1.2;word-break:break-all${String(r.procType).length>14?';font-size:8.5pt':''}"><b>${E(r.procType)}</b></td></tr>
 <tr class="hd"><td colspan="3">COLOR</td><td>수량</td><td>단위</td><td colspan="2">비고</td><td colspan="8">작업, 주의 사항</td></tr>
 ${rows}
 <tr><td colspan="3" class="hd">TOTAL</td><td class="r"><b>${num(r.lines.filter(l=>l.unit===u).reduce((a,l)=>a+(+l.qty||0),0))}</b></td><td>${E(u)}</td><td colspan="2"></td><td colspan="8" style="border-top:none"></td></tr>
 <tr><td colspan="15" class="tl wr" style="height:16mm;border-bottom:none">${info.map(E).join('<br>')}</td></tr>
-<tr><td colspan="7" class="hd">비 고</td><td colspan="8" class="hd">SHIPPING MARK</td></tr>
-<tr><td colspan="7" class="tl wr" style="height:58mm">${br(r.remarks)}</td><td colspan="8" style="vertical-align:middle"><div class="mark">${br(r.mark)}</div></td></tr>
+<tr><td colspan="9" class="hd">비 고</td><td colspan="6" class="hd">SHIPPING MARK</td></tr>
+<tr><td colspan="9" class="tl wr" style="height:58mm">${br(r.remarks)}</td><td colspan="6" style="vertical-align:middle"><div class="mark">${br(r.mark)}</div></td></tr>
 <tr><td colspan="15" class="tl wr" style="font-size:8pt;line-height:1.5">${terms.map(E).join('<br>')}</td></tr>
 </table>
 <div class="ft">${E(S.name||'')}</div>
