@@ -35,8 +35,6 @@ function stLoad(r){const o=r&&!Array.isArray(r)?r:{};
  if(stAssignSup()||mig)setTimeout(save,0)}
 const stPayload=()=>({statements:stmts,customers:custs,suppliers:sups,supplierDefault:supDef,supplier:normSup(defSup()||{})});
 function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.statements))stmts=raw.statements.map(normStmt);if(Array.isArray(raw.customers))custs=raw.customers.map(normCust);if(Array.isArray(raw.suppliers)||raw.supplier)supMigrate(raw);stAssignSup();stEd=null}
-const stExCount=()=>stmts.filter(x=>x.example).length+custs.filter(x=>x.example).length;
-function stDelExamples(){stmts.filter(x=>x.example).forEach(unlinkShip);stmts=stmts.filter(x=>!x.example);custs=custs.filter(x=>!x.example);if(stEd&&stEd.example)stEd=null}
 // ---- 생산 관리 출고 연동 ----
 function findShip(id){for(const o of orders)for(const p of o.procs){const i=p.ships.findIndex(x=>x.id===id);if(i>=0)return {o,p,i}}return null}
 function unlinkShip(s){if(!s.shipId)return;const f=findShip(s.shipId);if(f){f.p.ships.splice(f.i,1);f.o.updated=now()}}

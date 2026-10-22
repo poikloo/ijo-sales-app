@@ -100,6 +100,19 @@ ipcMain.handle('importSupplierXlsx',async()=>{const r=await dialog.showOpenDialo
     contacts:[v('A42'),v('A43')].filter(Boolean).map(t=>t.replace(/\s*인수자\s*\(인\)\s*$/,'').trimEnd()).join('\n')}});
 ipcMain.handle('openExternal',(e,u)=>{if(/^(https?:|mailto:)/i.test(String(u)))return shell.openExternal(String(u))});
 ipcMain.handle('copyText',(e,t)=>{require('electron').clipboard.writeText(String(t))});
+const WF=()=>path.join(DIR(),'workorders');
+function wfAbs(rel){const a=path.resolve(WF(),String(rel||''));if(!a.startsWith(path.resolve(WF())+path.sep))throw new Error('잘못된 경로');return a}
+ipcMain.handle('wfPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:[{name:'PDF',extensions:['pdf']}],properties:['openFile','multiSelections']});return r.canceled?[]:r.filePaths});
+ipcMain.handle('wfAttach',(e,oid,src)=>{oid=String(oid).replace(/[^\w-]/g,'');src=String(src);if(!oid||!/\.pdf$/i.test(src)||!fs.statSync(src).isFile())throw new Error('PDF 파일이 아닙니다');
+  const dir=path.join(WF(),oid);fs.mkdirSync(dir,{recursive:true});const ext=path.extname(src),base=path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'작업의뢰서';
+  let name=base+ext,i=2;while(fs.existsSync(path.join(dir,name)))name=`${base} (${i++})${ext}`;fs.copyFileSync(src,path.join(dir,name));
+  return {id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name,path:oid+'/'+name}});
+ipcMain.handle('wfPreview',(e,rel,name)=>{const a=wfAbs(rel);if(!fs.existsSync(a))return false;
+  const w=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});
+ipcMain.handle('wfSaveAs',async(e,rel,name)=>{const a=wfAbs(rel);if(!fs.existsSync(a))return false;const r=process.env.IJO_SHOT&&process.env.IJO_SAVEAS?{filePath:process.env.IJO_SAVEAS}:await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),path.basename(String(name||path.basename(a)))),filters:[{name:'PDF',extensions:['pdf']}]});
+  if(r.canceled||!r.filePath)return null;fs.copyFileSync(a,r.filePath);return r.filePath});
+ipcMain.handle('wfDelete',(e,rel)=>{const a=wfAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));

@@ -9,8 +9,6 @@ function ctLoad(r){const o=r&&!Array.isArray(r)?r:{};contacts=Array.isArray(o.co
  if(!Array.isArray(o.contacts)){if(!r||(Array.isArray(r.bids)&&r.bids.some(x=>x.example))||(Array.isArray(r.orders)&&r.orders.some(x=>x.example)))contacts.push(exContact());setTimeout(save,0)}}
 const ctPayload=()=>({contacts});
 function ctImport(raw){if(raw&&!Array.isArray(raw)&&Array.isArray(raw.contacts))contacts=raw.contacts.map(normContact)}
-const ctExCount=()=>contacts.filter(x=>x.example).length;
-function ctDelExamples(){contacts=contacts.filter(x=>!x.example)}
 const digits=s=>String(s||'').replace(/[\s\-().]/g,'').toLowerCase();
 function ctMatch(c,q){if(!q)return true;const t=q.toLowerCase(),d=digits(q);
  return [c.company,c.name,...c.addrs].some(x=>x.toLowerCase().includes(t))||(d&&[...c.tels,...c.faxes,...c.mobiles].some(x=>digits(x).includes(d)))}
