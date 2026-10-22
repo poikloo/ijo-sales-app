@@ -30,13 +30,13 @@ function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
 function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',delivered:!!o.delivered,updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}))}
-function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);crLoad(r);ivLoad(r);data=r?normalize(r):null;
+function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);crLoad(r);lsLoad(r);ivLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...ivPayload()}).catch(e=>alert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...lsPayload(),...ivPayload()}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
@@ -100,7 +100,7 @@ function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
-async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...crPayload(),...ivPayload()},null,2));if(p)toast('백업 저장: '+p)}
+async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...crPayload(),...lsPayload(),...ivPayload()},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
  if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
  if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);crImport(raw);ivImport(raw);save();render();toast('복원 완료')}}
@@ -140,7 +140,7 @@ function renderProd(){const v=pv&&orders.find(o=>o.id===pv);$('pl_wrap').style.d
  $('ptitle').textContent=v?'생산 관리 › '+v.no:'생산 관리';if(v)return renderOrder(v);
  const cs=[...new Set(orders.map(o=>o.client).filter(Boolean))],pc=$('pc'),cv=pc.value;pc.innerHTML='<option value="">전체 거래처</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');pc.value=cv;
  const k=$('pk').value.trim().toLowerCase(),st=$('pst').value;
- const l=orders.filter(o=>{const g=progress(o);return (!cv||o.client===cv)&&(!st||(st==='dv'?!!o.delivered:st==='ndv'?!o.delivered:(st==='done')===(g.rate>=100)))&&(!k||[o.no,o.item,o.fabric,o.color,o.client,...o.procs.flatMap(p=>[p.name,p.vendor])].join(' ').toLowerCase().includes(k))}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+ let l=orders.filter(o=>{const g=progress(o);return (!cv||o.client===cv)&&(!st||(st==='dv'?!!o.delivered:st==='ndv'?!o.delivered:(st==='done')===(g.rate>=100)))&&(!k||[o.no,o.item,o.fabric,o.color,o.client,...o.procs.flatMap(p=>[p.name,p.vendor])].join(' ').toLowerCase().includes(k))});lsBar('prod');l=lsSort('prod',l,o=>o);
  $('ptb').innerHTML=l.length?l.map(o=>{const g=progress(o);return `<tr class="r${o.delivered?' dlv':''}" onclick="openDetail('${o.id}')"><td><b>${esc(o.no)}</b></td><td>${esc(o.client)}</td><td>${tag(o)}${esc(o.item)}${o.fabric?`<br><small class="muted">${esc(o.fabric)}</small>`:''}</td><td>${o.lines.map(l=>`<div class="ln">${esc(l.color)||'-'}</div>`).join('')}</td><td style="text-align:right">${o.lines.map(l=>`<div class="ln">${num(l.qty)} ${esc(l.unit)}</div>`).join('')}${o.lines.length>1&&!o.mixedUnit?`<div class="ln tot">계 ${num(o.qty)} ${esc(o.unit)}</div>`:''}</td><td class="dt">${esc(o.date)}</td><td class="dt">${esc(o.due)}</td>
   <td>${g.cur?`<span class="badge" style="background:${pcol(o.procs.indexOf(g.cur))};color:#fff">${esc(g.cur.name)}</span><small>${num(sum(g.cur))} ${esc(o.unit)}</small>`:'<small class="muted">출고 없음</small>'}</td>
   <td>${dlvHTML(o,g)}</td><td><div class="bar"><i class="${g.rate>=100?'full':''}" style="width:${Math.min(100,g.rate)}%"></i></div><small>${g.last?esc(g.last.name)+' ':''}${num(g.fin)} / ${num(o.qty)} (${g.rate.toFixed(1)}%)</small></td></tr>`}).join(''):'<tr><td colspan="10">생산 오더가 없습니다. [+ 추가]로 등록하세요.</td></tr>'}

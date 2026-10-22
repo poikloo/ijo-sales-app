@@ -2,7 +2,7 @@
 let colWidths={};
 function crLoad(r){colWidths=(r&&r.colWidths&&typeof r.colWidths==='object')?r.colWidths:{}}
 function crPayload(){return {colWidths}}
-function crImport(r){crLoad(r);document.querySelectorAll('table[data-rz]').forEach(crApply)}
+function crImport(r){crLoad(r);if(r&&r.listSort)lsLoad(r);document.querySelectorAll('table[data-rz]').forEach(crApply)}
 function crCols(t){return [...t.querySelectorAll('colgroup col')]}
 function crApply(t){const id=t.dataset.rz,cols=crCols(t),w=colWidths[id];
  if(!t._def)t._def=cols.map(c=>c.getAttribute('style')||'');
@@ -27,3 +27,17 @@ function crInit(){document.querySelectorAll('table[data-rz]').forEach(t=>{
    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);h.classList.remove('on');document.body.classList.remove('rzing');if(colWidths[t.dataset.rz])save()};
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)})});
  t.tHead.addEventListener('contextmenu',e=>{if(!colWidths[t.dataset.rz])return;e.preventDefault();if(confirm('이 목록의 칸 넓이를 모두 기본값으로 되돌릴까요?'))crResetAll(t)})})}
+// ===== 목록 정렬 (기본: 오더번호 오름차순, 목록별로 저장) =====
+let listSort={};
+const LS_KEYS=[['no','오더번호'],['client','거래처'],['date','발주일']];
+function lsLoad(r){listSort=(r&&r.listSort&&typeof r.listSort==='object')?r.listSort:{}}
+function lsPayload(){return {listSort}}
+function lsGet(id){const s=listSort[id];return s&&LS_KEYS.some(k=>k[0]===s.k)?{k:s.k,d:s.d===-1?-1:1}:{k:'no',d:1}}
+function lsSet(id,k,d){listSort[id]={k,d};save();render()}
+const lsCmp=(a,b)=>String(a).localeCompare(String(b),'ko',{numeric:true,sensitivity:'base'});
+// get: {no,client,date} 값을 돌려주는 함수
+function lsSort(id,arr,get){const s=lsGet(id),ord=[s.k,...['no','client','date'].filter(k=>k!==s.k)];
+ return arr.slice().sort((x,y)=>{const a=get(x),b=get(y);for(let i=0;i<ord.length;i++){const k=ord[i],d=i===0?s.d:1,va=a[k]||'',vb=b[k]||'';
+  if(!va&&!vb)continue;if(!va)return 1;if(!vb)return -1;const c=lsCmp(va,vb)*d;if(c)return c}return 0})}
+function lsBar(id,dateLbl){const el=document.getElementById('srt_'+id);if(!el)return;const s=lsGet(id);
+ el.innerHTML='<span class="srl">정렬</span>'+LS_KEYS.map(([k,l])=>`<span class="sg"><b>${k==='date'&&dateLbl?dateLbl:l}</b>${[1,-1].map(d=>`<button class="${s.k===k&&s.d===d?'on':''}" title="${(k==='date'&&dateLbl?dateLbl:l)} ${d===1?'오름차순':'내림차순'}" onclick="lsSet('${id}','${k}',${d})">${d===1?'↑':'↓'}</button>`).join('')}</span>`).join('')}
