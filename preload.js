@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('api',{
   wfPreview:(p,n)=>ipcRenderer.invoke('wfPreview',p,n),
   wfSaveAs:(p,n)=>ipcRenderer.invoke('wfSaveAs',p,n),
   wfDelete:p=>ipcRenderer.invoke('wfDelete',p),
+  ssPick:()=>ipcRenderer.invoke('ssPick'),
+  ssAttach:(oid,p)=>ipcRenderer.invoke('ssAttach',oid,p),
+  ssPreview:(p,n)=>ipcRenderer.invoke('ssPreview',p,n),
+  ssSaveAs:(p,n)=>ipcRenderer.invoke('ssSaveAs',p,n),
+  ssDelete:p=>ipcRenderer.invoke('ssDelete',p),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });
