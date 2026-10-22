@@ -8,11 +8,13 @@ const pForm=(pre,x,req)=>F_ORDER.map(k=>{if(!k)return '<label></label>';const l=
 const sid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const party=p=>{const o={};P_FIELDS.forEach(([k])=>o[k]=String(p&&p[k]||''));return o};
 const emptyLot=(color='')=>({id:sid(),lotNo:'',color,rolls:Array(20).fill('')});
+const padRolls=r=>{r=r.slice();r.length=Math.max(20,Math.ceil(r.length/10)*10);for(let i=0;i<r.length;i++)if(r[i]==null)r[i]='';return r};
+const lotLines=l=>Math.max(2,Math.ceil(l.rolls.length/10));
 const lotCnt=l=>l.rolls.filter(v=>v!==''&&v!=null).length,lotSum=l=>l.rolls.reduce((a,v)=>a+(+v||0),0);
 const stTot=s=>({c:s.lots.reduce((a,l)=>a+lotCnt(l),0),q:Math.round(s.lots.reduce((a,l)=>a+lotSum(l),0)*100)/100});
 const stAmt=s=>{const q=stTot(s).q;return s.price&&q?Math.round(q*s.price):0};
 const fnum=v=>v===''||v==null?'':(+v).toLocaleString('ko-KR',{maximumFractionDigits:2});
-function normLot(l){const r=Array.isArray(l&&l.rolls)?l.rolls.slice(0,20):[];while(r.length<20)r.push('');return {id:String(l&&l.id||sid()),lotNo:String(l&&l.lotNo||''),color:String(l&&l.color||''),rolls:r.map(v=>v===''||v==null||isNaN(+v)?'':+v)}}
+function normLot(l){const r=padRolls(Array.isArray(l&&l.rolls)?l.rolls:[]);return {id:String(l&&l.id||sid()),lotNo:String(l&&l.lotNo||''),color:String(l&&l.color||''),rolls:r.map(v=>v===''||v==null||isNaN(+v)?'':+v)}}
 function normStmt(s){return {id:String(s.id||sid()),example:!!s.example,no:+s.no||1,date:s.date||'',orderId:s.orderId||'',orderNo:s.orderNo||'',item:s.item||'',spec:s.spec||'',customerId:s.customerId||'',cust:party(s.cust),
  dest:s.dest||'',contact:s.contact||'',price:s.price===''||s.price==null?'':+s.price||'',note:s.note||'',lots:(Array.isArray(s.lots)?s.lots:[]).map(normLot),linkShip:!!s.linkShip,shipId:s.shipId||'',supplierId:String(s.supplierId||''),sup:s.sup?normSup(s.sup):null,updated:s.updated||''}}
 const supHas=x=>x&&(P_FIELDS.some(([k])=>String(x[k]||'').trim())||String(x.contacts||'').trim()||(x.notice!=null&&String(x.notice)!==DEF_NOTICE));
@@ -97,27 +99,30 @@ function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderI
  <div class="card"><h2>공급받는자</h2><div class="g"><label class="w">거래처 선택<input list="st_custs" value="${esc(e.cust.name)}" onchange="stCustInput(this.value)" placeholder="상호 검색"></label>
   ${P_FIELDS.map(([k,l])=>`<label class="${k==='addr'?'w':''}">${l}<input value="${esc(e.cust[k])}" oninput="stEd.cust['${k}']=this.value"></label>`).join('')}</div>
   ${missing?`<p class="warn">'${esc(e.cust.name)}'은(는) 거래처에 등록되어 있지 않습니다. <button onclick="stRegCust()">거래처로 등록</button></p>`:''}</div></div>
- <div class="card"><h2>LOT별 수량 <span class="muted" style="font-weight:normal">— 칸에서 Enter: 다음 칸 · 엑셀에서 여러 칸 복사 후 붙여넣기 가능</span><button style="float:right" onclick="liOpen()" title="받은 거래명세서 PDF·캡처 이미지에서 LOT별 수량을 읽어 옵니다">수량 가져오기 (PDF·이미지)</button></h2>
+ <div class="card"><h2>LOT별 수량 <span class="muted" style="font-weight:normal">— 칸에서 Enter: 다음 칸 · 마지막 칸에 입력하면 줄 자동 추가 · 엑셀에서 여러 칸 복사 후 붙여넣기 가능</span><button style="float:right" onclick="liOpen()" title="받은 거래명세서 PDF·캡처 이미지에서 LOT별 수량을 읽어 옵니다">수량 가져오기 (PDF·이미지)</button></h2>
   <div class="tw"><table class="lot"><thead><tr><th style="width:120px">LOT NO.</th><th style="width:90px">COLOR</th>${Array.from({length:10},(_,i)=>`<th>${i+1}</th>`).join('')}<th style="width:46px">절</th><th style="width:80px">수량(YD)</th><th style="width:34px"></th></tr></thead>
-  <tbody>${e.lots.map((l,k)=>`<tr><td rowspan="2"><input value="${esc(l.lotNo)}" oninput="stEd.lots[${k}].lotNo=this.value"></td><td rowspan="2"><input value="${esc(l.color)}" oninput="stEd.lots[${k}].color=this.value"></td>${[0,1,2,3,4,5,6,7,8,9].map(i=>rc(k,i,l)).join('')}<td rowspan="2" class="num" id="lc${k}"></td><td rowspan="2" class="num" id="lq${k}"></td><td rowspan="2"><button onclick="stDelLot(${k})" title="LOT 삭제">✕</button></td></tr>
-   <tr>${[10,11,12,13,14,15,16,17,18,19].map(i=>rc(k,i,l)).join('')}</tr>`).join('')}</tbody>
+  <tbody>${e.lots.map((l,k)=>stLotRows(l,k)).join('')}</tbody>
   <tfoot><tr><td colspan="12" style="text-align:right">합계</td><td class="num" id="tc"></td><td class="num" id="tq"></td><td></td></tr></tfoot></table></div>
   <div style="display:flex;gap:16px;align-items:center;margin-top:8px"><button onclick="stAddLot()">+ LOT 추가</button><span style="flex:1"></span><span>총 절 <b id="tc2"></b></span><span>총 수량 <b id="tq2"></b> YD</span><span>금액 <b id="ta"></b></span></div></div>
  <datalist id="st_orders">${orders.map(x=>`<option value="${esc(orderLabel(x))}">`).join('')}</datalist><datalist id="st_custs">${custs.map(c=>`<option value="${esc(c.name)}">`).join('')}</datalist>`;stRecalc()}
+function stLotRows(l,k){const L=lotLines(l),al=k%2?'':' class="alt"';let h='';for(let j=0;j<L;j++){const cells=Array.from({length:10},(_,i)=>rc(k,j*10+i,l)).join('');
+ h+=j===0?`<tr${al}><td rowspan="${L}"><input value="${esc(l.lotNo)}" oninput="stEd.lots[${k}].lotNo=this.value"></td><td rowspan="${L}"><input value="${esc(l.color)}" oninput="stEd.lots[${k}].color=this.value"><div class="muted" style="font-size:11px;margin-top:3px">${L}줄</div></td>${cells}<td rowspan="${L}" class="num" id="lc${k}"></td><td rowspan="${L}" class="num" id="lq${k}"></td><td rowspan="${L}" style="vertical-align:top;white-space:nowrap"><button onclick="stDelLot(${k})" title="LOT 삭제">✕</button><br><button class="ln" onclick="stAddLine(${k})" title="이 LOT에 10칸 한 줄 추가">+ 줄</button><br><button class="ln" onclick="stDelLine(${k})" title="마지막 줄 삭제"${L<=2?' disabled':''}>− 줄</button></td></tr>`:`<tr${al}>${cells}</tr>`}return h}
+function stAddLine(k,focus){const l=stEd.lots[k];l.rolls=l.rolls.concat(Array(10).fill(''));renderEditor();const c=cellAt(k,focus==null?l.rolls.length-10:focus);if(c){c.focus();c.select()}}
+function stDelLine(k){const l=stEd.lots[k];if(lotLines(l)<=2)return;const t=l.rolls.slice(-10);if(t.some(v=>v!=='')&&!confirm('마지막 줄에 입력된 수량이 있습니다. 줄을 삭제할까요?'))return;l.rolls=l.rolls.slice(0,-10);renderEditor()}
 const rc=(k,i,l)=>`<td class="rcw"><input class="rc" data-k="${k}" data-i="${i}" inputmode="decimal" value="${l.rolls[i]===''?'':l.rolls[i]}" oninput="stCell(this)" onkeydown="stKey(event,this)" onpaste="stPaste(event,this)"></td>`;
-function stCell(el){const k=+el.dataset.k,i=+el.dataset.i,v=el.value.replace(/,/g,'').trim();stEd.lots[k].rolls[i]=v===''||isNaN(+v)?'':+v;el.classList.toggle('bad',v!==''&&isNaN(+v));stRecalc()}
+function stCell(el){const k=+el.dataset.k,i=+el.dataset.i,v=el.value.replace(/,/g,'').trim();stEd.lots[k].rolls[i]=v===''||isNaN(+v)?'':+v;el.classList.toggle('bad',v!==''&&isNaN(+v));stRecalc();const l=stEd.lots[k];if(i===l.rolls.length-1&&v!==''){l.rolls=l.rolls.concat(Array(10).fill(''));const p=el.selectionStart;renderEditor();const c=cellAt(k,i);if(c){c.focus();try{c.setSelectionRange(p,p)}catch(_){}}}}
 function stRecalc(){const e=stEd;if(!e)return;e.lots.forEach((l,k)=>{const c=$('lc'+k),q=$('lq'+k);if(c){c.textContent=lotCnt(l)||'';q.textContent=fnum(lotSum(l)||'')}});
  const t=stTot(e),a=stAmt(e);['tc','tc2'].forEach(x=>$(x)&&($(x).textContent=t.c));['tq','tq2'].forEach(x=>$(x)&&($(x).textContent=fnum(t.q)));if($('ta'))$('ta').textContent=a?a.toLocaleString('ko-KR')+'원':'-'}
 function cellAt(k,i){return document.querySelector(`.rc[data-k="${k}"][data-i="${i}"]`)}
-function stKey(ev,el){if(ev.key!=='Enter')return;ev.preventDefault();let k=+el.dataset.k,i=+el.dataset.i+(ev.shiftKey?-1:1);if(i>19){k++;i=0}if(i<0){k--;i=19}const n=cellAt(k,i);if(n){n.focus();n.select()}}
+function stKey(ev,el){if(ev.key!=='Enter')return;ev.preventDefault();let k=+el.dataset.k,i=+el.dataset.i+(ev.shiftKey?-1:1);const l=stEd.lots[k];if(i>=l.rolls.length){if(el.value.trim()!==''){stAddLine(k,i);return}k++;i=0}if(i<0){k--;if(k<0)return;i=stEd.lots[k].rolls.length-1}const n=cellAt(k,i);if(n){n.focus();n.select()}}
 function stPaste(ev,el){const t=(ev.clipboardData||window.clipboardData).getData('text');const parts=t.split(/[\s,\t]+/).filter(x=>x!=='');if(parts.length<2)return;ev.preventDefault();
- const k=+el.dataset.k;let i=+el.dataset.i,n=0;for(const p of parts){if(i>19)break;const v=+p;stEd.lots[k].rolls[i]=isNaN(v)?'':v;const c=cellAt(k,i);if(c)c.value=isNaN(v)?'':v;i++;n++}
- stRecalc();if(n<parts.length)toast(`한 LOT는 최대 20절입니다. ${parts.length-n}개 값은 붙여넣지 않았어요.`);else toast(`${n}개 값을 붙여넣었어요`)}
-function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderId&&orders.find(x=>x.id===stEd.orderId);stEd.lots.push({...emptyLot(last&&last.color||o&&(o.lines[0]||{}).color||''),lotNo:String(stEd.lots.length+1)});renderEditor();const c=document.querySelectorAll('.lot tbody tr');c[c.length-2].querySelector('input').focus()}
+ const k=+el.dataset.k;let i=+el.dataset.i,n=0;const l=stEd.lots[k];for(const p of parts){const v=+p;l.rolls[i]=isNaN(v)?'':v;i++;n++}l.rolls=padRolls(l.rolls);if(l.rolls.length<=i)l.rolls=l.rolls.concat(Array(10).fill(''));
+ renderEditor();toast(`${n}개 값을 붙여넣었어요`)}
+function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderId&&orders.find(x=>x.id===stEd.orderId);stEd.lots.push({...emptyLot(last&&last.color||o&&(o.lines[0]||{}).color||''),lotNo:String(stEd.lots.length+1)});renderEditor();const c=cellAt(stEd.lots.length-1,0);if(c)c.focus()}
 function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!confirm('이 LOT에 입력된 수량이 있습니다. 삭제할까요?'))return;stEd.lots.splice(k,1);if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor()}
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
 function stCancel(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
-function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.updated=now();return s}
+function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.lots.forEach(l=>{while(l.rolls.length>20&&l.rolls.slice(-10).every(v=>v===''))l.rolls=l.rolls.slice(0,-10)});s.updated=now();return s}
 function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
  const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 출고에 반영됨':''))}return true}
@@ -134,16 +139,21 @@ items.forEach(function(o){var f=parseFloat(getComputedStyle(o.t).fontSize),n=0;
  while(over()&&f>MIN&&n<60){f=Math.max(MIN,f-0.5);o.t.style.fontSize=f+'px';[].forEach.call(o.w.querySelectorAll('*'),function(c){c.style.fontSize='inherit'});n++}
  if(over()){o.t.style.whiteSpace='normal';o.w.style.whiteSpace='normal';o.w.style.wordBreak='break-all';o.w.style.lineHeight='1.05'}});
 document.documentElement.setAttribute('data-fit','1')})();<\/script>`;
-function stmtHTML(s){const S=supOf(s),c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(window.MINLOTS_TEST||MIN_LOTS,s.lots.length),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
+// 한 장(A4) 넘으면 전체를 축소해 잘림 없이 맞춤
+const PAGE_FIT_JS=`<script>(function(){var H=262*96/25.4,h=document.body.scrollHeight;if(h>H){document.body.style.zoom=(H/h).toFixed(4)}document.documentElement.setAttribute('data-pagefit','1')})();<\/script>`;
+function stmtHTML(s){const S=supOf(s),c=s.cust,t=stTot(s),a=stAmt(s),E=v=>esc(v),N=v=>v===''||v==null?'':fnum(v);
  const pty=(lab,p)=>`<td rowspan="5" class="hd vt">${lab}</td><td class="hd">등록<br>번호</td><td colspan="5" class="b big">${E(p.reg)}</td>`;
- let lots='';for(let k=0;k<n;k++){const l=s.lots[k]||{lotNo:'',color:'',rolls:Array(20).fill('')};
-  lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2" class="cl">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
+ const MINR=(window.MINLOTS_TEST||MIN_LOTS)*2,pl=s.lots.slice();let rows=pl.reduce((a,l)=>a+lotLines(l),0);while(rows<MINR){pl.push({lotNo:'',color:'',rolls:Array(20).fill('')});rows+=2}
+ const rh=rows<=MINR?19:Math.max(13,Math.floor(19*MINR/rows)),rf=rows<=MINR?'':`font-size:${Math.max(7,9.5*rh/19).toFixed(1)}pt;`;
+ let lots='';pl.forEach(l=>{const L=lotLines(l);for(let j=0;j<L;j++){const cs=l.rolls.slice(j*10,j*10+10).map(v=>`<td class="r">${N(v)}</td>`).join('');
+  const tot=j===L-1?`<td class="r">${lotCnt(l)||''}</td><td class="r">${N(lotSum(l)||'')}</td>`:j===0?`<td rowspan="${L-1}"></td><td rowspan="${L-1}"></td>`:'';
+  lots+=`<tr>${j===0?`<td rowspan="${L}">${E(l.lotNo)}</td><td rowspan="${L}" class="cl">${E(l.color)}</td>`:''}${cs}${tot}</tr>`}});
  const notice=String(S.notice||'').split(/\r?\n/).filter(Boolean),cts=String(S.contacts||'').split(/\r?\n/).filter(Boolean);
  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${E(stFileName(s))}</title><style>
 @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000;width:194mm}
 table{border-collapse:collapse;width:99.5%;table-layout:fixed}td{border:1px solid #000;padding:1px 3px;height:18px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}.wr{white-space:normal;word-break:keep-all}
 .nb td{border:none}.hd{background:#f2f2f2;font-weight:bold}.vt{writing-mode:vertical-rl;letter-spacing:6px}.b{font-weight:bold}.big{font-size:11pt}.r{text-align:right}.l{text-align:left}
-h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:12pt;font-weight:normal;height:30px;padding:3px 4px}.ft tr.sp td{border:none;height:8px;padding:0}.lt td.cl{font-size:8.5pt;line-height:1.1;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;overflow:visible;padding:1px 2px}
+h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:${rh}px;${rf}}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:12pt;font-weight:normal;height:30px;padding:3px 4px}.ft tr.sp td{border:none;height:8px;padding:0}.lt td.cl{font-size:8.5pt;line-height:1.1;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;overflow:visible;padding:1px 2px}
 </style></head><body><table>
 <colgroup>${[8,8,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6,9].map(w=>`<col style="width:${(w/97*100).toFixed(2)}%">`).join('')}</colgroup>
 <tr class="nb"><td colspan="4"></td><td colspan="6"><h1>거래명세서(공급자)</h1></td><td colspan="4"></td></tr>
@@ -162,7 +172,7 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 <tbody class="ft"><tr class="sp"><td colspan="14"></td></tr><tr><td colspan="14" class="big2">납품처: ${E(s.dest)}</td></tr><tr><td colspan="14" class="big2">담당자: ${E(s.contact)}</td></tr><tr class="sp"><td colspan="14"></td></tr>
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
-${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table>${FIT_JS}</body></html>`}
+${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table>${FIT_JS}${PAGE_FIT_JS}</body></html>`}
 function stFileName(s){const fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,'');return [fsafe(s.orderNo)||(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_')}
 async function stOut(mode){if(!stEd)return;const s=stClean(stEd),nm=stFileName(s);
  if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;

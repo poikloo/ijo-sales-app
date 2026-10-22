@@ -73,9 +73,8 @@ function parseTokens(toks,opt){opt=opt||{};const ocr=!!opt.ocr,W=[];toks=toks.fi
  meta.filter(m=>m.k==='cut'||m.k==='yd').forEach(m=>{if(m.y>lastY+pit*1.5){if(tail[m.k]==null)tail[m.k]=m.v;return}const o=own(m.y);if(!o)return;o[m.k]=(o[m.k]||0)+m.v;o[m.k+'s']++});
  // 6) 롤 순서: 머리글 번호 순 (역순 머리글도 번호 기준), 다음 줄은 이어서
  const res=lots.filter(o=>o.lines.length||o.lot).map((o,i)=>{const rolls=[];o.lines.forEach(ln=>ln.r.sort((a,b)=>a.n-b.n||(rev?b.x-a.x:a.x-b.x)).forEach(q=>rolls.push(q.v)));
-  return {lot:o.lot||String(i+1),color:o.color,rolls:rolls.slice(0,20),cut:o.cut,yd:o.yd,_over:rolls.length>20}});
+  return {lot:o.lot||String(i+1),color:o.color,rolls,cut:o.cut,yd:o.yd}});
  res.forEach((o,i)=>{if(!o.color&&i)o.color=res[i-1].color});
- res.forEach(o=>{if(o._over)W.push(`LOT ${o.lot}: 20절을 넘어 앞의 20개만 가져왔어요`);delete o._over});
  // 합계 줄 (글자로 못 찾으면 마지막 행 아래 숫자)
  if(!total&&(tail.cut!=null||tail.yd!=null))total={t:[],pre:tail};
  if(total&&total.pre)total=total.pre;else if(total){const t={cut:null,yd:null};for(const k of total.t){const v=num(k.t,ocr);if(v==null)continue;const {c}=nearCol(cx(k));if(c&&(c.k==='cut'||c.k==='yd'))t[c.k]=v}if(t.cut!=null||t.yd!=null)total=t;else total=null}

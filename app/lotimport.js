@@ -55,9 +55,9 @@ function liRenderDlg(){const d=liDlg(),has=LI.previews.length;
 function liGrid(){if(!LI.res&&!LI.lots.length)return '<p class="muted">파일을 넣으면 LOT별 수량이 여기에 표로 나와요.</p>';
  const w=LI.res&&LI.res.warnings.length?`<p class="warn">${LI.res.warnings.map(esc).join('<br>')}</p>`:'';
  return w+`<table class="lot" id="li_t"><thead><tr><th style="width:80px">LOT NO.</th><th style="width:90px">COLOR</th>${Array.from({length:10},(_,i)=>`<th>${i+1}</th>`).join('')}<th style="width:44px">절</th><th style="width:70px">수량(YD)</th><th style="width:120px">명세서 절 / YD</th><th style="width:30px"></th></tr></thead>
- <tbody>${LI.lots.map((l,k)=>`<tr id="li_r${k}a"><td rowspan="2"><input value="${esc(l.lot)}" oninput="LI.lots[${k}].lot=this.value"></td><td rowspan="2"><input value="${esc(l.color)}" oninput="LI.lots[${k}].color=this.value"></td>${[0,1,2,3,4,5,6,7,8,9].map(i=>liCell(k,i,l)).join('')}<td rowspan="2" class="num" id="li_c${k}"></td><td rowspan="2" class="num" id="li_q${k}"></td>
-  <td rowspan="2" style="font-size:12px"><span style="display:flex;gap:3px"><input style="width:42px" inputmode="decimal" placeholder="절" value="${l.cut??''}" oninput="liV(${k},'cut',this.value)"><input inputmode="decimal" placeholder="YD" value="${l.yd??''}" oninput="liV(${k},'yd',this.value)"></span><div id="li_s${k}"></div></td><td rowspan="2"><button onclick="liDel(${k})" title="LOT 삭제">✕</button></td></tr>
-  <tr id="li_r${k}b">${[10,11,12,13,14,15,16,17,18,19].map(i=>liCell(k,i,l)).join('')}</tr>`).join('')}</tbody></table><div style="margin-top:8px"><button onclick="liAdd()">+ LOT 추가</button></div>`}
+ <tbody>${LI.lots.map((l,k)=>`<tr class="li_r${k}"><td rowspan="${LN(l)}"><input value="${esc(l.lot)}" oninput="LI.lots[${k}].lot=this.value"></td><td rowspan="${LN(l)}"><input value="${esc(l.color)}" oninput="LI.lots[${k}].color=this.value"></td>${Array.from({length:10},(_,i)=>liCell(k,i,l)).join('')}<td rowspan="${LN(l)}" class="num" id="li_c${k}"></td><td rowspan="${LN(l)}" class="num" id="li_q${k}"></td>
+  <td rowspan="${LN(l)}" style="font-size:12px"><span style="display:flex;gap:3px"><input style="width:42px" inputmode="decimal" placeholder="절" value="${l.cut??''}" oninput="liV(${k},'cut',this.value)"><input inputmode="decimal" placeholder="YD" value="${l.yd??''}" oninput="liV(${k},'yd',this.value)"></span><div id="li_s${k}"></div></td><td rowspan="${LN(l)}"><button onclick="liDel(${k})" title="LOT 삭제">✕</button></td></tr>${Array.from({length:LN(l)-1},(_,j)=>`<tr class="li_r${k}">${Array.from({length:10},(_,i)=>liCell(k,(j+1)*10+i,l)).join('')}</tr>`).join('')}`).join('')}</tbody></table><div style="margin-top:8px"><button onclick="liAdd()">+ LOT 추가</button></div>`}
+const LN=l=>Math.max(2,Math.ceil(l.rolls.length/10));
 const liCell=(k,i,l)=>`<td class="rcw"><input class="rc" inputmode="decimal" value="${l.rolls[i]==null||l.rolls[i]===''?'':l.rolls[i]}" oninput="liR(${k},${i},this)"></td>`;
 const liNum=v=>{v=String(v).replace(/,/g,'').trim();return v===''||isNaN(+v)?null:+v};
 function liR(k,i,el){const v=liNum(el.value);LI.lots[k].rolls[i]=v==null?'':v;el.classList.toggle('bad',el.value.trim()!==''&&v==null);liCheck()}
@@ -69,11 +69,11 @@ function liTotHTML(){if(!LI.lots.length)return '';const c=LI.lots.map(LotParse.c
  const T=LI.total,vt=T&&(T.cut!=null||T.yd!=null)?T:null,ok=!vt||((vt.cut==null||vt.cut===n)&&(vt.yd==null||Math.abs(vt.yd-s)<0.01));
  return `LOT ${LI.lots.length}개 · 총 <b>${n}</b>절 · <b>${fnum(s)}</b> YD${vt?` <span style="color:${ok?'#2f855a':'#c53030'}">(명세서 합계 ${vt.cut!=null?vt.cut+'절 ':''}${vt.yd!=null?fnum(vt.yd)+' YD':''} ${ok?'✓ 일치':'— 불일치'})</span>`:''}${bad?` · <b style="color:#c53030">확인 필요 ${bad}개 LOT</b>`:''}`}
 function liCheck(){LI.lots.forEach((l,k)=>{const c=LotParse.check(l),bad=!c.okCut||!c.okYd;if(!$('li_c'+k))return;$('li_c'+k).textContent=c.n||'';$('li_q'+k).textContent=fnum(c.s||'');
-  ['a','b'].forEach(x=>$('li_r'+k+x).querySelectorAll('td').forEach(td=>td.style.background=bad?'#fde8e8':''));
+  document.querySelectorAll('.li_r'+k+' td').forEach(td=>td.style.background=bad?'#fde8e8':'');
   $('li_s'+k).innerHTML=l.cut==null&&l.yd==null?'<span class="muted">명세서 합계 없음</span>':bad?`<b style="color:#c53030">불일치</b><br>명세서 ${l.cut??'-'}절 / ${l.yd!=null?fnum(l.yd):'-'}<br>계산 ${c.n}절 / ${fnum(c.s)}`:'<span style="color:#2f855a">✓ 일치</span>'});const t=$('li_tot');if(t)t.innerHTML=liTotHTML()}
 async function liLoad(name,type,bytes){if(LI.busy)return;Object.assign(LI,{src:{name,type,bytes},busy:true,msg:'읽는 중…',previews:[]});liRenderDlg();
  try{const r=await extractLots(LI.src,m=>{LI.msg=m;const z=$('li_drop');if(z&&LI.busy){const b=z.querySelector('b');if(b)b.textContent=m}});
-  LI.res=r;LI.previews=r.previews;LI.total=r.total;LI.lots=r.lots.map(l=>{const ro=l.rolls.slice(0,20);while(ro.length<20)ro.push('');return {lot:l.lot,color:l.color,rolls:ro,cut:l.cut,yd:l.yd}});
+  LI.res=r;LI.previews=r.previews;LI.total=r.total;LI.lots=r.lots.map(l=>{const ro=l.rolls.slice();ro.length=Math.max(20,Math.ceil(ro.length/10)*10);for(let i=0;i<ro.length;i++)if(ro[i]==null)ro[i]='';return {lot:l.lot,color:l.color,rolls:ro,cut:l.cut,yd:l.yd}});
   if(!LI.lots.length)r.warnings.push('수량을 찾지 못했어요. 더 선명한 PDF/캡처를 넣거나 직접 입력해 주세요.')}
  catch(e){LI.res={warnings:['읽지 못했습니다: '+(e.message||e)],lots:[]};LI.lots=[]}
  LI.busy=false;if($('lidlg').open){liRenderDlg();liCheck()}}
