@@ -86,6 +86,7 @@ ipcMain.handle('owXlsx',async(e,q,sup,name)=>{const ExcelJS=require('exceljs');c
   mg('A7','LI NO.',H);mg('B7',q.liNo||'');mg('C7','원발주처',H);mg('D7',q.client||'');mg('E7:F7','납기일',H);mg('G7',q.due||'');mg('H7:J8','납품처',H);mg('K7:O8',q.dest||'');
   mg('A8','PO NO.',H);mg('B8',q.poNo||'');mg('C8','담당자',H);mg('D8',q.manager||'');mg('E8:F8','참조',H);mg('G8',q.ref||'');
   mg('A10','품명',H);mg('B10:E10',q.item||'',{h:'left'});mg('F10:G10','가공구분',H);mg('H10:O10',q.procName||'');
+  [7,8,10].forEach(i=>{const R=ws.getRow(i);R.height=(R.height||15)*2;R.eachCell({includeEmpty:true},c=>{c.alignment={...(c.alignment||{}),vertical:'middle',wrapText:true}})});
   mg('A11:B11','COLOR',H);mg('C11:D11','수량',H);mg('E11:F11','단위',H);mg('G11','비고',H);mg('H11:O11','작업, 주의 사항',H);
   const ls=q.lines||[],n=Math.max(8,ls.length);for(let k=0;k<n;k++){const r=12+k,l=ls[k]||{};mg(`A${r}:B${r}`,l.color||'');mg(`C${r}:D${r}`,l.qty===''||l.qty==null?null:+l.qty,{fmt:'#,##0.##',h:'right'});mg(`E${r}:F${r}`,l.unit||'');mg(`G${r}`,l.note||'')}
   let r=12+n;const tq=ls.reduce((a,l)=>a+(+l.qty||0),0),tu=[...new Set(ls.filter(l=>l.qty!==''&&l.qty!=null).map(l=>l.unit))];
