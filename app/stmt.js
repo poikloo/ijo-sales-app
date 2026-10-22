@@ -83,16 +83,15 @@ function stCustInput(v){const c=custs.find(x=>x.name===v);if(c){stPick(c.id);ren
 function stClearOrder(){Object.assign(stEd,{orderId:'',linkShip:false});renderEditor()}
 function stF(k,v){stEd[k]=v;if(k==='price')stRecalc()}
 function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderId),missing=e.cust.name&&!custs.some(c=>c.name===e.cust.name);
- const inp=(k,l,attr='')=>`<label>${l}<input value="${esc(e[k])}" oninput="stF('${k}',this.value)" ${attr}></label>`;
+ const inp=(k,l,attr='',w)=>`<label${w?' class="w"':''}>${l}<input value="${esc(e[k])}" oninput="stF('${k}',this.value)" ${attr}></label>`;
  $('st_edit').innerHTML=`<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button onclick="stCancel()">◀ 목록</button><span style="flex:1"></span>
   <button onclick="stOut('preview')">미리보기</button><button onclick="stOut('print')">인쇄</button><button onclick="stOut('pdf')">PDF 저장</button><button onclick="stOut('xlsx')">엑셀로 내보내기</button>${e._new?'':`<button onclick="dupStmt('${e.id}')">복제</button><button class="d" onclick="delStmt('${e.id}')">삭제</button>`}<button class="p" onclick="stSave()">저장</button></div></div>
  <div class="dgrid"><div class="card"><h2>기본 정보</h2><div class="g">
-  <label>NO.<input type="number" min="1" value="${e.no}" oninput="stF('no',+this.value||1)"></label><label>날짜<input type="date" value="${esc(e.date)}" oninput="stF('date',this.value)"></label>
-  <label class="w">공급자<span style="display:flex;gap:6px;align-items:center"><select style="flex:1" onchange="stSupPick(this.value)">${sups.length?'':'<option value="">(설정에서 공급자를 먼저 등록하세요)</option>'}${sups.map(x=>`<option value="${x.id}"${x.id===e.supplierId?' selected':''}>${esc(x.name||'(상호 없음)')}${x.id===supDef?' (기본)':''}</option>`).join('')}${e.supplierId&&!sups.some(x=>x.id===e.supplierId)?`<option value="${esc(e.supplierId)}" selected>${esc(e.sup&&e.sup.name||'')} (삭제된 공급자)</option>`:''}</select>${stSupStale(e)?'<button onclick="stSupRefresh()" title="설정의 최신 공급자 정보로 바꿉니다">최신 정보로 갱신</button>':''}</span>${stSupStale(e)?'<span class="muted">이 명세서는 저장 당시의 공급자 정보로 인쇄됩니다.</span>':''}</label>
+  <label>공급자<span style="display:flex;gap:6px;align-items:center"><select style="flex:1" onchange="stSupPick(this.value)">${sups.length?'':'<option value="">(설정에서 공급자를 먼저 등록하세요)</option>'}${sups.map(x=>`<option value="${x.id}"${x.id===e.supplierId?' selected':''}>${esc(x.name||'(상호 없음)')}${x.id===supDef?' (기본)':''}</option>`).join('')}${e.supplierId&&!sups.some(x=>x.id===e.supplierId)?`<option value="${esc(e.supplierId)}" selected>${esc(e.sup&&e.sup.name||'')} (삭제된 공급자)</option>`:''}</select>${stSupStale(e)?'<button onclick="stSupRefresh()" title="설정의 최신 공급자 정보로 바꿉니다">최신 정보로 갱신</button>':''}</span>${stSupStale(e)?'<span class="muted">이 명세서는 저장 당시의 공급자 정보로 인쇄됩니다.</span>':''}</label><label>날짜<input type="date" value="${esc(e.date)}" oninput="stF('date',this.value)"></label>
   <label class="w">생산 오더에서 불러오기<span style="display:flex;gap:6px"><input list="st_orders" style="flex:1" placeholder="오더번호·품목·거래처 검색 후 선택" value="${o?esc(orderLabel(o)):''}" onchange="stOrderInput(this.value)">${e.orderId?'<button onclick="stClearOrder()">연결 해제</button>':''}</span></label>
   ${inp('orderNo','오더번호')}${inp('price','단가 (원, 비워도 됨)','inputmode="decimal"')}
   <label class="w">품명 및 규격<input value="${esc(e.item)}" oninput="stF('item',this.value)" placeholder="품목"></label><label class="w"><input value="${esc(e.spec)}" oninput="stF('spec',this.value)" placeholder="아이템명 / 규격 (둘째 줄)"></label>
-  ${inp('note','비고')}<label></label>${inp('dest','납품처')}${inp('contact','담당자')}
+  ${inp('note','비고','',1)}${inp('dest','납품처')}${inp('contact','담당자')}
   ${e.orderId?`<label class="w" style="flex-direction:row;align-items:center;gap:6px;font-size:14px;color:#222"><input type="checkbox" ${e.linkShip?'checked':''} onchange="stEd.linkShip=this.checked"> 생산 관리 출고에 반영 <span class="muted">(${o&&o.procs.length?`'${esc(o.procs[o.procs.length-1].name)}' 공정에 출고일·수량 기록`:'공정이 없어 반영할 수 없음'})</span></label>`:''}
  </div></div>
  <div class="card"><h2>공급받는자</h2><div class="g"><label class="w">거래처 선택<input list="st_custs" value="${esc(e.cust.name)}" onchange="stCustInput(this.value)" placeholder="상호 검색"></label>
@@ -165,7 +164,7 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table>${FIT_JS}</body></html>`}
-async function stOut(mode){if(!stEd)return;const s=stClean(stEd),fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_');
+async function stOut(mode){if(!stEd)return;const s=stClean(stEd),fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[fsafe(s.orderNo)||(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_');
  if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
  try{if(mode==='pdf'){const p=await A.stmtPDF(stmtHTML(s),nm+'.pdf');if(p)toast('PDF 저장: '+p)}
   else if(mode==='preview')await A.stmtPreview(stmtHTML(s),nm);
