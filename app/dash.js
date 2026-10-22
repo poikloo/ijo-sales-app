@@ -18,8 +18,8 @@ function renderDash(){const now=new Date(),cm=dbYm(now),pm=dbYm(new Date(now.get
  const kpi=(t,v,s)=>`<div class="card dbk"><div class="muted">${t}</div><b>${v}</b><small class="muted">${s}</small></div>`;
  $('dbkpi').innerHTML=kpi('진행중 오더',dbNum(open.length)+'건','납품 완료 체크 안 된 오더')
   +kpi('이번 달 출고량',dbNum(Math.round(a.yd))+' YD',`최종 공정 출고 · 지난달 대비 <b style="font-size:12px;color:${a.yd>=b.yd?'#1a7f37':'#c2255c'}">${chg}</b>${a.m?` · M 단위 ${dbNum(a.m)} M 별도`:''}`)
-  +kpi('이번 달 거래명세서',dbNum(stc)+'건','날짜 기준')
-  +kpi('납기 7일 이내',dbNum(soon.length)+'건',late?`<span style="color:#c2255c">지연 ${late}건 포함</span>`:'진행중 오더 중');
+  +ivCard(cm)+'<div class="card dbk"><div class="muted">현재 날짜·시간</div><b id="dbclk"></b><small class="muted" id="dbcld"></small></div>';
+ dbClock();
  // 2. 월 출고 현황
  const sm=dbM||now,ym=dbYm(sm);$('dbym').textContent=`${sm.getFullYear()}년 ${sm.getMonth()+1}월`;
  const byC={},byP={};let mx=0;orders.forEach(o=>{if(!dbIsYD(o)){return}const f=dbFinal(o);o.procs.forEach(p=>{const s=p.ships.filter(x=>(x.date||'').startsWith(ym)).reduce((a,x)=>a+(+x.qty||0),0);if(!s)return;const n=p.name||'(공정명 없음)';byP[n]=(byP[n]||0)+s;if(p===f){const c=o.client||'(거래처 없음)';byC[c]=(byC[c]||0)+s}})});
@@ -37,3 +37,17 @@ function renderDash(){const now=new Date(),cm=dbYm(now),pm=dbYm(new Date(now.get
  const ms=[];for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);ms.push([d.getMonth()+1,dbFinalYD(dbYm(d)).yd])}
  const top=Math.max(...ms.map(x=>x[1]),1),W=1000,H=200,bw=W/12;
  $('dbtr').innerHTML=ms.some(x=>x[1])?`<svg viewBox="0 0 ${W} ${H+40}" style="width:100%;height:240px">${ms.map(([m,v],i)=>{const h=v/top*H,x=i*bw+bw*.18;return `<rect x="${x}" y="${H-h+16}" width="${bw*.64}" height="${h}" rx="3" fill="${i===11?'#2271b1':'#9ec5e8'}"><title>${m}월 ${dbNum(Math.round(v))} YD</title></rect>${v?`<text x="${x+bw*.32}" y="${H-h+11}" font-size="12" text-anchor="middle" fill="#444">${dbNum(Math.round(v))}</text>`:''}<text x="${x+bw*.32}" y="${H+34}" font-size="13" text-anchor="middle" fill="#666">${m}월</text>`}).join('')}<line x1="0" x2="${W}" y1="${H+16}" y2="${H+16}" stroke="#ccc"/></svg>`:'<p class="muted">최근 12개월 출고가 없어요.</p>'}
+
+let invoices={},ivDraft=[],dbClkT=null;
+function ivLoad(r){const o=r&&!Array.isArray(r)&&r.invoices&&typeof r.invoices==='object'?r.invoices:{};invoices={};Object.keys(o).forEach(k=>{if(Array.isArray(o[k]))invoices[k]=o[k].filter(x=>x&&typeof x==='object').map(x=>({client:String(x.client||''),count:Math.max(0,Math.round(+x.count||0))}))})}
+function ivPayload(){return {invoices}}
+function ivImport(r){if(r&&!Array.isArray(r)&&r.invoices)ivLoad(r)}
+function ivCard(ym){const l=invoices[ym]||[],t=l.reduce((a,x)=>a+x.count,0),n=l.map(x=>x.client).filter(Boolean).join(', ');
+ return `<div class="card dbk" style="cursor:pointer" onclick="ivEdit('${ym}')" title="${esc(n||'눌러서 입력')}"><div class="muted" style="display:flex;justify-content:space-between">이번 달 청구서<button style="font-size:11px;padding:1px 8px" onclick="event.stopPropagation();ivEdit('${ym}')">수정</button></div><b>${dbNum(t)}건</b><small class="muted dbl">${esc(n||'보낼 거래처 없음')}</small></div>`}
+function ivSugg(){const s=new Set();(typeof orders!=='undefined'?orders:[]).forEach(o=>o.client&&s.add(o.client));(typeof contacts!=='undefined'?contacts:[]).forEach(c=>c.company&&s.add(c.company));return [...s].sort()}
+function ivRows(){$('iv_rows').innerHTML=ivDraft.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 90px 32px;gap:6px;margin-bottom:6px"><input list="iv_dl" placeholder="거래처명" value="${esc(r.client)}" oninput="ivDraft[${i}].client=this.value"><input type="number" min="0" value="${r.count}" oninput="ivDraft[${i}].count=this.value"><button type="button" onclick="ivDraft.splice(${i},1);ivRows()">✕</button></div>`).join('')||'<p class="muted">거래처를 추가하세요.</p>'}
+function ivEdit(ym){ivDraft=(invoices[ym]||[]).map(x=>({...x}));$('dt').textContent=`이번 달 청구서 (${ym.replace('-','년 ')}월)`;
+ $('dbody').innerHTML=`<div style="display:grid;grid-template-columns:1fr 90px 32px;gap:6px;font-size:12px" class="muted"><span>거래처명</span><span>건수</span><span></span></div><div id="iv_rows"></div><datalist id="iv_dl">${ivSugg().map(c=>`<option value="${esc(c)}">`).join('')}</datalist><button type="button" onclick="ivDraft.push({client:'',count:1});ivRows()">+ 추가</button>`;
+ $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="ivSave('${ym}')">저장</button>`;ivRows();if(!dlg.open)dlg.showModal()}
+function ivSave(ym){const l=ivDraft.map(r=>({client:String(r.client).trim(),count:Math.max(0,Math.round(+r.count||0))})).filter(r=>r.client||r.count);if(l.length)invoices[ym]=l;else delete invoices[ym];save();dlg.close();render()}
+function dbClock(){if(dbClkT)clearInterval(dbClkT);const W='일월화수목금토',f=()=>{const e=$('dbclk');if(!e){clearInterval(dbClkT);dbClkT=null;return}const d=new Date(),p=n=>String(n).padStart(2,'0');e.textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;$('dbcld').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${W[d.getDay()]})`};f();dbClkT=setInterval(f,1000)}
