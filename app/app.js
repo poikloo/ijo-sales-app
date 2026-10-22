@@ -59,11 +59,7 @@ function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
 function render(){
- if(page==='dash'){const td=ymd(new Date()),wk=ymd(new Date(Date.now()+7*864e5)),open=cl.filter(c=>!c.done);
-  const od=open.filter(c=>c.due&&c.due<td),tdy=open.filter(c=>c.due===td),up=open.filter(c=>c.due>td&&c.due<=wk).sort((a,b)=>a.due.localeCompare(b.due)),nd=open.filter(c=>!c.due);
-  const sec=(t,l)=>l.length?`<li class="sec">${t} (${l.length})</li>`+l.map(clItem).join(''):'';
-  $('dcl').innerHTML=(sec('지난 할 일',od)+sec('오늘',tdy)+sec('7일 이내',up)+sec('마감일 없음',nd))||'<li>남은 할 일이 없습니다. </li>';
-  $('dup').innerHTML=upHTML(upList().slice(0,10));$('ddue').innerHTML=dueHTML();$('dym').textContent=`${dcur.getFullYear()}년 ${dcur.getMonth()+1}월`;$('dcal').innerHTML=calHTML(dcur.getFullYear(),dcur.getMonth(),false,'dash')}
+ if(page==='dash')renderDash();
  if(page==='prod')renderProd();
  if(page==='stmt')renderStmt();
  if(page==='outwork')renderOutwork();
