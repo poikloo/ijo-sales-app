@@ -1,4 +1,5 @@
 const {app,BrowserWindow,ipcMain,dialog,Menu,shell}=require('electron');
+app.commandLine.appendSwitch('lang','ko-KR');
 const {autoUpdater}=require('electron-updater');
 const fs=require('fs'),path=require('path');
 const DIR=()=>app.getPath('userData'),FILE=()=>path.join(DIR(),'data.json'),BK=()=>path.join(DIR(),'backups');
