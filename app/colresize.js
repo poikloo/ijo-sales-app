@@ -39,5 +39,7 @@ const lsCmp=(a,b)=>String(a).localeCompare(String(b),'ko',{numeric:true,sensitiv
 function lsSort(id,arr,get){const s=lsGet(id),ord=[s.k,...['no','client','date'].filter(k=>k!==s.k)];
  return arr.slice().sort((x,y)=>{const a=get(x),b=get(y);for(let i=0;i<ord.length;i++){const k=ord[i],d=i===0?s.d:1,va=a[k]||'',vb=b[k]||'';
   if(!va&&!vb)continue;if(!va)return 1;if(!vb)return -1;const c=lsCmp(va,vb)*d;if(c)return c}return 0})}
-function lsBar(id,dateLbl){const el=document.getElementById('srt_'+id);if(!el)return;const s=lsGet(id);
- el.innerHTML='<span class="srl">정렬</span>'+LS_KEYS.map(([k,l])=>`<span class="sg"><b>${k==='date'&&dateLbl?dateLbl:l}</b>${[1,-1].map(d=>`<button class="${s.k===k&&s.d===d?'on':''}" title="${(k==='date'&&dateLbl?dateLbl:l)} ${d===1?'오름차순':'내림차순'}" onclick="lsSet('${id}','${k}',${d})">${d===1?'↑':'↓'}</button>`).join('')}</span>`).join('')}
+function lsBar(id,dateLbl){const el=document.getElementById('srt_'+id);if(!el)return;const s=lsGet(id),v=s.k+':'+s.d;
+ const h=LS_KEYS.flatMap(([k,l])=>[1,-1].map(d=>`<option value="${k}:${d}">정렬: ${k==='date'&&dateLbl?dateLbl:l} ${d===1?'↑':'↓'}</option>`)).join('');
+ if(el.dataset.h!==h){el.innerHTML=h;el.dataset.h=h}el.value=v}
+function lsPick(id,v){const [k,d]=v.split(':');lsSet(id,k,+d)}
