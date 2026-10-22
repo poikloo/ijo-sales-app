@@ -35,6 +35,10 @@ ipcMain.handle('stmtPDF',async(e,html,name)=>{const {w,f}=await renderPDF(html);
   const buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,margins:{top:0.3,bottom:0.3,left:0.3,right:0.3}});
   let p=process.env.IJO_PDF;if(!p){const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return null;p=r.filePath}
   fs.writeFileSync(p,buf);if(!process.env.IJO_PDF)shell.openPath(p);return p}finally{w.destroy();fs.rmSync(f,{force:true})}});
+ipcMain.handle('stmtPreview',async(e,html,name)=>{const {w,f}=await renderPDF(html);let buf;try{buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,margins:{top:0.3,bottom:0.3,left:0.3,right:0.3}})}finally{w.destroy();fs.rmSync(f,{force:true})}
+  const pf=path.join(os.tmpdir(),'ijo_preview_'+Date.now()+'.pdf');fs.writeFileSync(pf,buf);
+  const v=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  v.setMenu(null);v.webContents.setWindowOpenHandler(()=>({action:'deny'}));v.on('page-title-updated',ev=>ev.preventDefault());v.on('closed',()=>fs.rmSync(pf,{force:true}));await v.loadFile(pf);return true});
 ipcMain.handle('stmtPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4'},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});
 ipcMain.handle('stmtXlsx',async(e,s,sup,name)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('거래명세서',{pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.24,right:0.24,top:0.3,bottom:0.3,header:0,footer:0}}});
   const W=[4.4,7.3,5.6,8.4,5.4,8.4,8.4,8.4,5.5,5.4,8.4,8.4,7.3,10.6];ws.columns=W.map(w=>({width:w}));
