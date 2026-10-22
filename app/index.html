@@ -111,8 +111,8 @@ td.ssd{overflow:hidden}td.ssd.wfdrop{background:#ebf4ff;outline:2px dashed #2271
 </section>
 <section class="page" id="p_stmt">
  <div id="st_tabs" class="tabs"><button class="tab on" data-t="list" onclick="stSetTab('list')">명세서</button><button class="tab" data-t="cust" onclick="stSetTab('cust')">거래처</button></div>
- <div id="st_list"><div class="card"><div class="filters"><input id="sk" placeholder="검색(NO.·오더번호·품명·공급받는자·LOT)" oninput="render()" style="min-width:280px"><select id="ssu" onchange="render()"></select><select id="scu" onchange="render()"></select><span style="flex:1"></span><button class="p" onclick="newStmt()">+ 새 명세서</button></div>
-  <div class="tw"><table><thead><tr><th>NO.</th><th>날짜</th><th>공급자</th><th>공급받는자</th><th>오더번호</th><th>품명</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th style="text-align:right">금액</th><th></th></tr></thead><tbody id="stb"></tbody></table></div></div></div>
+ <div id="st_list"><div class="card"><div class="filters"><input id="sk" placeholder="검색(오더번호·품명·공급받는자·LOT)" oninput="render()" style="min-width:280px"><select id="ssu" onchange="render()"></select><select id="scu" onchange="render()"></select><span style="flex:1"></span><button class="p" onclick="newStmt()">+ 새 명세서</button></div>
+  <div class="tw"><table><thead><tr><th>날짜</th><th>공급자</th><th>공급받는자</th><th>오더번호</th><th>품명</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th style="text-align:right">금액</th><th></th></tr></thead><tbody id="stb"></tbody></table></div></div></div>
  <div id="st_cust" style="display:none"><div class="card"><div class="filters"><input id="ck" placeholder="검색(상호·등록번호·성명·주소)" oninput="render()" style="min-width:260px"><span style="flex:1"></span><button class="p" onclick="openCust()">+ 거래처 등록</button></div><p class="muted" id="cmiss"></p>
   <div class="tw"><table><thead><tr><th>상호</th><th>등록번호</th><th>성명</th><th>사업장주소</th><th>업태 / 종목</th><th>기본 납품처</th><th>기본 담당자</th></tr></thead><tbody id="ctb"></tbody></table></div></div></div>
  <div id="st_edit" style="display:none"></div>

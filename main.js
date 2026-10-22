@@ -46,7 +46,7 @@ ipcMain.handle('stmtXlsx',async(e,s,sup,name)=>{const ExcelJS=require('exceljs')
   const cell=(a,v,o={})=>{const c=ws.getCell(a);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:'middle',horizontal:o.h||'center',wrapText:true};if(o.fmt)c.numFmt=o.fmt;if(o.fill)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};return c};
   const box=(r)=>{const [a,b]=r.split(':');const s1=ws.getCell(a),s2=ws.getCell(b||a);for(let R=s1.row;R<=s2.row;R++)for(let C=s1.col;C<=s2.col;C++)ws.getCell(R,C).border=B};
   const mg=(r,v,o)=>{if(r.includes(':'))ws.mergeCells(r);cell(r.split(':')[0],v,o);box(r)};
-  cell('A1','NO.');cell('B1',s.no,{h:'left'});ws.mergeCells('E2:J2');cell('E2','거래명세서(공급자)',{font:{size:16,bold:true,underline:true}});ws.mergeCells('L3:N3');cell('L3',s.date||'',{h:'right'});
+  ws.mergeCells('E2:J2');cell('E2','거래명세서(공급자)',{font:{size:16,bold:true,underline:true}});ws.mergeCells('L3:N3');cell('L3',s.date||'',{h:'right'});
   const party=(c0,lab,p,isSup)=>{const C=n=>String.fromCharCode(c0.charCodeAt(0)+n);
     mg(`${C(0)}5:${C(0)}9`,lab,{fill:'FFF2F2F2',font:{bold:true}});mg(`${C(1)}5`,'등록\n번호');mg(`${C(2)}5:${C(6)}5`,p.reg||'',{font:{size:11,bold:true}});
     mg(`${C(1)}6`,'상호');mg(`${C(2)}6:${C(3)}6`,p.name||'');mg(`${C(4)}6`,'성명');mg(`${C(5)}6:${C(6)}6`,p.ceo||'');

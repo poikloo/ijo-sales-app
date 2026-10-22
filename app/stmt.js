@@ -39,21 +39,21 @@ function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.s
 function findShip(id){for(const o of orders)for(const p of o.procs){const i=p.ships.findIndex(x=>x.id===id);if(i>=0)return {o,p,i}}return null}
 function unlinkShip(s){if(!s.shipId)return;const f=findShip(s.shipId);if(f){f.p.ships.splice(f.i,1);f.o.updated=now()}}
 function linkShip(s){unlinkShip(s);if(!s.linkShip||!s.orderId){s.shipId='';return}const o=orders.find(x=>x.id===s.orderId);if(!o||!o.procs.length){s.shipId='';return}
- const p=o.procs[o.procs.length-1];s.shipId=s.shipId||sid();p.ships.push({id:s.shipId,date:s.date,qty:stTot(s).q,memo:`명세서 NO.${s.no}`,stmtId:s.id});p.ships.sort((a,b)=>(a.date||'').localeCompare(b.date||''));o.updated=now()}
+ const p=o.procs[o.procs.length-1];s.shipId=s.shipId||sid();p.ships.push({id:s.shipId,date:s.date,qty:stTot(s).q,memo:`거래명세서 ${s.date||''}`.trim(),stmtId:s.id});p.ships.sort((a,b)=>(a.date||'').localeCompare(b.date||''));o.updated=now()}
 function stmtsForOrder(o){const l=stmts.filter(s=>s.orderId===o.id).sort((a,b)=>b.no-a.no);
- return `<div class="card"><h2>발행한 거래명세서 <button style="float:right" onclick="newStmt('${o.id}')">+ 이 오더로 명세서 작성</button></h2>${l.length?`<table><thead><tr><th>NO.</th><th>날짜</th><th>공급받는자</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th>출고 반영</th></tr></thead><tbody>${l.map(s=>{const t=stTot(s);return `<tr class="r" onclick="go('stmt');editStmt('${s.id}')"><td>${s.no}</td><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td>${s.linkShip&&s.shipId?'✓':'-'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">아직 발행한 거래명세서가 없습니다.</p>'}</div>`}
+ return `<div class="card"><h2>발행한 거래명세서 <button style="float:right" onclick="newStmt('${o.id}')">+ 이 오더로 명세서 작성</button></h2>${l.length?`<table><thead><tr><th>날짜</th><th>공급받는자</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th>출고 반영</th></tr></thead><tbody>${l.map(s=>{const t=stTot(s);return `<tr class="r" onclick="go('stmt');editStmt('${s.id}')"><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td>${s.linkShip&&s.shipId?'✓':'-'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">아직 발행한 거래명세서가 없습니다.</p>'}</div>`}
 // ---- 목록 / 탭 ----
 function stSetTab(t){stTab=t;stEd=null;render()}
 function renderStmt(){document.querySelectorAll('#p_stmt .tab').forEach(e=>e.classList.toggle('on',e.dataset.t===stTab));
  $('st_tabs').style.display=stEd?'none':'';$('st_list').style.display=!stEd&&stTab==='list'?'':'none';$('st_cust').style.display=!stEd&&stTab==='cust'?'':'none';$('st_edit').style.display=stEd?'':'none';
- $('ptitle').textContent=stEd?`거래명세서 › ${stEd._new?'새 명세서':'NO.'+stEd.no}`:'거래명세서';
+ $('ptitle').textContent=stEd?`거래명세서 › ${stEd._new?'새 명세서':(stEd.orderNo||stEd.date||'명세서')}`:'거래명세서';
  if(stEd)return;
  if(stTab==='list'){const k=$('sk').value.trim().toLowerCase(),cv=$('scu').value,cs=[...new Set(stmts.map(s=>s.cust.name).filter(Boolean))];
   $('scu').innerHTML='<option value="">전체 공급받는자</option>'+cs.map(c=>`<option>${esc(c)}</option>`).join('');$('scu').value=cs.includes(cv)?cv:'';
   const sv=$('ssu').value,sn=[...new Set(stmts.map(x=>supOf(x).name).filter(Boolean))];$('ssu').innerHTML='<option value="">전체 공급자</option>'+sn.map(c=>`<option>${esc(c)}</option>`).join('');$('ssu').value=sn.includes(sv)?sv:'';$('ssu').style.display=sn.length>1?'':'none';
-  const l=stmts.filter(s=>(!$('ssu').value||supOf(s).name===$('ssu').value)&&(!$('scu').value||s.cust.name===$('scu').value)&&(!k||[s.no,s.orderNo,s.item,s.spec,s.cust.name,s.dest,s.note,...s.lots.map(x=>x.lotNo)].join(' ').toLowerCase().includes(k))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.no-a.no);
-  $('stb').innerHTML=l.length?l.map(s=>{const t=stTot(s),a=stAmt(s);return `<tr class="r" onclick="editStmt('${s.id}')"><td><b>${s.no}</b></td><td>${esc(s.date)}</td><td>${esc(supOf(s).name)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td>${esc(s.orderNo)}</td><td>${esc(s.item)}${s.spec?' '+esc(s.spec):''}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td style="text-align:right">${a?a.toLocaleString('ko-KR'):''}</td>
-   <td style="white-space:nowrap" onclick="event.stopPropagation()"><button onclick="dupStmt('${s.id}')">복제</button> <button class="d" onclick="delStmt('${s.id}')">삭제</button></td></tr>`}).join(''):'<tr><td colspan="10">거래명세서가 없습니다. [+ 새 명세서]로 작성하세요.</td></tr>'}
+  const l=stmts.filter(s=>(!$('ssu').value||supOf(s).name===$('ssu').value)&&(!$('scu').value||s.cust.name===$('scu').value)&&(!k||[s.orderNo,s.item,s.spec,s.cust.name,s.dest,s.note,...s.lots.map(x=>x.lotNo)].join(' ').toLowerCase().includes(k))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.no-a.no);
+  $('stb').innerHTML=l.length?l.map(s=>{const t=stTot(s),a=stAmt(s);return `<tr class="r" onclick="editStmt('${s.id}')"><td>${esc(s.date)}</td><td>${esc(supOf(s).name)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td>${esc(s.orderNo)}</td><td>${esc(s.item)}${s.spec?' '+esc(s.spec):''}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td style="text-align:right">${a?a.toLocaleString('ko-KR'):''}</td>
+   <td style="white-space:nowrap" onclick="event.stopPropagation()"><button onclick="dupStmt('${s.id}')">복제</button> <button class="d" onclick="delStmt('${s.id}')">삭제</button></td></tr>`}).join(''):'<tr><td colspan="9">거래명세서가 없습니다. [+ 새 명세서]로 작성하세요.</td></tr>'}
  if(stTab==='cust'){const k=$('ck').value.trim().toLowerCase(),l=custs.filter(c=>!k||[c.name,c.reg,c.ceo,c.addr,c.dest,c.contact,c.memo].join(' ').toLowerCase().includes(k)).sort((a,b)=>a.name.localeCompare(b.name));
   const miss=[...new Set(orders.map(o=>o.client).filter(n=>n&&!custs.some(c=>c.name===n)))];
   $('cmiss').innerHTML=miss.length?`생산 관리에 있지만 거래처로 등록되지 않은 이름: ${miss.map(n=>`<button onclick="openCust('',${esc(JSON.stringify(n))})">+ ${esc(n)}</button>`).join(' ')}`:'';
@@ -73,7 +73,7 @@ const nextNo=()=>stmts.reduce((a,s)=>Math.max(a,+s.no||0),0)+1;
 function newStmt(orderId){stEd=normStmt({no:nextNo(),date:ymd(new Date()),lots:[{...emptyLot(),lotNo:'1'}]});stEd._new=true;stEd.id=sid();{const d=defSup();if(d){stEd.supplierId=d.id;stEd.sup=supSnap(d)}}if(page!=='stmt'){page='';go('stmt')}if(orderId)stPickOrder(orderId);renderEditor();render()}
 function editStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor();render();$('content').scrollTop=0}
 function dupStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=normStmt({...JSON.parse(JSON.stringify(s)),id:sid(),no:nextNo(),date:ymd(new Date()),shipId:'',example:false});stEd._new=true;renderEditor();render();toast('복제본을 편집 중입니다 (저장해야 반영돼요)')}
-function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!confirm(`거래명세서 NO.${s.no}을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
+function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!confirm(`거래명세서(${[s.date,s.orderNo,s.cust.name].filter(Boolean).join(' · ')||'제목 없음'})을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
 function orderLabel(o){return `${o.no} · ${o.item}${o.client?' · '+o.client:''}`}
 function stPickOrder(id){const o=orders.find(x=>x.id===id);if(!o)return;const e=stEd;e.orderId=o.id;e.orderNo=o.no;e.item=o.item;e.spec=o.fabric||'';e.linkShip=true;
  e.lots.forEach(l=>{if(!l.color)l.color=(o.lines[0]||{}).color||''});const c=custs.find(x=>x.name===o.client);if(c)stPick(c.id);else if(o.client&&!e.cust.name)e.cust.name=o.client}
@@ -118,7 +118,7 @@ function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!confirm('이 LOT에 입
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
 function stCancel(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
 function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.updated=now();return s}
-function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);if(stmts.some(x=>x.no===s.no&&x.id!==s.id)&&!confirm(`NO.${s.no} 명세서가 이미 있습니다. 그래도 저장할까요?`))return false;
+function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
  const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 출고에 반영됨':''))}return true}
 // ---- 출력 ----
@@ -139,14 +139,13 @@ function stmtHTML(s){const S=supOf(s),c=s.cust,t=stTot(s),a=stAmt(s),n=Math.max(
  let lots='';for(let k=0;k<n;k++){const l=s.lots[k]||{lotNo:'',color:'',rolls:Array(20).fill('')};
   lots+=`<tr><td rowspan="2">${E(l.lotNo)}</td><td rowspan="2" class="cl">${E(l.color)}</td>${l.rolls.slice(0,10).map(v=>`<td class="r">${N(v)}</td>`).join('')}<td rowspan="2" class="r">${lotCnt(l)||''}</td><td rowspan="2" class="r">${N(lotSum(l)||'')}</td></tr><tr>${l.rolls.slice(10,20).map(v=>`<td class="r">${N(v)}</td>`).join('')}</tr>`}
  const notice=String(S.notice||'').split(/\r?\n/).filter(Boolean),cts=String(S.contacts||'').split(/\r?\n/).filter(Boolean);
- return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>거래명세서 NO.${s.no}</title><style>
+ return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${E(stFileName(s))}</title><style>
 @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000;width:194mm}
 table{border-collapse:collapse;width:99.5%;table-layout:fixed}td{border:1px solid #000;padding:1px 3px;height:18px;text-align:center;vertical-align:middle;overflow:hidden;white-space:nowrap}.wr{white-space:normal;word-break:keep-all}
 .nb td{border:none}.hd{background:#f2f2f2;font-weight:bold}.vt{writing-mode:vertical-rl;letter-spacing:6px}.b{font-weight:bold}.big{font-size:11pt}.r{text-align:right}.l{text-align:left}
 h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{height:19px}.ft td{border:none;text-align:left;height:22px}.gap td{border:none;height:6px}.ft td.big2{font-size:12pt;font-weight:normal;height:30px;padding:3px 4px}.ft tr.sp td{border:none;height:8px;padding:0}.lt td.cl{font-size:8.5pt;line-height:1.1;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;overflow:visible;padding:1px 2px}
 </style></head><body><table>
 <colgroup>${[8,8,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6.6,6,9].map(w=>`<col style="width:${(w/97*100).toFixed(2)}%">`).join('')}</colgroup>
-<tr class="nb"><td class="b">NO.</td><td class="l">${s.no}</td><td colspan="12"></td></tr>
 <tr class="nb"><td colspan="4"></td><td colspan="6"><h1>거래명세서(공급자)</h1></td><td colspan="4"></td></tr>
 <tr class="nb"><td colspan="11"></td><td colspan="3" class="r">${E(s.date)}</td></tr><tr class="gap"><td colspan="14"></td></tr>
 <tr>${pty('공급자',S)}<td rowspan="5" class="hd vt">공급받는자</td><td class="hd">등록<br>번호</td><td colspan="5" class="b big">${E(c.reg)}</td></tr>
@@ -164,7 +163,8 @@ h1{font-size:20pt;text-decoration:underline;letter-spacing:4px;margin:0}.lt td{h
 ${notice.map((x,i)=>`<tr><td class="b">${i?'':'주의 :'}</td><td colspan="13">${E(x)}</td></tr>`).join('')}
 ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space:pre">${E(x)}</td>${i===cts.length-1?'<td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td>':''}</tr>`).join('')}
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table>${FIT_JS}</body></html>`}
-async function stOut(mode){if(!stEd)return;const s=stClean(stEd),fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[fsafe(s.orderNo)||(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_');
+function stFileName(s){const fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,'');return [fsafe(s.orderNo)||(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_')}
+async function stOut(mode){if(!stEd)return;const s=stClean(stEd),nm=stFileName(s);
  if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
  try{if(mode==='pdf'){const p=await A.stmtPDF(stmtHTML(s),nm+'.pdf');if(p)toast('PDF 저장: '+p)}
   else if(mode==='preview')await A.stmtPreview(stmtHTML(s),nm);
