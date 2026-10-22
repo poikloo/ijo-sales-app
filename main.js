@@ -69,6 +69,30 @@ ipcMain.handle('stmtXlsx',async(e,s,sup,name)=>{const ExcelJS=require('exceljs')
   ws.mergeCells(`L${r-(cl.length?1:0)}:N${r-(cl.length?1:0)}`);cell(`L${r-(cl.length?1:0)}`,'인수자            (인)',{h:'right'});
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}
   await wb.xlsx.writeFile(p);return p});
+ipcMain.handle('owXlsx',async(e,q,sup,name)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('작업의뢰서',{pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:0.4,right:0.4,top:0.4,bottom:0.4,header:0,footer:0}}});
+  ws.columns=[11,15.5,8.8,12.7,4.9,8,15.7,3.3,4.4,4.8,5.3,5.4,5.6,3.8,1.7].map(w=>({width:w}));
+  const thin={style:'thin'},B={top:thin,left:thin,bottom:thin,right:thin},F={name:'맑은 고딕',size:10},H={fill:'FFF2F2F2'};
+  const cell=(a,v,o={})=>{const c=ws.getCell(a);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:o.v||'middle',horizontal:o.h||'center',wrapText:true};if(o.fmt)c.numFmt=o.fmt;if(o.fill)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}}};
+  const box=r=>{const [a,b]=r.split(':');const s1=ws.getCell(a),s2=ws.getCell(b||a);for(let R=s1.row;R<=s2.row;R++)for(let C=s1.col;C<=s2.col;C++)ws.getCell(R,C).border=B};
+  const mg=(r,v,o={})=>{if(r.includes(':'))ws.mergeCells(r);cell(r.split(':')[0],v,o);if(!o.nb)box(r)};
+  mg('A1:O1','작 업 의 뢰 서',{nb:1,font:{size:22,bold:true,color:{argb:'FF0B2A6F'}}});ws.getRow(1).height=40;
+  mg('A3:B4',q.vendor||'',{nb:1,font:{size:16},h:'left'});mg('C3:C4','귀하',{nb:1,font:{size:14},h:'left'});
+  mg('I3:I4','결재');['담당','과장','부장','상무','사장'].forEach((x,i)=>{const c=String.fromCharCode(74+i);if(i===4){mg('N3:O3',x,{font:{size:9}});mg('N4:O4','')}else{mg(c+'3',x,{font:{size:9}});mg(c+'4','')}});ws.getRow(4).height=30;
+  mg('A5:B5',q.date||'',{nb:1,font:{size:12}});
+  mg('A7','LI NO.',H);mg('B7',q.liNo||'');mg('C7','원발주처',H);mg('D7',q.client||'');mg('E7:F7','납기일',H);mg('G7',q.due||'');mg('H7:J8','납품처',H);mg('K7:O8',q.dest||'');
+  mg('A8','PO NO.',H);mg('B8',q.poNo||'');mg('C8','담당자',H);mg('D8',q.manager||'');mg('E8:F8','참조',H);mg('G8',q.ref||'');
+  mg('A10','품명',H);mg('B10:E10',q.item||'',{h:'left'});mg('F10:G10','가공구분',H);mg('H10:O10',q.procName||'');
+  mg('A11:B11','COLOR',H);mg('C11:D11','수량',H);mg('E11:F11','단위',H);mg('G11','비고',H);mg('H11:O11','작업, 주의 사항',H);
+  const ls=q.lines||[],n=Math.max(8,ls.length);for(let k=0;k<n;k++){const r=12+k,l=ls[k]||{};mg(`A${r}:B${r}`,l.color||'');mg(`C${r}:D${r}`,l.qty===''||l.qty==null?null:+l.qty,{fmt:'#,##0.##',h:'right'});mg(`E${r}:F${r}`,l.unit||'');mg(`G${r}`,l.note||'')}
+  let r=12+n;const tq=ls.reduce((a,l)=>a+(+l.qty||0),0),tu=[...new Set(ls.filter(l=>l.qty!==''&&l.qty!=null).map(l=>l.unit))];
+  mg(`A${r}:B${r}`,'TOTAL',H);mg(`C${r}:D${r}`,tq||null,{fmt:'#,##0.##',h:'right',font:{bold:true}});mg(`E${r}:F${r}`,tq&&tu.length===1?tu[0]:'');mg(`G${r}`,'');
+  const work=[q.shrink!==''?`가공 축: ${q.shrink}%`:'',q.src?`원단 입고처: ${q.src}`:'',q.work||''].filter(Boolean).join('\n');
+  r++;mg(`A${r}:G${r+3}`,q.notes||'',{h:'left',v:'top'});mg(`H12:O${r+3}`,work,{h:'left',v:'top'});r+=5;
+  mg(`A${r}:G${r}`,'비 고',H);mg(`H${r}:O${r}`,'SHIPPING MARK',H);r++;mg(`A${r}:G${r+10}`,q.memo||'',{h:'left',v:'top'});mg(`H${r}:O${r+10}`,q.mark||'',{font:{size:12}});r+=11;
+  String(q.terms||'').split(/\r?\n/).filter(x=>x.trim()).forEach(t=>{ws.mergeCells(`A${r}:O${r}`);cell(`A${r}`,t,{h:'left',font:{size:8.5}});r++});
+  r++;mg(`H${r}:O${r}`,(sup&&sup.name)||'',{nb:1,h:'right',font:{size:12,bold:true}});
+  let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}
+  await wb.xlsx.writeFile(p);return p});
 ipcMain.handle('importSupplierXlsx',async()=>{const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel',extensions:['xlsx']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;
   const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(r.filePaths[0]);const ws=wb.getWorksheet('양식')||wb.worksheets[0];
   const v=a=>{const c=ws.getCell(a).value;if(c==null)return '';if(typeof c==='object'){if(c.richText)return c.richText.map(t=>t.text).join('');if('result' in c)return String(c.result??'');if(c.text)return c.text}return String(c).trim()};

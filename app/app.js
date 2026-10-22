@@ -28,19 +28,19 @@ function normLines(o){const L=Array.isArray(o.lines)&&o.lines.length?o.lines:[{c
 // 주문 단위 색상/발주량/단위는 라인에서 계산: 색상=쉼표로 연결, 단위=첫 라인 단위, 발주량=그 단위 라인들의 합계
 function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD'}],u=L[0].unit;o.color=[...new Set(L.map(l=>l.color).filter(Boolean))].join(', ');o.unit=u;o.qty=L.filter(l=>l.unit===u).reduce((s,l)=>s+l.qty,0);o.mixedUnit=L.some(l=>l.unit!==u);return o}
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
-function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',updated:o.updated||'',
+function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',delivered:!!o.delivered,updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}))}
-function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);data=r?normalize(r):null;
+function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload()}).catch(e=>alert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload()}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
-document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;go(a.dataset.p)});
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
 function filtered(){const k=$('fk').value.trim().toLowerCase(),o=$('fo').value,s=$('fs').value;
@@ -67,6 +67,7 @@ function render(){
   $('dup').innerHTML=upHTML(upList().slice(0,10));$('ddue').innerHTML=dueHTML();$('dym').textContent=`${dcur.getFullYear()}년 ${dcur.getMonth()+1}월`;$('dcal').innerHTML=calHTML(dcur.getFullYear(),dcur.getMonth(),false,'dash')}
  if(page==='prod')renderProd();
  if(page==='stmt')renderStmt();
+ if(page==='outwork')renderOutwork();
  if(page==='contacts')renderContacts();
  if(page==='settings')renderSupplier();
  if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
@@ -104,10 +105,10 @@ function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
-async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload()},null,2));if(p)toast('백업 저장: '+p)}
+async function exportJSON(){const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload()},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
  if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
- if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);pcImport(raw);save();render();toast('복원 완료')}}
+ if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);owImport(raw);save();render();toast('복원 완료')}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
@@ -156,7 +157,7 @@ function renderOrder(o){const g=progress(o);let prev=null;
  <div class="oh">${[['오더번호',esc(o.no)],['품목',tag(o)+esc(o.item)],['아이템명',esc(o.fabric)],['색상 / 발주량',o.lines.map(l=>`<span class="cln">${esc(lineTxt(l))}</span>`).join('')+(o.lines.length>1&&!o.mixedUnit?`<small>합계 ${num(o.qty)} ${esc(o.unit)}</small>`:'')],['거래처',esc(o.client)],['발주일',esc(o.date)],['납기일',o.due?`<span class="${o.due<ymd(new Date())&&g.rate<100?'neg':''}">${esc(o.due)}</span>`:'']].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${v||'-'}</div></div>`).join('')}
  <div><div class="k">납품 완료</div><div class="v">${dlvHTML(o,g)}</div></div><div class="pg" style="flex:1;min-width:220px"><div class="k">최종 공정 출고 (${g.last?esc(g.last.name):'-'})</div><div class="bar"><i class="${g.rate>=100?'full':''}" style="width:${Math.min(100,g.rate)}%"></i></div><small>${num(g.fin)} / ${num(o.qty)} ${esc(o.unit)} (${g.rate.toFixed(1)}%)</small></div></div></div>`;
  const body=o.procs.map((p,i)=>{const s=sum(p),base=prev==null?o.qty:prev,chg=prev?((s-prev)/prev*100):null,exp=p.shrink!=null&&!isRaw(p)&&base?base*(1-p.shrink/100):null;prev=s;
-  const pc=pcol(i);return `<div class="pc" style="border-left:4px solid ${pc}"><div class="pch"><span class="no" style="background:${pc}">${i+1}</span><b style="color:${pc}">${esc(p.name)||'(공정명 없음)'}</b><span class="kv"><span class="k">가공 업체</span><b style="color:${pc}">${esc(p.vendor)||'-'}</b></span><span class="kv"><span class="k">가공 축</span><b style="color:${pc}">${p.shrink!=null&&!isRaw(p)?p.shrink+'%':'-'}</b></span><span class="sp"></span><button class="p" onclick="addShip('${o.id}','${p.id}')" title="출고 추가">+ 출고</button></div>
+  const pc=pcol(i);return `<div class="pc" style="border-left:4px solid ${pc}"><div class="pch"><span class="no" style="background:${pc}">${i+1}</span><b style="color:${pc}">${esc(p.name)||'(공정명 없음)'}</b><span class="kv"><span class="k">가공 업체</span><b style="color:${pc}">${esc(p.vendor)||'-'}</b></span><span class="kv"><span class="k">가공 축</span><b style="color:${pc}">${p.shrink!=null&&!isRaw(p)?p.shrink+'%':'-'}</b></span><span class="sp"></span><button onclick="owNew('${o.id}','${p.id}')" title="이 공정의 외주작업의뢰서 작성">+ 외주작업의뢰서${owFor(o.id,p.id).length?` (${owFor(o.id,p.id).length})`:''}</button><button class="p" onclick="addShip('${o.id}','${p.id}')" title="출고 추가">+ 출고</button></div>
   <table class="st" style="min-width:0"><thead><tr><th style="width:170px;text-align:center">출고일</th><th style="width:160px;text-align:center">출고량 (${esc(o.unit)})</th><th>메모</th><th style="width:44px"></th></tr></thead><tbody>
   ${p.ships.map(x=>`<tr><td><input type="date" value="${esc(x.date)}" onchange="editShip('${o.id}','${p.id}','${x.id}','date',this.value)"></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editShip('${o.id}','${p.id}','${x.id}','qty',this.value)"></td><td><input value="${esc(x.memo)}" onchange="editShip('${o.id}','${p.id}','${x.id}','memo',this.value)"></td><td><button onclick="delShip('${o.id}','${p.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">출고 내역이 없습니다. [+ 출고]로 추가하세요.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${num(s)}</td><td colspan="2"></td></tr></tfoot></table></div>`}).join('')||'<p class="muted">가공 공정이 없습니다. [수정]에서 공정을 추가하세요.</p>';

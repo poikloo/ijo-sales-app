@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api',{
   stmtPDF:(h,n)=>ipcRenderer.invoke('stmtPDF',h,n),
   stmtPrint:h=>ipcRenderer.invoke('stmtPrint',h),
   stmtXlsx:(s,sup,n)=>ipcRenderer.invoke('stmtXlsx',s,sup,n),
+  owXlsx:(r,sup,n)=>ipcRenderer.invoke('owXlsx',r,sup,n),
   importSupplierXlsx:()=>ipcRenderer.invoke('importSupplierXlsx'),
   openExternal:u=>ipcRenderer.invoke('openExternal',u),
   copyText:t=>ipcRenderer.invoke('copyText',t),
