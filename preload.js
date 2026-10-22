@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('api',{
   ssPreview:(p,n)=>ipcRenderer.invoke('ssPreview',p,n),
   ssSaveAs:(p,n)=>ipcRenderer.invoke('ssSaveAs',p,n),
   ssDelete:p=>ipcRenderer.invoke('ssDelete',p),
+  lotOcr:b=>ipcRenderer.invoke('lotOcr',b),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });

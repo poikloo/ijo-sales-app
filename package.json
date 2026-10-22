@@ -20,8 +20,13 @@
     "files": [
       "main.js",
       "preload.js",
+      "ocr-worker.js",
       "app/**/*",
-      "!node_modules/exceljs/dist/**"
+      "!node_modules/exceljs/dist/**",
+      "!node_modules/tesseract.js/dist/**",
+      "!node_modules/tesseract.js-core/tesseract-core.*",
+      "!node_modules/tesseract.js-core/tesseract-core-simd.*",
+      "!node_modules/tesseract.js-core/*.wasm.js"
     ],
     "win": {
       "target": [
@@ -53,14 +58,34 @@
         "repo": "ijo-sales-app",
         "releaseType": "release"
       }
+    ],
+    "asarUnpack": [
+      "ocr-worker.js",
+      "app/vendor/tessdata/**",
+      "node_modules/tesseract.js/**",
+      "node_modules/bmp-js/**",
+      "node_modules/idb-keyval/**",
+      "node_modules/is-electron/**",
+      "node_modules/is-url/**",
+      "node_modules/node-fetch/**",
+      "node_modules/whatwg-url/**",
+      "node_modules/tr46/**",
+      "node_modules/webidl-conversions/**",
+      "node_modules/opencollective-postinstall/**",
+      "node_modules/regenerator-runtime/**",
+      "node_modules/tesseract.js-core/**",
+      "node_modules/wasm-feature-detect/**",
+      "node_modules/zlibjs/**"
     ]
   },
   "devDependencies": {
     "electron": "^33.4.11",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "pdfjs-dist": "^3.11.174"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "tesseract.js": "^5.1.1"
   }
 }

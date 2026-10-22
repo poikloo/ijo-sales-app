@@ -132,6 +132,18 @@ ipcMain.handle('ssPreview',(e,rel,name)=>{const a=ssAbs(rel);if(!fs.existsSync(a
 ipcMain.handle('ssSaveAs',async(e,rel,name)=>{const a=ssAbs(rel);if(!fs.existsSync(a))return false;const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),path.basename(String(name||path.basename(a)))),filters:[{name:'PDF',extensions:['pdf']}]});
   if(r.canceled||!r.filePath)return null;fs.copyFileSync(a,r.filePath);return r.filePath});
 ipcMain.handle('ssDelete',(e,rel)=>{const a=ssAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
+// ===== 수량 가져오기: 오프라인 OCR (tesseract.js 워커 + 번들된 eng 데이터, 네트워크 사용 안 함) =====
+const unp=p=>p.replace(/app\.asar([\\/])/,'app.asar.unpacked$1');
+let ocrW=null;
+function ocrWorker(){if(ocrW)return ocrW;const T=require('tesseract.js'),{pathToFileURL}=require('url');
+  ocrW=T.createWorker('eng',1,{workerPath:unp(path.join(__dirname,'ocr-worker.js')),langPath:pathToFileURL(unp(path.join(__dirname,'app','vendor','tessdata'))).href,cacheMethod:'none',gzip:false}).catch(e=>{ocrW=null;throw e});return ocrW}
+function ocrToks(d){const o=[];for(const b of d.blocks||[])for(const p of b.paragraphs||[])for(const l of p.lines||[])for(const x of l.words||[])o.push({t:x.text,x0:x.bbox.x0,y0:x.bbox.y0,x1:x.bbox.x1,y1:x.bbox.y1,c:x.confidence});return o}
+ipcMain.handle('lotOcr',async(e,bytes)=>{const buf=Buffer.from(bytes),w=await ocrWorker();
+  await w.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:'',preserve_interword_spaces:'1'});const words=ocrToks((await w.recognize(buf,{},{blocks:true})).data);
+  await w.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:'0123456789,.-'});const digits=ocrToks((await w.recognize(buf,{},{blocks:true})).data).filter(k=>/\d/.test(k.t));
+  await w.setParameters({tessedit_pageseg_mode:'6'});const d6=ocrToks((await w.recognize(buf,{},{blocks:true})).data).filter(k=>/^[\d,.]+$/.test(k.t));
+  return {words,digits,digits6:d6}});
+app.on('will-quit',()=>{if(ocrW)ocrW.then(w=>w.terminate()).catch(()=>{})});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));

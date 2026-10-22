@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:">
 <title>이조 영업관리</title><style>
 *{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;background:#f0f2f5;color:#222;font-size:14px;display:flex;height:100vh;overflow:hidden}
 #side{width:220px;background:#1d2327;color:#c3c4c7;display:flex;flex-direction:column;flex-shrink:0}
@@ -133,4 +133,4 @@ td.ssd{overflow:hidden}td.ssd.wfdrop{background:#ebf4ff;outline:2px dashed #2271
 <datalist id="procs"><option>생지</option><option>염색</option><option>FR PU</option><option>FR LAMI</option><option>코팅</option><option>라미네이팅</option><option>봉제</option></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
-<script src="stmt.js"></script><script src="contacts.js"></script><script src="prodcal.js"></script><script src="outwork.js"></script><script src="workorder.js"></script><script src="shipfile.js"></script><script src="app.js"></script></body></html>
+<script src="vendor/pdfjs/pdf.min.js"></script><script src="lotparse.js"></script><script src="stmt.js"></script><script src="lotimport.js"></script><script src="contacts.js"></script><script src="prodcal.js"></script><script src="outwork.js"></script><script src="workorder.js"></script><script src="shipfile.js"></script><script src="app.js"></script></body></html>
