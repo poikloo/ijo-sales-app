@@ -45,7 +45,7 @@ function owHTML(r){const S=r.sup||supSnap(sups.find(x=>x.id===r.supplierId)||def
  const dt=r.date?r.date:'';let rows='';for(let i=0;i<n;i++){const l=r.lines[i];rows+=`<tr class="ln"><td colspan="3" class="c">${l?E(l.color):''}</td><td class="r">${l&&l.qty?num(l.qty):''}</td><td>${l&&(l.qty||l.color)?E(l.unit):''}</td><td colspan="2">${l?E(l.memo):''}</td>${i===0?`<td colspan="8" rowspan="${n}" class="tl wr">${br(r.notes)}</td>`:''}</tr>`}
  const info=String(r.info||'').split(/\r?\n/).filter(x=>x.trim()),terms=String(r.terms||'').split(/\r?\n/).filter(x=>x.trim());
  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>외주작업의뢰서</title><style>
-@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000}
+@page{size:A4 portrait;margin:10mm}*{box-sizing:border-box}body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:9.5pt;color:#000;width:190mm}
 table{border-collapse:collapse;width:100%;table-layout:fixed}td{border:1px solid #000;padding:2px 4px;height:22px;text-align:center;vertical-align:middle;overflow:hidden}
 .nb td,td.nb{border:none}.tl{text-align:left;vertical-align:top}.r{text-align:right}.wr{white-space:normal;word-break:keep-all}.hd{background:#f2f2f2}
 h1{text-align:center;font-size:26pt;letter-spacing:12pt;color:#1f3a93;margin:4mm 0 4mm}.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:3mm}
@@ -67,11 +67,11 @@ ${rows}
 <tr><td colspan="3" class="hd">TOTAL</td><td class="r"><b>${num(r.lines.filter(l=>l.unit===u).reduce((a,l)=>a+(+l.qty||0),0))}</b></td><td>${E(u)}</td><td colspan="2"></td><td colspan="8" style="border-top:none"></td></tr>
 <tr><td colspan="15" class="tl wr" style="height:8mm;border-bottom:none">${info.map(E).join('<br>')}</td></tr>
 <tr><td colspan="9" class="hd">비 고</td><td colspan="6" class="hd">SHIPPING MARK</td></tr>
-<tr><td colspan="9" class="tl wr" style="height:58mm">${br(r.remarks)}</td><td colspan="6" style="vertical-align:middle"><div class="mark">${br(r.mark)}</div></td></tr>
+<tr><td colspan="9" class="tl wr" style="height:58mm">${br(r.remarks)}</td><td colspan="6" style="vertical-align:middle"><div class="mark fit">${br(r.mark)}</div></td></tr>
 <tr><td colspan="15" class="tl wr" style="font-size:8pt;line-height:1.5">${terms.map(E).join('<br>')}</td></tr>
 </table>
 <div class="ft">${E(S.name||'')}</div>
-</body></html>`}
+${FIT_JS}</body></html>`}
 async function owOut(mode){const r=owClean(owEd),fs=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[(r.date||ymd(new Date())).replace(/-/g,''),'외주작업의뢰서',fs(r.to)].filter(Boolean).join('_');
  try{if(mode==='pdf'){const p=await A.stmtPDF(owHTML(r),nm+'.pdf');if(p)toast('PDF 저장: '+p)}else if(mode==='preview'){await A.stmtPreview(owHTML(r),nm)}else if(mode==='xlsx'){const p=await A.owXlsx({vendor:r.to,date:r.date,liNo:r.liNo,client:r.origin,due:r.due,dest:r.dest,poNo:r.poNo,manager:r.manager,ref:r.ref,item:r.item,procName:r.procType,lines:r.lines.map(l=>({color:l.color,qty:l.qty||'',unit:l.unit,note:l.memo})),shrink:'',src:'',work:r.notes,notes:r.info,memo:r.remarks,mark:r.mark,terms:r.terms},r.sup||supSnap(defSup()),nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}
   else await A.stmtPrint(owHTML(r))}catch(e){alert('출력 실패: '+(e.message||e))}}
