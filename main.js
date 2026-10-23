@@ -178,3 +178,12 @@ app.whenReady().then(()=>{
       console.log('ERRORS2:',JSON.stringify(await win.webContents.executeJavaScript('window.__errs||[]')));app.quit()},1200))}
 });
 app.on('window-all-closed',()=>app.quit());
+// 생산 관리 엑셀 가져오기: 파일 선택 → 행 배열(문자열)로 반환. 엑셀 날짜 셀은 YYYY-MM-DD 로 변환
+function csvRows(t){const R=[];let r=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){r.push(f);f=''}else if(c==='\n'){r.push(f.replace(/\r$/,''));R.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
+ipcMain.handle('ordImportPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;
+  const f=r.filePaths[0],name=path.basename(f);
+  if(/\.csv$/i.test(f)){let t=fs.readFileSync(f,'utf8').replace(/^\uFEFF/,'');return {name,rows:csvRows(t)}}
+  const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);const ws=wb.worksheets[0];if(!ws)return {name,rows:[]};
+  const p2=n=>String(n).padStart(2,'0'),cv=v=>{if(v==null)return '';if(v instanceof Date)return `${v.getUTCFullYear()}-${p2(v.getUTCMonth()+1)}-${p2(v.getUTCDate())}`;if(typeof v==='object'){if('result' in v)return cv(v.result);if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);return ''}return String(v)};
+  const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).trim());rows.push(a)});return {name,rows}});
+ipcMain.handle('preImportBackup',()=>{try{const d=readData();if(!d)return null;fs.mkdirSync(BK(),{recursive:true});const ts=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().replace(/[:T]/g,'-').slice(0,19);const p=path.join(BK(),`preimport_${ts}.json`);fs.writeFileSync(p,JSON.stringify(d,null,2));return p}catch(e){return null}});
