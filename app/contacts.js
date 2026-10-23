@@ -1,7 +1,7 @@
 // ===== 거래처 정보 (명함) =====
 let contacts=[],ctSel='',ctDraft=null;
 const CT_LISTS=[['addrs','주소','주소'],['tels','회사 전화번호','전화번호'],['faxes','회사 팩스번호','팩스번호'],['mobiles','휴대폰 전화번호','휴대폰 번호']];
-const CT_TEXT=[['company','회사명'],['name','성함'],['team','팀명'],['title','직급'],['email','메일 주소'],['web','홈페이지 주소']];
+const CT_TEXT=[['company','회사명'],['name','성함'],['team','팀명'],['title','직급'],['email','메일 주소'],['web','홈페이지 주소'],['memo','메모']];
 const strArr=a=>(Array.isArray(a)?a:[]).map(x=>String(x??'').trim()).filter(Boolean);
 function normContact(c){const o={id:String(c&&c.id||uid()),example:!!(c&&c.example),updated:c&&c.updated||''};CT_TEXT.forEach(([k])=>o[k]=String(c&&c[k]||'').trim());CT_LISTS.forEach(([k])=>o[k]=strArr(c&&c[k]));return o}
 const exContact=()=>normContact({id:'xct1',example:true,company:'예시상사',name:'홍길동',team:'영업팀',title:'과장',addrs:['(예시) 서울시 ○○구 ○○로 00'],tels:['000-0000-0000'],faxes:['000-0000-0001'],mobiles:['000-0000-0002'],email:'example@example.com',web:'www.example.com',updated:now()});
@@ -23,7 +23,7 @@ function viewContact(id){const c=contacts.find(x=>x.id===id);if(!c)return;$('dt'
  const ph=(l)=>l.map(p=>`<div>${esc(p)} <button class="mini" onclick="ctCopy(${esc(JSON.stringify(p))})">복사</button></div>`).join('');
  const rows=[['회사명',esc(c.company)],['성함',esc(c.name)],['팀명',esc(c.team)],['직급',esc(c.title)],['주소',c.addrs.map(esc).join('<br>')],['회사 전화',ph(c.tels)],['회사 팩스',ph(c.faxes)],['휴대폰',ph(c.mobiles)],
   ['메일',c.email?`<a href="#" onclick="A.openExternal('mailto:'+${esc(JSON.stringify(c.email))});return false">${esc(c.email)}</a> <button class="mini" onclick="ctCopy(${esc(JSON.stringify(c.email))})">복사</button>`:''],
-  ['홈페이지',c.web?`<a href="#" onclick="A.openExternal(${esc(JSON.stringify(webUrl(c.web)))});return false">${esc(c.web)}</a>`:'']].filter(r=>r[1]);
+  ['메모',esc(c.memo).replace(/\n/g,'<br>')],['홈페이지',c.web?`<a href="#" onclick="A.openExternal(${esc(JSON.stringify(webUrl(c.web)))});return false">${esc(c.web)}</a>`:'']].filter(r=>r[1]);
  $('dbody').innerHTML=`<dl class="dv">${rows.map(([k,v])=>`<dt>${k}</dt><dd style="white-space:normal">${v}</dd>`).join('')}</dl>`;
  $('dfoot').innerHTML=`<button class="d" onclick="delContact('${id}')">삭제</button><button onclick="openContact('${id}')">수정</button><button onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
 function delContact(id){const c=contacts.find(x=>x.id===id);if(c&&confirm(`'${[c.company,c.name].filter(Boolean).join(' ')||'이 명함'}'을(를) 삭제할까요?`)){contacts=contacts.filter(x=>x.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
@@ -34,12 +34,12 @@ function ctAddRow(k){ctDraft[k].push('');ctListRender(k);const ins=$('ctl_'+k).q
 function openContact(id){const c=id?contacts.find(x=>x.id===id):normContact({});if(!c)return;ctDraft=JSON.parse(JSON.stringify(c));$('dt').textContent=id?'명함 수정':'명함 추가';
  $('dbody').innerHTML=`<div class="g">${CT_TEXT.slice(0,4).map(([k,l])=>`<label>${l}<input id="ct_${k}" value="${esc(c[k])}"></label>`).join('')}
  ${CT_LISTS.map(([k,l])=>`<div class="w"><div style="font-size:12px;color:#555">${l}</div><div id="ctl_${k}"></div><button type="button" onclick="ctAddRow('${k}')">+ ${l.replace('회사 ','')} 추가</button></div>`).join('')}
- <label>메일 주소<input id="ct_email" type="email" value="${esc(c.email)}"></label><label>홈페이지 주소<input id="ct_web" value="${esc(c.web)}" placeholder="www.example.com"></label></div><p class="muted">모든 항목은 선택 입력입니다.</p>`;
+ <label>메일 주소<input id="ct_email" type="email" value="${esc(c.email)}"></label><label>홈페이지 주소<input id="ct_web" value="${esc(c.web)}" placeholder="www.example.com"></label><label class="w">메모<textarea id="ct_memo" rows="3">${esc(c.memo)}</textarea></label></div><p class="muted">모든 항목은 선택 입력입니다.</p>`;
  CT_LISTS.forEach(([k])=>ctListRender(k));
  $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveContact('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('ct_company').focus()}
 function saveContact(id){const o={};CT_TEXT.forEach(([k])=>o[k]=$('ct_'+k).value.trim());CT_LISTS.forEach(([k])=>o[k]=strArr(ctDraft[k]));o.updated=now();
  if(!CT_TEXT.some(([k])=>o[k])&&!CT_LISTS.some(([k])=>o[k].length)){toast('입력된 내용이 없어요. 한 가지 이상 입력해 주세요.');return}
  if(id){const i=contacts.findIndex(x=>x.id===id);contacts[i]=normContact({...contacts[i],...o})}else contacts.push(normContact({...o,id:uid()}));save();render();toast('저장했습니다');id?viewContact(id):dlg.close()}
-async function exportContactsCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['회사명','성함','팀명','직급','주소','회사 전화번호','회사 팩스번호','휴대폰 전화번호','메일 주소','홈페이지 주소','예시'];
- const rows=[...contacts].sort(ctSort).map(c=>[c.company,c.name,c.team,c.title,c.addrs.join(' / '),c.tels.join(' / '),c.faxes.join(' / '),c.mobiles.join(' / '),c.email,c.web,c.example?'예시':''].map(q).join(','));
+async function exportContactsCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['회사명','성함','팀명','직급','주소','회사 전화번호','회사 팩스번호','휴대폰 전화번호','메일 주소','홈페이지 주소','메모','예시'];
+ const rows=[...contacts].sort(ctSort).map(c=>[c.company,c.name,c.team,c.title,c.addrs.join(' / '),c.tels.join(' / '),c.faxes.join(' / '),c.mobiles.join(' / '),c.email,c.web,c.memo,c.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`거래처정보_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}

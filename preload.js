@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('api',{
   ordImportPick:()=>ipcRenderer.invoke('ordImportPick'),
   priceImportPick:()=>ipcRenderer.invoke('priceImportPick'),
   salesImportPick:()=>ipcRenderer.invoke('salesImportPick'),
+  ctImportPick:()=>ipcRenderer.invoke('ctImportPick'),
+  ctTemplate:h=>ipcRenderer.invoke('ctTemplate',h),
   preImportBackup:()=>ipcRenderer.invoke('preImportBackup'),
   stmtPDF:(h,n)=>ipcRenderer.invoke('stmtPDF',h,n),
   stmtPreview:(h,n)=>ipcRenderer.invoke('stmtPreview',h,n),
