@@ -1,6 +1,6 @@
 // ===== 대시보드 위젯 배치 (12칸 격자, 끌어서 이동·크기 조절, 놓으면 격자에 맞춰 정렬) =====
 const DL_COLS=12,DL_RH=24,DL_GAP=14,DL_MIN={w:2,h:2};
-const DL_DEF={kpi1:{x:0,y:0,w:3,h:3},kpi2:{x:3,y:0,w:3,h:3},kpi3:{x:6,y:0,w:3,h:3},clock:{x:9,y:0,w:3,h:3},month:{x:0,y:3,w:12,h:7},orders:{x:0,y:10,w:7,h:9},vendor:{x:7,y:10,w:5,h:7},sales:{x:7,y:17,w:5,h:2},trend:{x:0,y:19,w:12,h:8}};
+const DL_DEF={kpi1:{x:0,y:0,w:3,h:3},kpi2:{x:3,y:0,w:3,h:3},kpi3:{x:6,y:0,w:3,h:3},clock:{x:9,y:0,w:3,h:3},month:{x:0,y:3,w:12,h:7},orders:{x:0,y:10,w:7,h:9},vendor:{x:7,y:10,w:5,h:7},sales:{x:7,y:17,w:5,h:4},trend:{x:0,y:19,w:12,h:8}};
 let dashLayout={},dlOn=false,dlReady=false,dlAct=null;
 function dlNorm(o){const r={};Object.keys(DL_DEF).forEach(k=>{const v=o&&o[k],d=DL_DEF[k];if(v&&typeof v==='object'){const w=Math.min(DL_COLS,Math.max(DL_MIN.w,Math.round(+v.w)||d.w)),h=Math.max(DL_MIN.h,Math.round(+v.h)||d.h);r[k]={w,h,x:Math.min(DL_COLS-w,Math.max(0,Math.round(+v.x)||0)),y:Math.max(0,Math.round(+v.y)||0)}}else r[k]={...d}});return dlCompact(r)}
 function dlLoad(r){dashLayout=dlNorm(r&&!Array.isArray(r)?r.dashLayout:null)}

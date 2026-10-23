@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api',{
   saveFile:(n,c)=>ipcRenderer.invoke('saveFile',n,c),
   openFile:()=>ipcRenderer.invoke('openFile'),
   ordImportPick:()=>ipcRenderer.invoke('ordImportPick'),
+  salesImportPick:()=>ipcRenderer.invoke('salesImportPick'),
   preImportBackup:()=>ipcRenderer.invoke('preImportBackup'),
   stmtPDF:(h,n)=>ipcRenderer.invoke('stmtPDF',h,n),
   stmtPreview:(h,n)=>ipcRenderer.invoke('stmtPreview',h,n),

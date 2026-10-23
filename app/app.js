@@ -30,13 +30,13 @@ function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
 function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',delivered:!!o.delivered,updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}))}
-function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);data=r?normalize(r):null;
+function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload()}).catch(e=>alert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload()}).catch(e=>alert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
@@ -59,7 +59,8 @@ function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
 function render(){
- if(page==='dash')renderDash();
+ if(page==='dash'){renderDash();slDashW()}
+ if(page==='sales')renderSales();
  if(page==='prod')renderProd();
  if(page==='stmt')renderStmt();
  if(page==='outwork')renderOutwork();
@@ -104,10 +105,10 @@ const stamp=()=>ymd(new Date());
 async function bkFiles(k,l){if(!A.attRead)return l;return Promise.all(l.map(async f=>{const b=await A.attRead(k,f.path).catch(()=>null);return b?{...f,data:b}:f}))}
 async function bkRestore(k,l){if(!A.attWrite||!Array.isArray(l))return 0;let n=0;for(const f of l)if(f&&f.path&&typeof f.data==='string'){try{await A.attWrite(k,f.path,f.data);n++}catch(e){}}return n}
 async function exportJSON(){const wf=await bkFiles('wf',wfFiles),ss=await bkFiles('ss',shipFiles);
- const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),workOrderFiles:wf,shipFiles:ss},null,2));if(p)toast('백업 저장: '+p)}
+ const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),workOrderFiles:wf,shipFiles:ss},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
  if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
- if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles)]).then(([a,b])=>toast('복원 완료'+(a+b?` (첨부 PDF ${a+b}개)`:'')))}}
+ if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);slImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles)]).then(([a,b])=>toast('복원 완료'+(a+b?` (첨부 PDF ${a+b}개)`:'')))}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
