@@ -1,7 +1,7 @@
 {
   "name": "ijo-sales",
   "productName": "이조 영업관리",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "이조아이엔디 영업관리",
   "author": "이조아이엔디",
   "main": "main.js",
