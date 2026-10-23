@@ -40,7 +40,7 @@ function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render()}
-document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;go(a.dataset.p)});
+document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;if(a.dataset.p==='prod')pv=null;go(a.dataset.p)});
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
 function filtered(){const k=$('fk').value.trim().toLowerCase(),o=$('fo').value,s=$('fs').value;
@@ -58,7 +58,8 @@ function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일
   if(sp)data.forEach(x=>{if(x.pub&&x.pub.startsWith(ds))c+=`<span class="chip pub" onclick="view('${x.id}')">게시 ${esc(x.name)}</span>`});
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
-function render(){
+function render(){_render();if(window.lrAfter)lrAfter()}
+function _render(){
  if(page==='dash'){renderDash();slDashW()}
  if(page==='sales')renderSales();
  if(page==='price')renderPrice();
