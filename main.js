@@ -148,6 +148,10 @@ ipcMain.handle('lotOcr',async(e,bytes)=>{const buf=Buffer.from(bytes),w=await oc
   await w.setParameters({tessedit_pageseg_mode:'6'});const d6=ocrToks((await w.recognize(buf,{},{blocks:true})).data).filter(k=>/^[\d,.]+$/.test(k.t));
   return {words,digits,digits6:d6}});
 app.on('will-quit',()=>{if(ocrW)ocrW.then(w=>w.terminate()).catch(()=>{})});
+// ===== 백업용 첨부 파일 (base64) =====
+const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):wfAbs(rel);
+ipcMain.handle('attRead',(e,k,rel)=>{try{const a=attAbs(k,rel);return fs.existsSync(a)?fs.readFileSync(a).toString('base64'):null}catch(err){return null}});
+ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!/\.pdf$/i.test(a))throw new Error('PDF만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));
