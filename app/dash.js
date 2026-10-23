@@ -16,10 +16,10 @@ function renderDash(){const now=new Date(),cm=dbYm(now),pm=dbYm(new Date(now.get
  const stc=(typeof stmts!=='undefined'?stmts:[]).filter(s=>(s.date||'').startsWith(cm)).length;
  const soon=open.filter(o=>o.due&&o.due<=wk),late=soon.filter(o=>o.due<td).length;
  const kpi=(t,v,s)=>`<div class="card dbk"><div class="muted">${t}</div><b>${v}</b><small class="muted">${s}</small></div>`;
- $('dbkpi').innerHTML=kpi('진행중 오더',dbNum(open.length)+'건','납품 완료 체크 안 된 오더')
-  +kpi('이번 달 출고량',dbNum(Math.round(a.yd))+' YD',`최종 공정 출고 · 지난달 대비 <b style="font-size:12px;color:${a.yd>=b.yd?'#1a7f37':'#c2255c'}">${chg}</b>${a.m?` · M 단위 ${dbNum(a.m)} M 별도`:''}`)
-  +ivCard(cm)+'<div class="card dbk"><div class="muted">현재 날짜·시간</div><b id="dbclk"></b><small class="muted" id="dbcld"></small></div>';
- dbClock();
+ $('dbk1').innerHTML=kpi('진행중 오더',dbNum(open.length)+'건','납품 완료 체크 안 된 오더');
+ $('dbk2').innerHTML=kpi('이번 달 출고량',dbNum(Math.round(a.yd))+' YD',`최종 공정 출고 · 지난달 대비 <b style="font-size:12px;color:${a.yd>=b.yd?'#1a7f37':'#c2255c'}">${chg}</b>${a.m?` · M 단위 ${dbNum(a.m)} M 별도`:''}`);
+ $('dbk3').innerHTML=ivCard(cm);dlInit();
+ if(!dbClkT)dbClock();
  // 2. 월 출고 현황
  const sm=dbM||now,ym=dbYm(sm);$('dbym').textContent=`${sm.getFullYear()}년 ${sm.getMonth()+1}월`;
  const byC={},byP={};let mx=0;orders.forEach(o=>{if(!dbIsYD(o)){return}const f=dbFinal(o);o.procs.forEach(p=>{const s=p.ships.filter(x=>(x.date||'').startsWith(ym)).reduce((a,x)=>a+(+x.qty||0),0);if(!s)return;const n=p.name||'(공정명 없음)';byP[n]=(byP[n]||0)+s;if(p===f){const c=o.client||'(거래처 없음)';byC[c]=(byC[c]||0)+s}})});
@@ -35,8 +35,10 @@ function renderDash(){const now=new Date(),cm=dbYm(now),pm=dbYm(new Date(now.get
  $('dbven').innerHTML=vl.length?vl.map(([k,v])=>`<tr><td>${esc(k)}</td><td style="text-align:right">${v.n}건</td><td style="text-align:right">${v.yd||!v.m?dbNum(Math.round(v.yd))+" YD":""}${v.m?` <small class="muted">${v.yd?"+":""}${dbNum(v.m)} M</small>`:''}</td></tr>`).join(''):'<tr><td colspan="3" class="muted c">진행중인 가공이 없어요.</td></tr>';
  // 5. 월별 출고 추이 (최근 12개월, 최종 공정 출고 YD)
  const ms=[];for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);ms.push([d.getMonth()+1,dbFinalYD(dbYm(d)).yd])}
- const top=Math.max(...ms.map(x=>x[1]),1),W=1000,H=200,bw=W/12;
- $('dbtr').innerHTML=ms.some(x=>x[1])?`<svg viewBox="0 0 ${W} ${H+40}" style="width:100%;height:240px">${ms.map(([m,v],i)=>{const h=v/top*H,x=i*bw+bw*.18;return `<rect x="${x}" y="${H-h+16}" width="${bw*.64}" height="${h}" rx="3" fill="${i===11?'#2271b1':'#9ec5e8'}"><title>${m}월 ${dbNum(Math.round(v))} YD</title></rect>${v?`<text x="${x+bw*.32}" y="${H-h+11}" font-size="12" text-anchor="middle" fill="#444">${dbNum(Math.round(v))}</text>`:''}<text x="${x+bw*.32}" y="${H+34}" font-size="13" text-anchor="middle" fill="#666">${m}월</text>`}).join('')}<line x1="0" x2="${W}" y1="${H+16}" y2="${H+16}" stroke="#ccc"/></svg>`:'<p class="muted">최근 12개월 출고가 없어요.</p>'}
+ dbMs=ms;dbTrend()}
+let dbMs=[];
+function dbTrend(){const el=$('dbtr');if(!el)return;const ms=dbMs,top=Math.max(...ms.map(x=>x[1]),1),W=Math.max(300,el.clientWidth||1000),Hc=Math.max(80,el.clientHeight||240),H=Hc-40,bw=W/12;
+ $('dbtr').innerHTML=ms.some(x=>x[1])?`<svg width="${W}" height="${Hc}" style="display:block">${ms.map(([m,v],i)=>{const h=v/top*H,x=i*bw+bw*.18;return `<rect x="${x}" y="${H-h+16}" width="${bw*.64}" height="${h}" rx="3" fill="${i===11?'#2271b1':'#9ec5e8'}"><title>${m}월 ${dbNum(Math.round(v))} YD</title></rect>${v?`<text x="${x+bw*.32}" y="${H-h+11}" font-size="12" text-anchor="middle" fill="#444">${dbNum(Math.round(v))}</text>`:''}<text x="${x+bw*.32}" y="${H+34}" font-size="13" text-anchor="middle" fill="#666">${m}월</text>`}).join('')}<line x1="0" x2="${W}" y1="${H+16}" y2="${H+16}" stroke="#ccc"/></svg>`:'<p class="muted">최근 12개월 출고가 없어요.</p>'}
 
 let invoices={},ivDraft=[],dbClkT=null;
 function ivLoad(r){const o=r&&!Array.isArray(r)&&r.invoices&&typeof r.invoices==='object'?r.invoices:{};invoices={};Object.keys(o).forEach(k=>{if(Array.isArray(o[k]))invoices[k]=o[k].filter(x=>x&&typeof x==='object').map(x=>({client:String(x.client||''),count:Math.max(0,Math.round(+x.count||0))}))})}
