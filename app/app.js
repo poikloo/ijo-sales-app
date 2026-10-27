@@ -177,6 +177,10 @@ function renderOrder(o){const g=progress(o);let prev=null;
 const findP=(oid,pid)=>{const o=orders.find(x=>x.id===oid);return [o,o&&o.procs.find(p=>p.id===pid)]};
 function touch(o){o.updated=now();save();render()}
 function addShip(oid,pid){const [o,p]=findP(oid,pid);if(!p)return;p.ships.push({id:uid(),date:ymd(new Date()),qty:0,memo:''});touch(o);setTimeout(()=>{const ins=[...document.querySelectorAll('#pd_wrap .pc')][o.procs.indexOf(p)]?.querySelectorAll('tbody tr:last-child input');if(ins&&ins[1])ins[1].focus()},0)}
+// ▲/▼ 순서 버튼 공용 (Tab은 건너뜀, 맨 위/아래에서는 비활성)
+const mvBtns=(key,i,n,fn)=>`<button type="button" class="mvb" tabindex="-1" data-mv="${key}:-1" onclick="${fn}(${i},-1)" title="위로"${i>0?'':' disabled'}>▲</button><button type="button" class="mvb" tabindex="-1" data-mv="${key}:1" onclick="${fn}(${i},1)" title="아래로"${i<n-1?'':' disabled'}>▼</button>`;
+function mvFocus(key,d){const b=document.querySelector(`button[data-mv="${key}:${d}"]`),a=document.querySelector(`button[data-mv="${key}:${-d}"]`),t=b&&!b.disabled?b:a;if(t)t.focus({preventScroll:true})}
+function mvArr(a,i,d){const j=i+d;if(i<0||j<0||j>=a.length)return -1;[a[i],a[j]]=[a[j],a[i]];return j}
 // 출고 행 순서 바꾸기 (▲/▼): 자동 정렬 없이 사용자가 정한 순서 그대로 저장
 function moveShip(oid,pid,sid,d){const [o,p]=findP(oid,pid);if(!p)return;const i=p.ships.findIndex(x=>x.id===sid),j=i+d;if(i<0||j<0||j>=p.ships.length)return;
  [p.ships[i],p.ships[j]]=[p.ships[j],p.ships[i]];touch(o);
