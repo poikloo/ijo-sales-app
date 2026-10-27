@@ -1,4 +1,4 @@
-const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
+const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',testrpt:'TEST REPORT',quality:'품질 기준',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
 let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash';
 const PR=['높음','보통','낮음'];
