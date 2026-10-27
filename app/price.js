@@ -45,7 +45,7 @@ function prRecalc(){const sel=prices.find(x=>x.id===prSel),inp=prInputs(),p={...
  $('pc_mode').textContent=sel?(dirty?'· 선택 품목에서 바꾼 값으로 계산 중 (저장 전에는 목록에 반영 안 됨)':'· 선택 품목 값'):'· 계산기 (품목 미선택)';
  $('pc_save').textContent=sel?(dirty?'목록에 저장 ●':'목록에 저장'):'새 품목으로 저장';
  const c=(t,v,s,cls='')=>`<div class="card dbk ${cls}"><div class="muted">${t}</div><b>${prW(v)}<small style="font-size:13px"> 원</small></b><small class="muted">${s}</small></div>`;
- $('pc_res').innerHTML=c('NET /YD',r.net,'원가 합계')+c('NET /M',r.netM,'원가 합계 ÷ '+prSet.yd2m)+c('마진액 /YD',r.mg,'마진율 '+prPct(r.m))+c('마진액 /M',r.mgM,'마진율 '+prPct(r.m))+c('OFFER /YD',r.off,'마진 포함','pro')+c('OFFER /M',r.offM,'마진 포함','pro')+c('OFFER+VAT /YD',r.offV,'VAT '+prPct(prSet.vat))+c('OFFER+VAT /M',r.offVM,'VAT '+prPct(prSet.vat))+
+ $('pc_res').innerHTML=c('NET /YD',r.net,'원가 합계','pro')+c('NET /M',r.netM,'원가 합계 ÷ '+prSet.yd2m)+c('마진액 /YD',r.mg,'마진율 '+prPct(r.m))+c('마진액 /M',r.mgM,'마진율 '+prPct(r.m))+c('OFFER /YD',r.off,'마진 포함','pro')+c('OFFER /M',r.offM,'마진 포함')+c('OFFER+VAT /YD',r.offV,'VAT '+prPct(prSet.vat))+c('OFFER+VAT /M',r.offVM,'VAT '+prPct(prSet.vat))+
   `<div class="card prchain"><div class="muted" style="margin-bottom:4px">계산 체인 (YD당)</div>생지 ${prW(r.g)}${p.gCur==='USD'?` <small class="muted">($${+(+p.g).toFixed(4)}×${prW(prSet.fx)})</small>`:''} → 염색 ${prW(r.c1)} <small class="muted">(축 ${prPct(r.dS)})</small> → 가공1 ${prW(r.c2)} <small class="muted">(축 ${prPct(r.s1)})</small> → 가공2 ${prW(r.c3)} <small class="muted">(축 ${prPct(r.s2)})</small> → +기타·운임 ${prW(p.e+p.t)}</div>`;
  $('pc_route').textContent=sel?(prRoute(sel)||'-')+(sel.width?` · 폭 ${sel.width}`:''):'(품목을 고르면 공장·가공소 경로가 나와요)';
  $('pc_info').textContent=`환율 ₩${prW(prSet.fx)}/USD  │  1YD = ${prSet.yd2m}m  │  VAT ${prPct(prSet.vat)}`}

@@ -103,8 +103,10 @@ function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
-// 백업: 저장 데이터 전체 + 첨부 PDF 내용(base64)을 함께 담아 다른 PC에서도 복원되게
-async function bkFiles(k,l){if(!A.attRead)return l;return Promise.all(l.map(async f=>{const b=await A.attRead(k,f.path).catch(()=>null);return b?{...f,data:b}:f}))}
+// 백업: 저장 데이터 전체 + 첨부 파일(PDF·이미지) 내용(base64)을 함께 담아 다른 PC에서도 복원되게 (확장자는 path 에 그대로, mime 은 참고용)
+const ATT_MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif'};
+const attMime=p=>ATT_MIME[(String(p).match(/\.(\w+)$/)||[])[1]?.toLowerCase()]||'application/octet-stream';
+async function bkFiles(k,l){if(!A.attRead)return l;return Promise.all(l.map(async f=>{const b=await A.attRead(k,f.path).catch(()=>null);return b?{...f,mime:attMime(f.path),data:b}:f}))}
 async function bkRestore(k,l){if(!A.attWrite||!Array.isArray(l))return 0;let n=0;for(const f of l)if(f&&f.path&&typeof f.data==='string'){try{await A.attWrite(k,f.path,f.data);n++}catch(e){}}return n}
 async function exportJSON(){const wf=await bkFiles('wf',wfFiles),ss=await bkFiles('ss',shipFiles),br=await bkFiles('br',bizRegs);
  const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),workOrderFiles:wf,shipFiles:ss,bizRegs:br},null,2));if(p)toast('백업 저장: '+p)}
