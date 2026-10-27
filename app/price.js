@@ -49,9 +49,9 @@ function prRecalc(){const sel=prices.find(x=>x.id===prSel),inp=prInputs(),p={...
   `<div class="card prchain"><div class="muted" style="margin-bottom:4px">계산 체인 (YD당)</div>생지 ${prW(r.g)}${p.gCur==='USD'?` <small class="muted">($${+(+p.g).toFixed(4)}×${prW(prSet.fx)})</small>`:''} → 염색 ${prW(r.c1)} <small class="muted">(축 ${prPct(r.dS)})</small> → 가공1 ${prW(r.c2)} <small class="muted">(축 ${prPct(r.s1)})</small> → 가공2 ${prW(r.c3)} <small class="muted">(축 ${prPct(r.s2)})</small> → +기타·운임 ${prW(p.e+p.t)}</div>`;
  $('pc_route').textContent=sel?(prRoute(sel)||'-')+(sel.width?` · 폭 ${sel.width}`:''):'(품목을 고르면 공장·가공소 경로가 나와요)';
  $('pc_info').textContent=`환율 ₩${prW(prSet.fx)}/USD  │  1YD = ${prSet.yd2m}m  │  VAT ${prPct(prSet.vat)}`}
-function prCalcSave(){const inp=prInputs(),sel=prices.find(x=>x.id===prSel);
+async function prCalcSave(){const inp=prInputs(),sel=prices.find(x=>x.id===prSel);
  if(!sel){prOpen('',inp);return}
- if(!confirm(`"${prLabel(sel)}"의 단가·축·마진율을 지금 입력한 값으로 바꿀까요?`))return;Object.assign(sel,prNorm({...sel,...inp}));save();toast('목록에 저장했습니다');prRecalc()}
+ if(!await uiConfirm(`"${prLabel(sel)}"의 단가·축·마진율을 지금 입력한 값으로 바꿀까요?`))return;Object.assign(sel,prNorm({...sel,...inp}));save();toast('목록에 저장했습니다');prRecalc()}
 // ---- 단가 목록 ----
 const PR_SK=[['cat','품목'],['item','ITEM'],['code','CODE']];
 function prSortGet(){const s=listSort.price;return s&&PR_SK.some(k=>k[0]===s.k)?{k:s.k,d:s.d===-1?-1:1}:{k:'cat',d:1}}
@@ -84,17 +84,17 @@ function prOpen(id,pre){const x=id?prices.find(p=>p.id===id):prNorm({...(pre||{}
 const PE_T=['cat','part','code','item','color','width','gV','dV','p1V','p1D','p2V','p2D','eD','memo'],PE_N=['g','d','p1','p2','e','t'],PE_P=['dS','p1S','p2S','m'];
 function prEdGet(){const o={gCur:$('pe_gCur').value};PE_T.forEach(k=>o[k]=$('pe_'+k).value.trim());PE_N.forEach(k=>o[k]=prNum($('pe_'+k).value)||0);PE_P.forEach(k=>{const v=prNum($('pe_'+k).value);o[k]=v==null?null:v/100});return o}
 function prEdCalc(){const r=prCalc(prNorm(prEdGet()));$('pe_res').innerHTML=`NET <b>${prW(r.net)}</b>원/YD · ${prW(r.netM)}원/M  │  OFFER <b style="color:#2271b1">${prW(r.off)}</b>원/YD · ${prW(r.offM)}원/M  │  OFFER+VAT ${prW(r.offV)}원/YD`}
-function prSave(id){const o=prEdGet();if(!o.item&&!o.code)return alert('ITEM이나 CODE를 입력하세요.');const n=prNorm({...o,id:id||uid()});
+function prSave(id){const o=prEdGet();if(!o.item&&!o.code)return uiAlert('ITEM이나 CODE를 입력하세요.');const n=prNorm({...o,id:id||uid()});
  if(id){const i=prices.findIndex(p=>p.id===id);n.example=prices[i].example;prices[i]=n}else{prices.push(n);prSel=n.id;const pk=$('pc_pick');if(pk)pk.value=prLabel(n)}save();dlg.close();render();toast('저장했습니다')}
-function prDel(id){if(!confirm('이 단가를 삭제할까요?'))return;prices=prices.filter(p=>p.id!==id);if(prSel===id)prSel='';save();dlg.close();render();toast('삭제했습니다')}
+async function prDel(id){if(!await uiConfirm('이 단가를 삭제할까요?'))return;prices=prices.filter(p=>p.id!==id);if(prSel===id)prSel='';save();dlg.close();render();toast('삭제했습니다')}
 // ---- 설정 ----
 const PS_F=[['fx','환율 (₩/USD)',''],['yd2m','1야드 = ? 미터',''],['vat','VAT (%)','p'],['dye','기본 염색 축 (%)','p'],['g1','기본 가공1 축 (%)','p'],['g2','기본 가공2 축 (%)','p'],['margin','기본 마진율 PRO (%)','p']];
 function prSetView(){const b=$('pr_setf');if(!b.dataset.b){b.dataset.b=1;b.innerHTML=PS_F.map(([k,l])=>`<label>${l}<input id="ps_${k}" class="num" inputmode="decimal" onchange="prSetSave('${k}',this)"></label>`).join('')}
  PS_F.forEach(([k,,p])=>{const e=$('ps_'+k);if(document.activeElement!==e)e.value=p?+(prSet[k]*100).toFixed(4):prSet[k]});
  $('pr_setx').textContent=`현재 등록된 ${prices.length}개 품목의 NET·OFFER가 이 값으로 계산돼요. 환율을 바꾸면 USD 생지 단가가 들어간 품목이 모두 바로 다시 계산돼요.`}
-function prSetSave(k,e){let v=prNum(e.value);if(v==null||v<0||(k==='yd2m'&&!v)||(k==='fx'&&!v)){alert('올바른 숫자를 입력하세요.');e.value='';prSetView();return}
+function prSetSave(k,e){let v=prNum(e.value);if(v==null||v<0||(k==='yd2m'&&!v)||(k==='fx'&&!v)){uiAlert('올바른 숫자를 입력하세요.');e.value='';prSetView();return}
  if((PS_F.find(f=>f[0]===k)||[])[2])v/=100;prSet[k]=v;save();prSetView();toast('설정을 저장했어요 · 모든 단가 다시 계산')}
-function prSetReset(){if(!confirm('설정을 기본값(환율 1,400 · 0.9144m · VAT 10% · 축 0% · 마진 20%)으로 되돌릴까요?'))return;prSet={...PR_DEF};save();render()}
+async function prSetReset(){if(!await uiConfirm('설정을 기본값(환율 1,400 · 0.9144m · VAT 10% · 축 0% · 마진 20%)으로 되돌릴까요?'))return;prSet={...PR_DEF};save();render()}
 // ---- 엑셀 가져오기 (Price 시트 자동 인식, '=2.74*$H$1' 같은 수식은 USD 2.74로) ----
 let piBook=null,piSh=0,piName='';
 const PI_COLS=['cat','part','code','item','color','width','gV','g','dV','dS','d','p1V','p1D','p1S','p1','p2V','p2D','p2S','p2','eD','e','t'];
@@ -110,8 +110,8 @@ function piAnalyze(){const sh=piBook[piSh],h=piHdr(sh.rows),R=sh.rows.slice(h+1)
   ['dS','p1S','p2S'].forEach(k=>{const v=T(k),n=prNum(v.replace('%',''));if(v&&n==null){notes.push(`${PI_LBL[k]}: ${v}`);txt++;o[k]=null}else o[k]=n==null?null:(n>1||v.includes('%')?n/100:n)});
   o.memo=notes.join(' / ');const p=prNorm(o);p.rn=h+i+2;p.key=[p.item,p.color,p.part].map(piU).join('|');p.dup=prices.some(x=>[x.item,x.color,x.part].map(piU).join('|')===p.key);L.push(p)});
  return {L,usd,txt,h,fx:piFx(sh.rows)}}
-async function prImportOpen(){if(!A.priceImportPick)return alert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.priceImportPick()}catch(e){return alert('파일을 읽지 못했습니다: '+e)}if(!r)return;
- piBook=r.sheets.filter(s=>s.rows.length&&piHdr(s.rows)>=0);if(!piBook.length)return alert('CODE·ITEM 머리글이 있는 단가 시트를 찾지 못했습니다.');piName=r.name;piSh=Math.max(0,piBook.findIndex(s=>/^price/i.test(s.name.trim())));piRender()}
+async function prImportOpen(){if(!A.priceImportPick)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.priceImportPick()}catch(e){return uiAlert('파일을 읽지 못했습니다: '+e)}if(!r)return;
+ piBook=r.sheets.filter(s=>s.rows.length&&piHdr(s.rows)>=0);if(!piBook.length)return uiAlert('CODE·ITEM 머리글이 있는 단가 시트를 찾지 못했습니다.');piName=r.name;piSh=Math.max(0,piBook.findIndex(s=>/^price/i.test(s.name.trim())));piRender()}
 function piRender(){const a=piAnalyze(),mode=(document.querySelector('input[name=pimode]:checked')||{}).value||'skip',nd=a.L.filter(p=>p.dup).length;
  $('dt').textContent='단가 엑셀 가져오기 — '+piName;if(!dlg.style.width){dlg.style.width='min(1200px,96vw)';dlg.addEventListener('close',()=>dlg.style.width='',{once:true})}
  $('dbody').innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><b style="font-size:13px">시트</b><select onchange="piSh=+this.value;piRender()">${piBook.map((s,i)=>`<option value="${i}"${i===piSh?' selected':''}>${esc(s.name)}</option>`).join('')}</select><span class="muted" style="font-size:12px">머리글 ${a.h+1}행 · 칸 순서: 분류1·분류2·CODE·ITEM·COLOR·WIDTH·생지 공장·가격·염색 공장·축·가격·가공1(가공소·내역·축·가격)·가공2(…)·기타(내용·금액)·TRANS</span></div>

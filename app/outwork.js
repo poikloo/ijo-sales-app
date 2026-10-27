@@ -37,10 +37,10 @@ function owEditor(){const e=owEd,o=orders.find(x=>x.id===e.orderId),pi=o?o.procs
 function owTot(e){const u=(e.lines[0]||{}).unit||'YD';return `${num(e.lines.filter(l=>l.unit===u).reduce((a,l)=>a+(+l.qty||0),0))} ${u}`}
 function owTotUpd(){const t=$('owtot');if(t)t.textContent='TOTAL '+owTot(owEd)}
 function owSupPick(id){const x=sups.find(y=>y.id===id);owEd.supplierId=id;owEd.sup=x?supSnap(x):null}
-function owBack(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){owEd=null;render()}}
+async function owBack(){if(await uiConfirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){owEd=null;render()}}
 function owClean(e){const r=normOw(e);r.lines=r.lines.filter(l=>l.color.trim()||l.qty||l.memo.trim());r.updated=now();return r}
 function owSave(){const r=owClean(owEd),i=owReqs.findIndex(x=>x.id===r.id);if(i>=0)owReqs[i]=r;else owReqs.push(r);owEd=JSON.parse(JSON.stringify(r));save();render();toast('저장했습니다')}
-function owDel(){if(!confirm('이 외주작업의뢰서를 삭제할까요?'))return;owReqs=owReqs.filter(x=>x.id!==owEd.id);owEd=null;save();render();toast('삭제했습니다')}
+async function owDel(){if(!await uiConfirm('이 외주작업의뢰서를 삭제할까요?'))return;owReqs=owReqs.filter(x=>x.id!==owEd.id);owEd=null;save();render();toast('삭제했습니다')}
 function owHTML(r){const S=r.sup||supSnap(sups.find(x=>x.id===r.supplierId)||defSup())||{},E=v=>esc(v),br=v=>esc(v).replace(/\r?\n/g,'<br>'),u=(r.lines[0]||{}).unit||'YD',n=Math.max(OW_ROWS,r.lines.length);
  const dt=r.date?r.date:'';let rows='';for(let i=0;i<n;i++){const l=r.lines[i];rows+=`<tr class="ln"><td colspan="3" class="c">${l?E(l.color):''}</td><td class="r">${l&&l.qty?num(l.qty):''}</td><td>${l&&(l.qty||l.color)?E(l.unit):''}</td><td colspan="2">${l?E(l.memo):''}</td>${i===0?`<td colspan="8" rowspan="${n}" class="tl wr">${br(r.notes)}</td>`:''}</tr>`}
  const info=String(r.info||'').split(/\r?\n/).filter(x=>x.trim()),terms=String(r.terms||'').split(/\r?\n/).filter(x=>x.trim());
@@ -74,4 +74,4 @@ ${rows}
 ${FIT_JS}</body></html>`}
 async function owOut(mode){const r=owClean(owEd),fs=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,''),nm=[(r.date||ymd(new Date())).replace(/-/g,''),'외주작업의뢰서',fs(r.to)].filter(Boolean).join('_');
  try{if(mode==='pdf'){const p=await A.stmtPDF(owHTML(r),nm+'.pdf');if(p)toast('PDF 저장: '+p)}else if(mode==='preview'){await A.stmtPreview(owHTML(r),nm)}else if(mode==='xlsx'){const p=await A.owXlsx({vendor:r.to,date:r.date,liNo:r.liNo,client:r.origin,due:r.due,dest:r.dest,poNo:r.poNo,manager:r.manager,ref:r.ref,item:r.item,procName:r.procType,lines:r.lines.map(l=>({color:l.color,qty:l.qty||'',unit:l.unit,note:l.memo})),shrink:'',src:'',work:r.notes,notes:r.info,memo:r.remarks,mark:r.mark,terms:r.terms},r.sup||supSnap(defSup()),nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}
-  else await A.stmtPrint(owHTML(r))}catch(e){alert('출력 실패: '+(e.message||e))}}
+  else await A.stmtPrint(owHTML(r))}catch(e){uiAlert('출력 실패: '+(e.message||e))}}

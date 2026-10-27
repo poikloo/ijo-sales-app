@@ -65,17 +65,17 @@ function openCust(id,name){const c=id?custs.find(x=>x.id===id):normCust({name:na
  $('dbody').innerHTML=`<div class="g">${pForm('cu_',c,true)}
  <label>기본 납품처<input id="cu_dest" value="${esc(c.dest)}"></label><label>기본 담당자<input id="cu_contact" value="${esc(c.contact)}"></label><label class="w">메모<textarea id="cu_memo" rows="2">${esc(c.memo)}</textarea></label></div>`;
  $('dfoot').innerHTML=(id?`<button class="d" onclick="delCust('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCust('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal()}
-function saveCust(id){const o={};[...P_FIELDS.map(x=>x[0]),'dest','contact','memo'].forEach(k=>o[k]=$('cu_'+k).value.trim());if(!o.name)return alert('상호를 입력하세요.');
- if(custs.some(c=>c.name===o.name&&c.id!==id)&&!confirm(`'${o.name}' 거래처가 이미 있습니다. 그래도 저장할까요?`))return;
+async function saveCust(id){const o={};[...P_FIELDS.map(x=>x[0]),'dest','contact','memo'].forEach(k=>o[k]=$('cu_'+k).value.trim());if(!o.name)return uiAlert('상호를 입력하세요.');
+ if(custs.some(c=>c.name===o.name&&c.id!==id)&&!await uiConfirm(`'${o.name}' 거래처가 이미 있습니다. 그래도 저장할까요?`))return;
  let c;if(id){c=custs.find(x=>x.id===id);Object.assign(c,o)}else{c=normCust({...o});custs.push(c)}save();dlg.close();
  if(stEd&&(!stEd.cust.name||stEd.cust.name===c.name)){stPick(c.id);renderEditor()}render();toast('거래처를 저장했습니다')}
-function delCust(id){if(confirm('이 거래처를 삭제할까요? (이미 발행한 명세서 내용은 그대로 남습니다)')){custs=custs.filter(x=>x.id!==id);save();dlg.close();render()}}
+async function delCust(id){if(await uiConfirm('이 거래처를 삭제할까요? (이미 발행한 명세서 내용은 그대로 남습니다)')){custs=custs.filter(x=>x.id!==id);save();dlg.close();render()}}
 // ---- 편집기 ----
 const nextNo=()=>stmts.reduce((a,s)=>Math.max(a,+s.no||0),0)+1;
 function newStmt(orderId){stEd=normStmt({no:nextNo(),date:ymd(new Date()),lots:[{...emptyLot(),lotNo:'1'}]});stEd._new=true;stEd.id=sid();{const d=defSup();if(d){stEd.supplierId=d.id;stEd.sup=supSnap(d)}}if(page!=='stmt'){page='';go('stmt')}if(orderId)stPickOrder(orderId);renderEditor();render()}
 function editStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor();render();$('content').scrollTop=0}
 function dupStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=normStmt({...JSON.parse(JSON.stringify(s)),id:sid(),no:nextNo(),date:ymd(new Date()),shipId:'',example:false});stEd._new=true;renderEditor();render();toast('복제본을 편집 중입니다 (저장해야 반영돼요)')}
-function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!confirm(`거래명세서(${[s.date,s.orderNo,s.cust.name].filter(Boolean).join(' · ')||'제목 없음'})을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
+async function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!await uiConfirm(`거래명세서(${[s.date,s.orderNo,s.cust.name].filter(Boolean).join(' · ')||'제목 없음'})을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
 function orderLabel(o){return `${o.no} · ${o.item}${o.client?' · '+o.client:''}`}
 function stPickOrder(id){const o=orders.find(x=>x.id===id);if(!o)return;const e=stEd;e.orderId=o.id;e.orderNo=o.no;e.item=o.item;e.spec=o.fabric||'';e.linkShip=true;
  e.lots.forEach(l=>{if(!l.color)l.color=(o.lines[0]||{}).color||''});const c=custs.find(x=>x.name===o.client);if(c)stPick(c.id);else if(o.client&&!e.cust.name)e.cust.name=o.client}
@@ -108,7 +108,7 @@ function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderI
 function stLotRows(l,k){const L=lotLines(l),al=k%2?'':' class="alt"';let h='';for(let j=0;j<L;j++){const cells=Array.from({length:10},(_,i)=>rc(k,j*10+i,l)).join('');
  h+=j===0?`<tr${al}><td rowspan="${L}"><input value="${esc(l.lotNo)}" oninput="stEd.lots[${k}].lotNo=this.value"></td><td rowspan="${L}"><input value="${esc(l.color)}" oninput="stEd.lots[${k}].color=this.value"><div class="muted" style="font-size:11px;margin-top:3px">${L}줄</div></td>${cells}<td rowspan="${L}" class="num" id="lc${k}"></td><td rowspan="${L}" class="num" id="lq${k}"></td><td rowspan="${L}" style="vertical-align:top;white-space:nowrap"><button onclick="stDelLot(${k})" title="LOT 삭제">✕</button><br><button class="ln" onclick="stAddLine(${k})" title="이 LOT에 10칸 한 줄 추가">+ 줄</button><br><button class="ln" onclick="stDelLine(${k})" title="마지막 줄 삭제"${L<=2?' disabled':''}>− 줄</button></td></tr>`:`<tr${al}>${cells}</tr>`}return h}
 function stAddLine(k,focus){const l=stEd.lots[k];l.rolls=l.rolls.concat(Array(10).fill(''));renderEditor();const c=cellAt(k,focus==null?l.rolls.length-10:focus);if(c){c.focus();c.select()}}
-function stDelLine(k){const l=stEd.lots[k];if(lotLines(l)<=2)return;const t=l.rolls.slice(-10);if(t.some(v=>v!=='')&&!confirm('마지막 줄에 입력된 수량이 있습니다. 줄을 삭제할까요?'))return;l.rolls=l.rolls.slice(0,-10);renderEditor()}
+async function stDelLine(k){const l=stEd.lots[k];if(lotLines(l)<=2)return;const t=l.rolls.slice(-10);if(t.some(v=>v!=='')&&!await uiConfirm('마지막 줄에 입력된 수량이 있습니다. 줄을 삭제할까요?'))return;l.rolls=l.rolls.slice(0,-10);renderEditor()}
 const rc=(k,i,l)=>`<td class="rcw"><input class="rc" data-k="${k}" data-i="${i}" inputmode="decimal" value="${l.rolls[i]===''?'':l.rolls[i]}" oninput="stCell(this)" onkeydown="stKey(event,this)" onpaste="stPaste(event,this)"></td>`;
 function stCell(el){const k=+el.dataset.k,i=+el.dataset.i,v=el.value.replace(/,/g,'').trim();stEd.lots[k].rolls[i]=v===''||isNaN(+v)?'':+v;el.classList.toggle('bad',v!==''&&isNaN(+v));stRecalc();const l=stEd.lots[k];if(i===l.rolls.length-1&&v!==''){l.rolls=l.rolls.concat(Array(10).fill(''));const p=el.selectionStart;renderEditor();const c=cellAt(k,i);if(c){c.focus();try{c.setSelectionRange(p,p)}catch(_){}}}}
 function stRecalc(){const e=stEd;if(!e)return;e.lots.forEach((l,k)=>{const c=$('lc'+k),q=$('lq'+k);if(c){c.textContent=lotCnt(l)||'';q.textContent=fnum(lotSum(l)||'')}});
@@ -119,9 +119,9 @@ function stPaste(ev,el){const t=(ev.clipboardData||window.clipboardData).getData
  const k=+el.dataset.k;let i=+el.dataset.i,n=0;const l=stEd.lots[k];for(const p of parts){const v=+p;l.rolls[i]=isNaN(v)?'':v;i++;n++}l.rolls=padRolls(l.rolls);if(l.rolls.length<=i)l.rolls=l.rolls.concat(Array(10).fill(''));
  renderEditor();toast(`${n}개 값을 붙여넣었어요`)}
 function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderId&&orders.find(x=>x.id===stEd.orderId);stEd.lots.push({...emptyLot(last&&last.color||o&&(o.lines[0]||{}).color||''),lotNo:String(stEd.lots.length+1)});renderEditor();const c=cellAt(stEd.lots.length-1,0);if(c)c.focus()}
-function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!confirm('이 LOT에 입력된 수량이 있습니다. 삭제할까요?'))return;stEd.lots.splice(k,1);if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor()}
+async function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!await uiConfirm('이 LOT에 입력된 수량이 있습니다. 삭제할까요?'))return;stEd.lots.splice(k,1);if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor()}
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
-function stCancel(){if(confirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
+async function stCancel(){if(await uiConfirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
 function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.lots.forEach(l=>{while(l.rolls.length>20&&l.rolls.slice(-10).every(v=>v===''))l.rolls=l.rolls.slice(0,-10)});s.updated=now();return s}
 function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
@@ -175,14 +175,14 @@ ${cts.map((x,i)=>`<tr><td colspan="${i===cts.length-1?10:14}" style="white-space
 ${cts.length?'':'<tr><td colspan="10"></td><td colspan="4" style="text-align:right">인수자 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; (인)</td></tr>'}</tbody></table>${FIT_JS}${PAGE_FIT_JS}</body></html>`}
 function stFileName(s){const fsafe=v=>String(v||'').replace(/[\\/:*?"<>|\x00-\x1f]/g,'').replace(/\s+/g,' ').trim().replace(/[. ]+$/,'');return [fsafe(s.orderNo)||(s.date||ymd(new Date())).replace(/-/g,''),'거래명세서',fsafe(s.cust.name)].filter(Boolean).join('_')}
 async function stOut(mode){if(!stEd)return;const s=stClean(stEd),nm=stFileName(s);
- if(!supOf(s).name&&!confirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
+ if(!supOf(s).name&&!await uiConfirm('공급자 정보가 비어 있습니다. (설정 > 공급자 정보에서 등록) 그래도 출력할까요?'))return;
  try{if(mode==='pdf'){const p=await A.stmtPDF(stmtHTML(s),nm+'.pdf');if(p)toast('PDF 저장: '+p)}
   else if(mode==='preview')await A.stmtPreview(stmtHTML(s),nm);
   else if(mode==='print')await A.stmtPrint(stmtHTML(s));
-  else{const p=await A.stmtXlsx(s,supOf(s),nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}}catch(e){alert('출력 실패: '+(e.message||e))}}
+  else{const p=await A.stmtXlsx(s,supOf(s),nm+'.xlsx');if(p)toast('엑셀 저장: '+p)}}catch(e){uiAlert('출력 실패: '+(e.message||e))}}
 // ---- 설정: 공급자 정보 ----
 function renderSupplier(){renderSuppliers()}
-async function importSupplier(){try{const r=await A.importSupplierXlsx();if(!r)return;P_FIELDS.forEach(([k])=>{if(r[k])$('sp_'+k).value=r[k]});if(r.contacts)$('sp_contacts').value=r.contacts;if(r.notice)$('sp_notice').value=r.notice;toast('엑셀에서 불러왔어요. 확인 후 [저장]을 누르세요')}catch(e){alert('엑셀을 읽지 못했습니다: '+(e.message||e))}}
+async function importSupplier(){try{const r=await A.importSupplierXlsx();if(!r)return;P_FIELDS.forEach(([k])=>{if(r[k])$('sp_'+k).value=r[k]});if(r.contacts)$('sp_contacts').value=r.contacts;if(r.notice)$('sp_notice').value=r.notice;toast('엑셀에서 불러왔어요. 확인 후 [저장]을 누르세요')}catch(e){uiAlert('엑셀을 읽지 못했습니다: '+(e.message||e))}}
 
 function stSupStale(e){const x=sups.find(y=>y.id===e.supplierId);return !!(x&&e.sup&&JSON.stringify(supSnap(x))!==JSON.stringify(normSup(e.sup)))}
 function stSupPick(id){const x=sups.find(y=>y.id===id);stEd.supplierId=id;stEd.sup=supSnap(x);renderEditor()}
@@ -200,6 +200,6 @@ function saveSup(id){const o={};P_FIELDS.forEach(([k])=>o[k]=$('sp_'+k).value.tr
  if(!supHas({...o,notice:null}))return toast('상호나 등록번호 등 한 가지 이상 입력해 주세요.');
  if(id)Object.assign(sups.find(y=>y.id===id),o);else{const x=normSupRec(o);sups.push(x);if(!supDef||!sups.some(y=>y.id===supDef))supDef=x.id}
  if(stAssignSup()){}save();dlg.close();renderSuppliers();toast('공급자 정보를 저장했습니다')}
-function delSup(id){const x=sups.find(y=>y.id===id);if(!x)return;const n=stmts.filter(s=>s.supplierId===id).length;
- if(!confirm(`공급자 '${x.name||'(상호 없음)'}'을(를) 삭제할까요?${n?`\n이 공급자로 작성한 명세서 ${n}건은 저장된 정보로 그대로 인쇄됩니다.`:''}`))return;
+async function delSup(id){const x=sups.find(y=>y.id===id);if(!x)return;const n=stmts.filter(s=>s.supplierId===id).length;
+ if(!await uiConfirm(`공급자 '${x.name||'(상호 없음)'}'을(를) 삭제할까요?${n?`\n이 공급자로 작성한 명세서 ${n}건은 저장된 정보로 그대로 인쇄됩니다.`:''}`))return;
  sups=sups.filter(y=>y.id!==id);if(supDef===id)supDef=sups[0]?sups[0].id:'';save();renderSuppliers();toast('삭제했습니다')}

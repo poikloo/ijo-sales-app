@@ -4,15 +4,24 @@ const {autoUpdater}=require('electron-updater');
 const fs=require('fs'),path=require('path');
 const DIR=()=>app.getPath('userData'),FILE=()=>path.join(DIR(),'data.json'),BK=()=>path.join(DIR(),'backups');
 function readData(){for(const f of [FILE(),FILE()+'.tmp']){try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){}}return null}
-function writeData(d){
-  fs.mkdirSync(BK(),{recursive:true});
-  const s=JSON.stringify(d,null,2);
-  fs.writeFileSync(FILE()+'.tmp',s);fs.renameSync(FILE()+'.tmp',FILE());
+// 저장: data.json은 매번 쓰고, 자동 백업 사본은 1분에 한 번만 (저장할 때마다 사본을 쓰면 디스크·백신 검사로 창이 버벅일 수 있음)
+let bkLast=0,bkTimer=null,bkPending=null;
+function writeBackup(s){try{fs.mkdirSync(BK(),{recursive:true});
   const ts=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().replace(/[:T]/g,'-').slice(0,19);
   fs.writeFileSync(path.join(BK(),`data_${ts}.json`),s);
   const list=fs.readdirSync(BK()).filter(f=>f.startsWith('data_')).sort();
-  while(list.length>50)fs.unlinkSync(path.join(BK(),list.shift()));
+  while(list.length>50)fs.unlinkSync(path.join(BK(),list.shift()))}catch(e){}bkLast=Date.now();bkPending=null}
+function flushBackup(){if(bkTimer){clearTimeout(bkTimer);bkTimer=null}if(bkPending)writeBackup(bkPending)}
+function writeData(d){
+  const s=JSON.stringify(d,null,2);
+  fs.writeFileSync(FILE()+'.tmp',s);fs.renameSync(FILE()+'.tmp',FILE());
+  bkPending=s;const wait=60000-(Date.now()-bkLast);
+  if(wait<=0)flushBackup();else if(!bkTimer)bkTimer=setTimeout(()=>{bkTimer=null;if(bkPending)writeBackup(bkPending)},wait);
   return true}
+app.on('before-quit',flushBackup);
+// 모든 기본 대화상자가 닫힌 뒤 메인 창에 키보드 포커스를 되돌림
+function refocusMain(){if(!win||win.isDestroyed())return;try{if(process.platform==='win32'){win.blur();win.focus()}if(fbOn&&fbv)fbv.webContents.focus();else win.webContents.focus()}catch(e){}}
+for(const k of ['showOpenDialog','showSaveDialog','showMessageBox']){const f=dialog[k].bind(dialog);dialog[k]=(...a)=>Promise.resolve(f(...a)).finally(()=>setTimeout(refocusMain,0))}
 let manualCheck=false,promptShown=false;
 function setupUpdater(){
   autoUpdater.autoDownload=true;autoUpdater.autoInstallOnAppQuit=true;
@@ -206,6 +215,8 @@ app.whenReady().then(()=>{
   win.loadFile(path.join(__dirname,'app','index.html'));
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('before-input-event',fbKey);
+  // Windows: 기본 대화상자(파일 선택·알림 등)가 닫히거나 다른 창에서 돌아왔을 때 입력란에 글자가 안 들어가는 문제 방지
+  win.on('focus',()=>{if(!win.isDestroyed()&&!fbOn)win.webContents.focus()});
   win.webContents.on('found-in-page',(e,r)=>{if(fbv&&fbOn)fbv.webContents.send('fb-res',{i:r.activeMatchOrdinal||0,n:r.matches||0})});
   win.on('resize',()=>{if(fbOn)fbv.setBounds(fbRect())});
   if(process.env.IJO_SHOT){win.webContents.on('console-message',(e,l,m)=>console.log('[renderer]',m));

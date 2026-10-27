@@ -11,16 +11,16 @@ const brGet=id=>bizRegs.find(x=>x.id===id);
 const BR_OK=ATT_OK;
 async function brRemoveFile(f){try{await A.brDelete(f.path)}catch(e){}bizRegs=bizRegs.filter(x=>x.id!==f.id)}
 function brRefresh(){render();if(dlg.open&&$('ct_br'))brModal()}
-async function brAdd(company,src){if(!A.brAttach)return alert('데스크톱 앱에서만 사용할 수 있어요.');if(!brKey(company))return toast('회사명을 먼저 입력해 주세요');
+async function brAdd(company,src){if(!A.brAttach)return uiAlert('데스크톱 앱에서만 사용할 수 있어요.');if(!brKey(company))return toast('회사명을 먼저 입력해 주세요');
  if(!BR_OK.test(src||''))return toast('PDF·이미지(JPG·PNG·WEBP·GIF) 파일만 첨부할 수 있어요');
- const old=brOf(company);if(old&&!confirm(`이미 첨부된 사업자등록증 '${old.name}'을(를) 새 파일로 바꿀까요?`))return;
- try{const r=await A.brAttach(src);if(!r)return;if(old)await brRemoveFile(old);bizRegs.push(normBr({...r,company,addedAt:now()}));save();brRefresh();toast('사업자등록증을 첨부했어요')}catch(e){alert('첨부 실패: '+e)}}
+ const old=brOf(company);if(old&&!await uiConfirm(`이미 첨부된 사업자등록증 '${old.name}'을(를) 새 파일로 바꿀까요?`))return;
+ try{const r=await A.brAttach(src);if(!r)return;if(old)await brRemoveFile(old);bizRegs.push(normBr({...r,company,addedAt:now()}));save();brRefresh();toast('사업자등록증을 첨부했어요')}catch(e){uiAlert('첨부 실패: '+e)}}
 async function brPick(company){const p=await A.brPick();if(p)brAdd(company,p)}
 const brCo=el=>el.closest('[data-brc]').dataset.brc;
 function brOver(e){e.preventDefault();e.currentTarget.classList.add('wfdrop')}
 function brDrop(e){e.preventDefault();e.stopPropagation();const el=e.currentTarget;el.classList.remove('wfdrop');const f=[...e.dataTransfer.files][0];const p=f&&A.pathForFile?A.pathForFile(f):'';if(p)brAdd(brCo(el),p)}
-function brPreview(id){const f=brGet(id);if(f)A.brPreview(f.path,f.name).then(r=>{if(r===false)alert('파일을 찾을 수 없어요.')})}
-async function brDel(id){const f=brGet(id);if(!f||!confirm(`'${f.company}'의 사업자등록증 '${f.name}'을(를) 삭제할까요?\n(같은 회사의 모든 명함에서 사라져요)`))return;await brRemoveFile(f);save();brRefresh();toast('삭제했어요')}
+function brPreview(id){const f=brGet(id);if(f)A.brPreview(f.path,f.name).then(r=>{if(r===false)uiAlert('파일을 찾을 수 없어요.')})}
+async function brDel(id){const f=brGet(id);if(!f||!await uiConfirm(`'${f.company}'의 사업자등록증 '${f.name}'을(를) 삭제할까요?\n(같은 회사의 모든 명함에서 사라져요)`))return;await brRemoveFile(f);save();brRefresh();toast('삭제했어요')}
 const brIcon=n=>attIsImg(n)?'IMG':'PDF';
 // 칸/창 공통 내용 (data-brc 에 회사명)
 function brInner(company){const f=brOf(company);if(!brKey(company))return '<small class="muted">회사명 없음</small>';

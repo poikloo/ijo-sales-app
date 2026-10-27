@@ -22,8 +22,8 @@ function ciAnalyze(){const R=ciRaw.slice(ciHdr+1),g=(r,k)=>ciMap[k]>=0?String(r[
   const k=ciKey(o.company,o.name),p=map.get(k);if(p){CI_LIST.forEach(f=>o[f].forEach(v=>{if(!p[f].includes(v))p[f].push(v)}));CI_F.forEach(([f])=>{if(!CI_LIST.has(f)&&!p[f])p[f]=o[f]});p.merged=true;return}
   o.key=k;map.set(k,o)});
  const L=[...map.values()],ex=new Set(contacts.map(c=>ciKey(c.company,c.name)));L.forEach(o=>o.dup=ex.has(o.key));return {rows,L,bad}}
-async function ctImportOpen(){if(!A.ctImportPick)return alert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.ctImportPick()}catch(e){return alert('파일을 읽지 못했습니다: '+e)}if(!r)return;
- if(!r.rows.length)return alert('데이터가 없습니다.');ciRaw=r.rows;ciName=r.name;ciHdr=Math.max(0,ciRaw.slice(0,15).findIndex(x=>x.some(c=>/회사|상호|성함|이름|COMPANY|NAME/i.test(String(c)))));ciMap=ciDetect(ciRaw[ciHdr]);ciRender()}
+async function ctImportOpen(){if(!A.ctImportPick)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.ctImportPick()}catch(e){return uiAlert('파일을 읽지 못했습니다: '+e)}if(!r)return;
+ if(!r.rows.length)return uiAlert('데이터가 없습니다.');ciRaw=r.rows;ciName=r.name;ciHdr=Math.max(0,ciRaw.slice(0,15).findIndex(x=>x.some(c=>/회사|상호|성함|이름|COMPANY|NAME/i.test(String(c)))));ciMap=ciDetect(ciRaw[ciHdr]);ciRender()}
 function ciRender(){const h=ciRaw[ciHdr],a=ciAnalyze(),nw=a.L.filter(o=>!o.dup).length,dp=a.L.length-nw,mg=a.L.filter(o=>o.merged).length,cos=new Set(a.L.filter(o=>o.company).map(o=>o.key.split('|')[0])).size,mode=(document.querySelector('input[name=cimode]:checked')||{}).value||'skip';
  $('dt').textContent='엑셀 가져오기 — '+ciName;
  $('dbody').innerHTML=`<div class="fsec">칸 연결 (자동 인식, 필요하면 바꾸세요)</div><div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 12px;margin-top:6px">${CI_F.map(([k,t])=>`<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:12px;font-weight:600;color:#555">${t}</span><select style="width:100%;min-width:0;box-sizing:border-box" onchange="ciMap.${k}=+this.value;ciRender()"><option value="-1">(없음)</option>${h.map((c,i)=>`<option value="${i}"${ciMap[k]===i?' selected':''}>${esc(c||'열 '+(i+1))}</option>`).join('')}</select></div>`).join('')}</div>
@@ -39,4 +39,4 @@ async function ciRun(){const a=ciAnalyze(),over=(document.querySelector('input[n
   if(x.dup){if(!over){skip++;return}contacts.forEach((c,i)=>{if(ciKey(c.company,c.name)===x.key){const m={...c};CI_F.forEach(([k])=>{if(CI_LIST.has(k)?o[k].length:o[k])m[k]=o[k]});m.updated=o.updated;m.example=false;contacts[i]=normContact(m)}});upd++}
   else{contacts.push(normContact({...o,id:uid()+add}));add++}});
  save();dlg.close();render();toast(`가져오기 완료: 새 명함 ${add}장${upd?`, 덮어쓰기 ${upd}장`:''}${skip?`, 건너뜀 ${skip}장`:''}`)}
-async function ctTemplate(){if(!A.ctTemplate)return alert('데스크톱 앱에서만 사용할 수 있습니다.');const p=await A.ctTemplate(CI_F.map(x=>x[1]));if(p)toast('양식 저장: '+p)}
+async function ctTemplate(){if(!A.ctTemplate)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');const p=await A.ctTemplate(CI_F.map(x=>x[1]));if(p)toast('양식 저장: '+p)}

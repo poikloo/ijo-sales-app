@@ -26,7 +26,7 @@ function crInit(){document.querySelectorAll('table[data-rz]').forEach(t=>{
    const mv=ev=>{w[i]=Math.max(50,Math.round(w0+ev.clientX-x0));colWidths[t.dataset.rz]=w;crApply(t)};
    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);h.classList.remove('on');document.body.classList.remove('rzing');if(colWidths[t.dataset.rz])save()};
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up)})});
- t.tHead.addEventListener('contextmenu',e=>{if(!colWidths[t.dataset.rz])return;e.preventDefault();if(confirm('이 목록의 칸 넓이를 모두 기본값으로 되돌릴까요?'))crResetAll(t)})})}
+ t.tHead.addEventListener('contextmenu',async e=>{if(!colWidths[t.dataset.rz])return;e.preventDefault();if(await uiConfirm('이 목록의 칸 넓이를 모두 기본값으로 되돌릴까요?'))crResetAll(t)})})}
 // ===== 목록 정렬 (기본: 오더번호 오름차순, 목록별로 저장) =====
 let listSort={};
 const LS_KEYS=[['no','오더번호'],['client','거래처'],['date','발주일']];

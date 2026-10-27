@@ -82,8 +82,8 @@ async function liFile(f){const t=liTypeOf(f.name||'',f.type||'');if(!t)return to
 function liDrop(ev){ev.preventDefault();const f=ev.dataTransfer.files[0];if(f)liFile(f)}
 function liPick(el){const f=el.files[0];if(f)liFile(f);el.value=''}
 function liPaste(ev){const it=[...(ev.clipboardData||{}).items||[]].find(i=>i.kind==='file');if(!it)return;ev.preventDefault();const f=it.getAsFile();if(f)liFile(new File([f],'붙여넣은 캡처.png',{type:f.type||'image/png'}))}
-function liApply(replace){const ok=LI.lots.filter(l=>l.lot||l.rolls.some(v=>v!==''));if(!ok.length)return;if(!stEd)return;
- const has=stEd.lots.filter(l=>lotCnt(l));if(replace&&has.length&&!confirm(`지금 입력된 LOT ${has.length}개를 지우고 가져온 ${ok.length}개 LOT로 바꿀까요?`))return;
+async function liApply(replace){const ok=LI.lots.filter(l=>l.lot||l.rolls.some(v=>v!==''));if(!ok.length)return;if(!stEd)return;
+ const has=stEd.lots.filter(l=>lotCnt(l));if(replace&&has.length&&!await uiConfirm(`지금 입력된 LOT ${has.length}개를 지우고 가져온 ${ok.length}개 LOT로 바꿀까요?`))return;
  const nl=ok.map(l=>normLot({lotNo:l.lot,color:l.color,rolls:l.rolls}));
  if(replace)stEd.lots=nl;else stEd.lots=stEd.lots.filter(l=>lotCnt(l)).concat(nl);
  $('lidlg').close();renderEditor();toast(`${nl.length}개 LOT를 ${replace?'적용':'추가'}했어요. 숫자를 한 번 더 확인해 주세요`)}

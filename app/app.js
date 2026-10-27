@@ -36,7 +36,7 @@ function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload()}).catch(e=>alert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload()}).catch(e=>uiAlert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
@@ -58,7 +58,14 @@ function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일
   if(sp)data.forEach(x=>{if(x.pub&&x.pub.startsWith(ds))c+=`<span class="chip pub" onclick="view('${x.id}')">게시 ${esc(x.name)}</span>`});
   if(mode==='dash')c+=cl.filter(x=>x.due===ds).map(clChip).join('');
   h+=`<div class="${cls}"><div>${d.getDate()}</div>${c}</div>`}return h}
-function render(){_render();if(window.lrAfter)lrAfter()}
+// 다시 그리기(render) 때문에 방금 클릭한 입력란이 새로 만들어져 클릭이 '안 먹는' 문제 방지: 같은 입력란을 찾아 포커스를 옮겨 줌
+let _md=null;document.addEventListener('mousedown',e=>{_md={el:e.target,t:Date.now()}},true);
+const FK_ATTR=['id','onchange','oninput','onkeydown','onblur','data-k','name','placeholder'];
+function fieldKey(el){if(!el||!el.matches||!el.matches('input,textarea,select')||el.type==='button'||el.type==='file')return null;for(const a of FK_ATTR){const v=el.getAttribute(a);if(v)return {tag:el.tagName,a,v,i:[...document.querySelectorAll(el.tagName)].filter(x=>x.getAttribute(a)===v).indexOf(el)}}return null}
+function fieldFind(k){const l=[...document.querySelectorAll(k.tag)].filter(x=>x.getAttribute(k.a)===k.v);return l[k.i]||l[0]||null}
+function render(){const md=_md&&Date.now()-_md.t<1000?_md.el:null,ae=document.activeElement,k=md?fieldKey(md):fieldKey(ae),old=md||ae;
+ _render();if(window.lrAfter)lrAfter();
+ if(k&&old&&!old.isConnected){const n=fieldFind(k);if(n&&!n.disabled&&n.offsetParent!==null){const f=()=>{if(n.isConnected&&document.activeElement!==n){n.focus({preventScroll:true});if(n.setSelectionRange&&/^(text|search|tel|)$/.test(n.type||''))try{n.setSelectionRange(n.value.length,n.value.length)}catch(e){}}};f();setTimeout(f,0);if(md)_md={el:n,t:Date.now()}}}}
 function _render(){
  if(page==='dash'){renderDash();slDashW()}
  if(page==='sales')renderSales();
@@ -85,7 +92,7 @@ function _render(){
 function view(id){const x=data.find(e=>e.id===id);if(!x)return;$('dt').textContent=(x.example?'[예시] ':'')+x.name;const tot=x.cos.reduce((a,c)=>a+(+c.s||0),0);
  $('dbody').innerHTML=`<dl class="dv"><dt>입찰공고번호</dt><dd>${esc(x.no)}</dd><dt>수요기관</dt><dd>${esc(x.org)}</dd><dt>게시일시</dt><dd>${fdt(x.pub)}</dd><dt>개찰일시</dt><dd>${fdt(x.open)} ${x.open?'('+ddLabel(dday(x.open))+')':''}</dd><dt>가격</dt><dd>${won(x.price)}</dd><dt>계약대표업체</dt><dd>${esc(x.rep)}</dd><dt>계약업체<br><small>(합계 ${tot}%)</small></dt><dd>${x.cos.map(c=>esc(c.n)+' — '+c.s+'%').join('\n')}</dd><dt>상태</dt><dd>${esc(x.status)}</dd><dt>개찰결과 메모</dt><dd>${esc(x.result)}</dd><dt>비고</dt><dd>${esc(x.memo)}</dd></dl>`;
  $('dfoot').innerHTML=`<button class="d" onclick="del('${id}')">삭제</button><button onclick="openForm('${id}')">수정</button><button onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
-function del(id){if(confirm('삭제하시겠습니까?')){data=data.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
+async function del(id){if(await uiConfirm('삭제하시겠습니까?')){data=data.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
 function coRow(n='',s=''){return `<div class="cr"><input placeholder="업체명" value="${esc(n)}" class="cn"><input class="sh cs" type="number" step="0.01" placeholder="지분 %" value="${esc(s)}" oninput="chk()"><button type="button" onclick="this.parentNode.remove();chk()">✕</button></div>`}
 function chk(){const v=[...document.querySelectorAll('.cs')].map(i=>+i.value||0),t=Math.round(v.reduce((a,b)=>a+b,0)*100)/100,w=$('sw');if(w){w.className=t===100?'ok':'warn';w.textContent=`지분율 합계: ${t}%`+(t===100?' ✓':' — 100%가 아닙니다!')}}
 function openForm(id){const x=id?data.find(e=>e.id===id):{status:'진행중',cos:[]};$('dt').textContent=id?'공고 수정':'새 공고';
@@ -96,10 +103,10 @@ function openForm(id){const x=id?data.find(e=>e.id===id):{status:'진행중',cos
  <label>상태<select id="f_status">${ST.map(s=>`<option${s===x.status?' selected':''}>${s}</option>`).join('')}</select></label><label></label>
  <label class="w">개찰결과 메모<textarea id="f_result" rows="2">${esc(x.result)}</textarea></label><label class="w">비고<textarea id="f_memo" rows="2">${esc(x.memo)}</textarea></label></div>`;
  $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveForm('${id||''}')">저장</button>`;chk();if(!dlg.open)dlg.showModal();$('f_name').focus()}
-function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('no'),org:g('org'),pub:g('pub'),open:g('open'),price:+g('price').replace(/,/g,'')||0,rep:g('rep'),
+async function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('no'),org:g('org'),pub:g('pub'),open:g('open'),price:+g('price').replace(/,/g,'')||0,rep:g('rep'),
  cos:[...document.querySelectorAll('#cos .cr')].map(r=>({n:r.querySelector('.cn').value.trim(),s:+r.querySelector('.cs').value||0})).filter(c=>c.n),status:g('status'),result:g('result'),memo:g('memo'),updated:now()};
- if(!o.name)return alert('공고명을 입력하세요.');if(!o.open)return alert('개찰일시를 입력하세요.');
- const t=o.cos.reduce((a,c)=>a+c.s,0);if(o.cos.length&&Math.round(t*100)!==10000&&!confirm(`지분율 합계가 ${t}%입니다. 그래도 저장할까요?`))return;
+ if(!o.name)return uiAlert('공고명을 입력하세요.');if(!o.open)return uiAlert('개찰일시를 입력하세요.');
+ const t=o.cos.reduce((a,c)=>a+c.s,0);if(o.cos.length&&Math.round(t*100)!==10000&&!await uiConfirm(`지분율 합계가 ${t}%입니다. 그래도 저장할까요?`))return;
  if(id){const i=data.findIndex(e=>e.id===id);data[i]={...data[i],...o}}else data.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),example:false,...o});
  save();render();toast('저장했습니다');id?view(id):dlg.close()}
 const stamp=()=>ymd(new Date());
@@ -111,8 +118,8 @@ async function bkRestore(k,l){if(!A.attWrite||!Array.isArray(l))return 0;let n=0
 async function exportJSON(){const wf=await bkFiles('wf',wfFiles),ss=await bkFiles('ss',shipFiles),br=await bkFiles('br',bizRegs);
  const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),workOrderFiles:wf,shipFiles:ss,bizRegs:br},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
- if(!d)return alert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
- if(confirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);brImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);slImport(raw);prImport(raw);sllImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles),bkRestore('br',raw.bizRegs)]).then(([a,b,c])=>toast('복원 완료'+(a+b+c?` (첨부 파일 ${a+b+c}개)`:'')))}}
+ if(!d)return uiAlert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
+ if(await uiConfirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);brImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);slImport(raw);prImport(raw);sllImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles),bkRestore('br',raw.bizRegs)]).then(([a,b,c])=>toast('복원 완료'+(a+b+c?` (첨부 파일 ${a+b+c}개)`:'')))}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
@@ -137,8 +144,8 @@ function openCl(id){const x=id?cl.find(e=>e.id===id):{title:'',due:csel||'',pri:
  <label style="flex-direction:row;align-items:center;gap:6px;font-size:14px"><input id="c_done" type="checkbox" ${x.done?'checked':''}> 완료</label><label class="w">메모<textarea id="c_memo" rows="3">${esc(x.memo)}</textarea></label></div>`;
  $('dfoot').innerHTML=(id?`<button class="d" onclick="delCl('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCl('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('c_title').focus()}
 function saveCl(id){const o={title:$('c_title').value.trim(),due:$('c_due').value,pri:$('c_pri').value,cat:$('c_cat').value.trim(),memo:$('c_memo').value.trim(),done:$('c_done').checked,updated:now()};
- if(!o.title)return alert('할 일을 입력하세요.');if(id){const i=cl.findIndex(e=>e.id===id);cl[i]={...cl[i],...o}}else cl.push({id:uid(),example:false,...o});save();render();dlg.close();toast('저장했습니다')}
-function delCl(id){if(confirm('이 할 일을 삭제할까요?')){cl=cl.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
+ if(!o.title)return uiAlert('할 일을 입력하세요.');if(id){const i=cl.findIndex(e=>e.id===id);cl[i]={...cl[i],...o}}else cl.push({id:uid(),example:false,...o});save();render();dlg.close();toast('저장했습니다')}
+async function delCl(id){if(await uiConfirm('이 할 일을 삭제할까요?')){cl=cl.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
 
 // ===== 생산 관리 =====
 const PCOL=['#1f6feb','#1a7f37','#d4620a','#8250df','#0f8a8a','#c2255c'],pcol=i=>PCOL[i%PCOL.length];
@@ -171,14 +178,14 @@ const findP=(oid,pid)=>{const o=orders.find(x=>x.id===oid);return [o,o&&o.procs.
 function touch(o){o.updated=now();save();render()}
 function addShip(oid,pid){const [o,p]=findP(oid,pid);if(!p)return;p.ships.push({id:uid(),date:ymd(new Date()),qty:0,memo:''});touch(o);setTimeout(()=>{const ins=[...document.querySelectorAll('#pd_wrap .pc')][o.procs.indexOf(p)]?.querySelectorAll('tbody tr:last-child input');if(ins&&ins[1])ins[1].focus()},0)}
 function editShip(oid,pid,sid,k,v){const [o,p]=findP(oid,pid),s=p&&p.ships.find(x=>x.id===sid);if(!s)return;s[k]=k==='qty'?(+String(v).replace(/[^0-9.\-]/g,'')||0):v;touch(o)}
-function delShip(oid,pid,sid){const [o,p]=findP(oid,pid);if(!p||!confirm('이 출고 내역을 삭제할까요?'))return;ssOnShipDelete(sid);p.ships=p.ships.filter(x=>x.id!==sid);touch(o)}
-function delOrder(id){const o=orders.find(x=>x.id===id);if(o&&confirm(`오더 ${o.no}을(를) 출고 내역과 함께 삭제할까요?`)){orders=orders.filter(x=>x.id!==id);pv=null;save();render();toast('삭제했습니다')}}
+async function delShip(oid,pid,sid){const [o,p]=findP(oid,pid);if(!p||!await uiConfirm('이 출고 내역을 삭제할까요?'))return;await ssOnShipDelete(sid);p.ships=p.ships.filter(x=>x.id!==sid);touch(o)}
+async function delOrder(id){const o=orders.find(x=>x.id===id);if(o&&await uiConfirm(`오더 ${o.no}을(를) 출고 내역과 함께 삭제할까요?`)){orders=orders.filter(x=>x.id!==id);pv=null;save();render();toast('삭제했습니다')}}
 let fprocs=[];
 const isRaw=p=>String(p.name||'').trim()==='생지';
 function rawSync(i,el){const p=fprocs[i],s=el.parentNode.querySelector('.shk');if(isRaw(p)){p.shrink=null;s.value='';s.disabled=true}else s.disabled=false}
 function procRows(){fprocs.forEach(p=>{if(isRaw(p))p.shrink=null});$('fprocs').innerHTML=fprocs.map((p,i)=>`<div class="prow"><span class="n">${i+1}</span><input placeholder="공정" list="procs" value="${esc(p.name)}" oninput="fprocs[${i}].name=this.value;rawSync(${i},this)"><input placeholder="가공 업체" value="${esc(p.vendor)}" oninput="fprocs[${i}].vendor=this.value"><input type="number" step="0.1" class="shk" ${isRaw(p)?'disabled':''} value="${isRaw(p)?'':(p.shrink??'')}" oninput="fprocs[${i}].shrink=this.value"><span class="pbtn"><button type="button" onclick="mvProc(${i},-1)" ${i?'':'disabled'}>▲</button><button type="button" onclick="mvProc(${i},1)" ${i<fprocs.length-1?'':'disabled'}>▼</button><button type="button" onclick="rmProc(${i})">✕</button></span></div>`).join('')||'<p class="muted">공정이 없습니다.</p>'}
 function mvProc(i,k){const j=i+k;[fprocs[i],fprocs[j]]=[fprocs[j],fprocs[i]];procRows()}
-function rmProc(i){const p=fprocs[i];if(p.ships&&p.ships.length&&!confirm(`'${p.name||'이 공정'}'에 출고 내역 ${p.ships.length}건이 있습니다. 공정과 출고 내역을 함께 삭제할까요?\n(저장을 눌러야 실제로 반영됩니다)`))return;fprocs.splice(i,1);procRows()}
+async function rmProc(i){const p=fprocs[i];if(p.ships&&p.ships.length&&!await uiConfirm(`'${p.name||'이 공정'}'에 출고 내역 ${p.ships.length}건이 있습니다. 공정과 출고 내역을 함께 삭제할까요?\n(저장을 눌러야 실제로 반영됩니다)`))return;fprocs.splice(i,1);procRows()}
 let flines=[];
 const fmtN=v=>String(v).replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 function lineRows(){$('flines').innerHTML=flines.map((l,i)=>`<div class="lrow"><input placeholder="색상" value="${esc(l.color)}" oninput="flines[${i}].color=this.value"><input inputmode="numeric" placeholder="발주량" value="${l.qty?num(l.qty):''}" oninput="this.value=fmtN(this.value);flines[${i}].qty=+this.value.replace(/,/g,'')||0"><select onchange="flines[${i}].unit=this.value">${UNITS.map(u=>`<option${u===l.unit?' selected':''}>${u}</option>`).join('')}</select><button type="button" title="삭제" onclick="flines.splice(${i},1);if(!flines.length)flines.push({color:'',qty:0,unit:'YD'});lineRows()">✕</button></div>`).join('')}
@@ -190,9 +197,9 @@ function openOrder(id){const o=id?orders.find(x=>x.id===id):{no:'',item:'',lines
  <div class="w"><div class="lrow lhead"><span>색상</span><span>발주량</span><span>단위</span><span></span></div><div id="flines"></div><button type="button" onclick="flines.push({color:'',qty:0,unit:(flines[flines.length-1]||{}).unit||'YD'});lineRows();const i=$('flines').querySelectorAll('input');i[i.length-2].focus()">+ 추가</button></div></div>
  <div class="fsec" style="margin-top:16px">가공 공정</div><div class="prow phead"><span></span><span>공정</span><span>가공 업체</span><span>가공 축(%)</span><span></span></div><div id="fprocs"></div><button type="button" onclick="fprocs.push({id:uid(),name:'',vendor:'',shrink:null,ships:[]});procRows()">+ 공정 추가</button>`;
  $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveOrder('${id||''}')">저장</button>`;lineRows();procRows();if(!dlg.open)dlg.showModal();$('o_no').focus()}
-function saveOrder(id){const g=k=>$('o_'+k).value.trim(),o={no:g('no'),item:g('item'),lines:normLines({lines:flines.filter(l=>String(l.color).trim()||l.qty)}),client:g('client'),date:g('date'),due:g('due'),fabric:g('fabric'),updated:now(),
+async function saveOrder(id){const g=k=>$('o_'+k).value.trim(),o={no:g('no'),item:g('item'),lines:normLines({lines:flines.filter(l=>String(l.color).trim()||l.qty)}),client:g('client'),date:g('date'),due:g('due'),fabric:g('fabric'),updated:now(),
  procs:fprocs.filter(p=>p.name.trim()||p.vendor.trim()||(p.ships&&p.ships.length)).map(p=>({id:p.id,name:p.name.trim(),vendor:p.vendor.trim(),shrink:isRaw(p)?null:numOrNull(p.shrink),ships:p.ships||[]}))};
- if(!o.no)return alert('오더번호를 입력하세요.');if(orders.some(x=>x.no===o.no&&x.id!==id)&&!confirm(`오더번호 ${o.no}이(가) 이미 있습니다. 그래도 저장할까요?`))return;
+ if(!o.no)return uiAlert('오더번호를 입력하세요.');if(orders.some(x=>x.no===o.no&&x.id!==id)&&!await uiConfirm(`오더번호 ${o.no}이(가) 이미 있습니다. 그래도 저장할까요?`))return;
  deriveOrder(o);if(id){const i=orders.findIndex(x=>x.id===id);orders[i]={...orders[i],...o}}else{const n={id:uid(),example:false,...o};orders.push(n);pv=n.id}
  save();dlg.close();render();toast('저장했습니다')}
 async function exportOrdersCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['오더번호','품목','아이템명','색상','발주량','단위','거래처','발주일','납기일','색상별 발주량','공정순서','공정','가공업체','가공축(%)','출고일','출고량','메모','공정소계','납품완료'],rows=[];

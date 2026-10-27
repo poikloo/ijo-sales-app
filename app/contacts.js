@@ -27,7 +27,7 @@ function viewContact(id){const c=contacts.find(x=>x.id===id);if(!c)return;$('dt'
  $('dbody').innerHTML=`<dl class="dv">${rows.map(([k,v])=>`<dt>${k}</dt><dd style="white-space:normal">${v}</dd>`).join('')}</dl>`;
  brModal();
  $('dfoot').innerHTML=`<button class="d" onclick="delContact('${id}')">삭제</button><button onclick="openContact('${id}')">수정</button><button onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
-function delContact(id){const c=contacts.find(x=>x.id===id);if(c&&confirm(`'${[c.company,c.name].filter(Boolean).join(' ')||'이 명함'}'을(를) 삭제할까요?`)){contacts=contacts.filter(x=>x.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
+async function delContact(id){const c=contacts.find(x=>x.id===id);if(c&&await uiConfirm(`'${[c.company,c.name].filter(Boolean).join(' ')||'이 명함'}'을(를) 삭제할까요?`)){contacts=contacts.filter(x=>x.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
 function ctRows(k,ph){const l=ctDraft[k].length?ctDraft[k]:[''];if(!ctDraft[k].length)ctDraft[k]=[''];
  return l.map((v,i)=>`<div class="cr"><input value="${esc(v)}" placeholder="${ph}" oninput="ctDraft['${k}'][${i}]=this.value" ${k==='addrs'?'':'inputmode="tel"'}><button type="button" onclick="ctDraft['${k}'].splice(${i},1);ctListRender('${k}')" title="삭제">✕</button></div>`).join('')}
 function ctListRender(k){const d=CT_LISTS.find(x=>x[0]===k);$('ctl_'+k).innerHTML=ctRows(k,d[2])}

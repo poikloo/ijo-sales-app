@@ -73,10 +73,10 @@ function slCalc(el){el.value=fmtN(el.value);const g=k=>+$('sa_'+k).value.replace
  if((k==='unitPrice'||k==='qty')&&!slMan.s){const s=Math.round(g('unitPrice')*g('qty'));$('sa_supply').value=s?slWon(s):''}
  if(k!=='total'&&!slMan.t){const s=g('supply');$('sa_total').value=s?slWon(Math.round(s*1.1)):''}}
 function slSave(id){const g=k=>$('sa_'+k).value.trim(),nn=k=>+g(k).replace(/,/g,'')||0,d=g('date'),y=d?+d.slice(0,4):Math.round(+g('year'))||0;
- if(!y)return alert('매출일이나 연도를 입력하세요.');if(!g('client'))return alert('거래처를 입력하세요.');
+ if(!y)return uiAlert('매출일이나 연도를 입력하세요.');if(!g('client'))return uiAlert('거래처를 입력하세요.');
  const o=slNorm({id:id||uid(),date:d,year:y,client:g('client'),orderNo:g('orderNo'),item:g('item'),fabric:g('fabric'),process:g('process'),color:g('color'),unitPrice:nn('unitPrice'),qty:nn('qty'),supply:nn('supply'),total:nn('total'),memo:g('memo')});
  if(id){const i=sales.findIndex(s=>s.id===id);o.source=sales[i].source;sales[i]=o}else sales.push(o);save();dlg.close();render();toast('저장했습니다')}
-function slDel(id){if(!confirm('이 매출을 삭제할까요?'))return;sales=sales.filter(s=>s.id!==id);save();dlg.close();render();toast('삭제했습니다')}
+async function slDel(id){if(!await uiConfirm('이 매출을 삭제할까요?'))return;sales=sales.filter(s=>s.id!==id);save();dlg.close();render();toast('삭제했습니다')}
 async function slCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['오더번호','매출일','연도','거래처','품목','아이템명','색상','가공구분','수량','단가','공급가액','총액(VAT포함)','메모'];
  const rows=slRows().map(x=>[x.orderNo,x.date,x.year||'',x.client,x.item,x.fabric,x.color,x.process,x.qty,x.unitPrice,x.supply,x.total,x.memo]);
  const p=await A.saveFile(`매출관리_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows.map(r=>r.map(q).join(','))].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
@@ -93,8 +93,8 @@ function siDetect(h){const n=h.map(siH),f=t=>n.findIndex(t),m={};
  m.orderNo=f(x=>x.includes('LINO')||x.includes('ORDERNO')||x.includes('오더번호'));m.item=f(x=>x.includes('용도')||x.includes('품목'));m.fabric=f(x=>x.includes('품명')||x.includes('아이템'));
  m.process=f(x=>x.includes('가공'));m.color=f(x=>x.includes('COLOR')||x.includes('색상'));m.unitPrice=f(x=>x.includes('단가'));m.qty=f(x=>x.includes('수량'));m.supply=f(x=>x.includes('공급가'));m.total=f(x=>x.includes('총액')||x.includes('합계금액'));return m}
 function siFindHdr(rows){return rows.slice(0,15).findIndex(r=>{const n=r.map(siH);return n.some(x=>x.includes('업체')||x.includes('거래처'))&&n.some(x=>x.includes('단가'))})}
-async function slImportOpen(){if(!A.salesImportPick)return alert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.salesImportPick()}catch(e){return alert('파일을 읽지 못했습니다: '+e)}if(!r)return;
- siBook=r.sheets.filter(s=>s.rows.length);if(!siBook.length)return alert('데이터가 없습니다.');siName=r.name;let best=-1;siBook.forEach((s,i)=>{const h=siFindHdr(s.rows);if(h>=0&&(best<0||s.rows.length-h>siBook[best].rows.length-siFindHdr(siBook[best].rows)))best=i});siSh=Math.max(0,best);siSet()}
+async function slImportOpen(){if(!A.salesImportPick)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');let r;try{r=await A.salesImportPick()}catch(e){return uiAlert('파일을 읽지 못했습니다: '+e)}if(!r)return;
+ siBook=r.sheets.filter(s=>s.rows.length);if(!siBook.length)return uiAlert('데이터가 없습니다.');siName=r.name;let best=-1;siBook.forEach((s,i)=>{const h=siFindHdr(s.rows);if(h>=0&&(best<0||s.rows.length-h>siBook[best].rows.length-siFindHdr(siBook[best].rows)))best=i});siSh=Math.max(0,best);siSet()}
 function siSet(){const rows=siBook[siSh].rows;siHdr=Math.max(0,siFindHdr(rows));siMap=siDetect(rows[siHdr]);siRender()}
 function siAnalyze(){const R=siBook[siSh].rows.slice(siHdr+1),g=(r,k)=>siMap[k]>=0?String(r[siMap[k]]??'').trim():'',cl=v=>/^-+$/.test(v)?'':v,L=[],bad=[];let ex=0;
  R.forEach((r,i)=>{const rn=siHdr+i+2,t={};['client','orderNo','item','fabric','process','color'].forEach(k=>t[k]=cl(g(r,k)));
