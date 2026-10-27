@@ -16,7 +16,7 @@ function renderDash(){const now=new Date(),cm=dbYm(now),pm=dbYm(new Date(now.get
  const stc=(typeof stmts!=='undefined'?stmts:[]).filter(s=>(s.date||'').startsWith(cm)).length;
  const soon=open.filter(o=>o.due&&o.due<=wk),late=soon.filter(o=>o.due<td).length;
  const kpi=(t,v,s)=>`<div class="card dbk"><div class="muted">${t}</div><b>${v}</b><small class="muted">${s}</small></div>`;
- $('dbk1').innerHTML=kpi('진행중 오더',dbNum(open.length)+'건','납품 완료 체크 안 된 오더');
+ $('dbk1').innerHTML=kpi('진행중 오더',dbNum(open.length)+'건','오더 완료 체크 안 된 오더');
  $('dbk2').innerHTML=kpi('이번 달 출고량',dbNum(Math.round(a.yd))+' YD',`최종 공정 출고 · 지난달 대비 <b style="font-size:12px;color:${a.yd>=b.yd?'#1a7f37':'#c2255c'}">${chg}</b>${a.m?` · M 단위 ${dbNum(a.m)} M 별도`:''}`);
  $('dbk3').innerHTML=ivCard(cm);dlInit();
  if(!dbClkT)dbClock();
