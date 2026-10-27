@@ -31,9 +31,16 @@ contextBridge.exposeInMainWorld('api',{
   ssPreview:(p,n)=>ipcRenderer.invoke('ssPreview',p,n),
   ssSaveAs:(p,n)=>ipcRenderer.invoke('ssSaveAs',p,n),
   ssDelete:p=>ipcRenderer.invoke('ssDelete',p),
+  brPick:()=>ipcRenderer.invoke('brPick'),
+  brAttach:p=>ipcRenderer.invoke('brAttach',p),
+  brPreview:(p,n)=>ipcRenderer.invoke('brPreview',p,n),
+  brDelete:p=>ipcRenderer.invoke('brDelete',p),
   attRead:(k,p)=>ipcRenderer.invoke('attRead',k,p),
   attWrite:(k,p,b)=>ipcRenderer.invoke('attWrite',k,p,b),
   lotOcr:b=>ipcRenderer.invoke('lotOcr',b),
+  fbRerun:()=>ipcRenderer.send('fb-rerun'),
+  fbOpen:()=>ipcRenderer.invoke('fbOpen'),
+  onFindBar:cb=>ipcRenderer.on('fb-state',(e,on)=>cb(on)),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });

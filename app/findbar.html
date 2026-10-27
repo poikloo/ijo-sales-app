@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>찾기</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:transparent;font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR",sans-serif;font-size:13px}
+.b{display:flex;align-items:center;gap:4px;height:100%;padding:5px 6px 5px 10px;background:#fff;border:1px solid #c3c4c7;border-radius:8px;box-shadow:0 2px 8px #0002}
+input{flex:1;min-width:0;font:inherit;padding:5px 7px;border:1px solid #c3c4c7;border-radius:6px;outline:none}input:focus{border-color:#2271b1;box-shadow:0 0 0 1px #2271b1}
+.n{min-width:52px;text-align:center;color:#555;font-size:12px;white-space:nowrap}.n.z{color:#c53030}
+button{border:1px solid transparent;background:none;border-radius:5px;width:28px;height:28px;cursor:pointer;font:inherit;color:#333;padding:0}button:hover{background:#f0f2f5;border-color:#c3c4c7}button:disabled{color:#bbb;background:none;border-color:transparent;cursor:default}
+</style></head><body><div class="b"><input id="q" placeholder="이 화면에서 찾기" spellcheck="false" autocomplete="off"><span class="n" id="n"></span>
+<button id="up" title="이전 (Shift+Enter)">▲</button><button id="dn" title="다음 (Enter)">▼</button><button id="x" title="닫기 (Esc)">✕</button></div>
+<script>
+const q=document.getElementById('q'),n=document.getElementById('n'),F=window.fb;let last='';
+function run(fwd,next){const v=q.value;if(!v){last='';n.textContent='';n.className='n';F.find('',true,false);upd(0);return}const isNew=v!==last;last=v;F.find(v,fwd,!isNew&&next)}
+function upd(m){document.getElementById('up').disabled=document.getElementById('dn').disabled=!m}
+q.addEventListener('input',()=>run(true,false));
+q.addEventListener('keydown',e=>{if(e.key==='Enter'){if(e.isComposing||e.keyCode===229)return;e.preventDefault();run(!e.shiftKey,true)}else if(e.key==='Escape'){e.preventDefault();F.close()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&e.target!==q){e.preventDefault();F.close()}});
+document.getElementById('up').onclick=()=>{run(false,true);q.focus()};document.getElementById('dn').onclick=()=>{run(true,true);q.focus()};document.getElementById('x').onclick=()=>F.close();
+F.onFocus(()=>{q.focus();q.select();if(q.value){last='';run(true,false)}});
+F.onRerun(()=>{if(q.value){last='';run(true,false)}});
+F.onResult(r=>{if(!q.value)return;n.textContent=r.n?`${r.i}/${r.n}`:'0/0';n.className='n'+(r.n?'':' z');upd(r.n)});
+upd(0);
+</script></body></html>

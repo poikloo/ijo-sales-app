@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,Menu,shell}=require('electron');
+const {app,BrowserWindow,WebContentsView,ipcMain,dialog,Menu,shell}=require('electron');
 app.commandLine.appendSwitch('lang','ko-KR');
 const {autoUpdater}=require('electron-updater');
 const fs=require('fs'),path=require('path');
@@ -136,6 +136,18 @@ ipcMain.handle('ssPreview',(e,rel,name)=>{const a=ssAbs(rel);if(!fs.existsSync(a
 ipcMain.handle('ssSaveAs',async(e,rel,name)=>{const a=ssAbs(rel);if(!fs.existsSync(a))return false;const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),path.basename(String(name||path.basename(a)))),filters:[{name:'PDF',extensions:['pdf']}]});
   if(r.canceled||!r.filePath)return null;fs.copyFileSync(a,r.filePath);return r.filePath});
 ipcMain.handle('ssDelete',(e,rel)=>{const a=ssAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
+// ===== 거래처(회사)별 사업자등록증 (PDF/JPG/PNG) =====
+const BR=()=>path.join(DIR(),'bizreg'),BR_EXT=/\.(pdf|jpe?g|png)$/i;
+function brAbs(rel){const a=path.resolve(BR(),String(rel||''));if(!a.startsWith(path.resolve(BR())+path.sep))throw new Error('잘못된 경로');return a}
+ipcMain.handle('brPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:[{name:'사업자등록증 (PDF/이미지)',extensions:['pdf','jpg','jpeg','png']}],properties:['openFile']});return r.canceled?null:r.filePaths[0]||null});
+ipcMain.handle('brAttach',(e,src)=>{src=String(src);if(!BR_EXT.test(src)||!fs.statSync(src).isFile())throw new Error('PDF·JPG·PNG 파일만 첨부할 수 있어요');
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),dir=path.join(BR(),id);fs.mkdirSync(dir,{recursive:true});
+  const ext=path.extname(src),name=(path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'사업자등록증')+ext;fs.copyFileSync(src,path.join(dir,name));
+  return {id,name,path:id+'/'+name}});
+ipcMain.handle('brPreview',(e,rel,name)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;
+  const w=new BrowserWindow({width:900,height:1000,parent:win,title:'사업자등록증 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});
+ipcMain.handle('brDelete',(e,rel)=>{const a=brAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
 // ===== 수량 가져오기: 오프라인 OCR (tesseract.js 워커 + 번들된 eng 데이터, 네트워크 사용 안 함) =====
 const unp=p=>p.replace(/app\.asar([\\/])/,'app.asar.unpacked$1');
 let ocrW=null;
@@ -149,9 +161,9 @@ ipcMain.handle('lotOcr',async(e,bytes)=>{const buf=Buffer.from(bytes),w=await oc
   return {words,digits,digits6:d6}});
 app.on('will-quit',()=>{if(ocrW)ocrW.then(w=>w.terminate()).catch(()=>{})});
 // ===== 백업용 첨부 파일 (base64) =====
-const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):wfAbs(rel);
+const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):k==='br'?brAbs(rel):wfAbs(rel);
 ipcMain.handle('attRead',(e,k,rel)=>{try{const a=attAbs(k,rel);return fs.existsSync(a)?fs.readFileSync(a).toString('base64'):null}catch(err){return null}});
-ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!/\.pdf$/i.test(a))throw new Error('PDF만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
+ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!(k==='br'?BR_EXT:/\.pdf$/i).test(a))throw new Error('PDF만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));
@@ -160,6 +172,25 @@ ipcMain.handle('saveFile',async(e,name,content)=>{const r=await dialog.showSaveD
   if(r.canceled)return null;fs.writeFileSync(r.filePath,content,'utf8');return r.filePath});
 ipcMain.handle('openFile',async()=>{const r=await dialog.showOpenDialog({filters:[{name:'JSON 백업',extensions:['json']}],properties:['openFile']});
   if(r.canceled||!r.filePaths[0])return null;return fs.readFileSync(r.filePaths[0],'utf8')});
+// ===== Ctrl+F 찾기 막대: 별도 WebContentsView(오른쪽 위)에 띄워서 입력란 글자가 검색 결과에 섞이지 않게 =====
+let fbv=null,fbOn=false;
+const fbRect=()=>{const [w]=win.getContentSize();return {x:Math.max(0,w-392),y:6,width:380,height:44}};
+function fbKey(e,i){if(i.type!=='keyDown')return;const k=String(i.key||'').toLowerCase();
+  if((i.control||i.meta)&&!i.alt&&k==='f'){e.preventDefault();fbShow()}
+  else if(k==='f3'){e.preventDefault();fbShow()}}
+function fbShow(){if(!win||win.isDestroyed())return;
+  if(!fbv){fbv=new WebContentsView({webPreferences:{preload:path.join(__dirname,'findbar-preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+    fbv.setBackgroundColor('#00000000');fbv.webContents.on('before-input-event',fbKey);fbv.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+    fbv.webContents.loadFile(path.join(__dirname,'app','findbar.html'));fbv.webContents.once('did-finish-load',()=>{if(fbOn){fbv.webContents.focus();fbv.webContents.send('fb-focus')}})}
+  if(!fbOn){win.contentView.addChildView(fbv);fbOn=true;win.webContents.send('fb-state',true)}
+  fbv.setBounds(fbRect());fbv.webContents.focus();if(!fbv.webContents.isLoading())fbv.webContents.send('fb-focus')}
+function fbHide(){if(!fbOn)return;fbOn=false;win.webContents.stopFindInPage('keepSelection');win.contentView.removeChildView(fbv);win.webContents.send('fb-state',false);win.webContents.focus()}
+ipcMain.on('fb-find',(e,q,fwd,follow)=>{if(!win||!fbv||e.sender!==fbv.webContents)return;
+  if(!q){win.webContents.stopFindInPage('clearSelection');fbv.webContents.send('fb-res',{i:0,n:0});return}
+  win.webContents.findInPage(q,{forward:fwd,findNext:!follow,matchCase:false})});
+ipcMain.on('fb-close',e=>{if(fbv&&e.sender===fbv.webContents)fbHide()});
+ipcMain.handle('fbOpen',()=>fbShow());
+ipcMain.on('fb-rerun',()=>{if(fbOn&&fbv)fbv.webContents.send('fb-rerun')});
 if(!app.requestSingleInstanceLock())app.quit();
 let win;
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus()}});
@@ -170,6 +201,9 @@ app.whenReady().then(()=>{
   setupUpdater();
   win.loadFile(path.join(__dirname,'app','index.html'));
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+  win.webContents.on('before-input-event',fbKey);
+  win.webContents.on('found-in-page',(e,r)=>{if(fbv&&fbOn)fbv.webContents.send('fb-res',{i:r.activeMatchOrdinal||0,n:r.matches||0})});
+  win.on('resize',()=>{if(fbOn)fbv.setBounds(fbRect())});
   if(process.env.IJO_SHOT){win.webContents.on('console-message',(e,l,m)=>console.log('[renderer]',m));
     win.webContents.on('did-finish-load',()=>setTimeout(async()=>{
       const errs=await win.webContents.executeJavaScript('window.__errs||[]');console.log('ERRORS:',JSON.stringify(errs));

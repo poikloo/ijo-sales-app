@@ -16,7 +16,7 @@ function prImport(r){if(r&&!Array.isArray(r)&&(Array.isArray(r.prices)||r.priceS
 function prCalc(p,S=prSet){const ax=(v,pr,def)=>v!=null?v:(pr>0?def:0),g=p.gCur==='USD'?p.g*S.fx:p.g;
  const dS=ax(p.dS,p.d,S.dye),s1=ax(p.p1S,p.p1,S.g1),s2=ax(p.p2S,p.p2,S.g2),m=p.m!=null?p.m:S.margin,y=S.yd2m||PR_DEF.yd2m;
  const c1=g*(1+dS)+p.d,c2=c1*(1+s1)+p.p1,c3=c2*(1+s2)+p.p2,net=c3+p.e+p.t,mg=net*m,off=net+mg;
- return {g,c1,c2,c3,dS,s1,s2,m,net,netM:net/y,mg,off,offM:off/y,offV:off*(1+S.vat),offVM:off/y*(1+S.vat)}}
+ return {g,c1,c2,c3,dS,s1,s2,m,net,netM:net/y,mg,mgM:mg/y,off,offM:off/y,offV:off*(1+S.vat),offVM:off/y*(1+S.vat)}}
 const prLabel=p=>[p.item||p.code||'(이름 없음)',p.color,p.part].filter(Boolean).join(' · ');
 function prRoute(p){const a=[];if(p.gV||p.g)a.push('생지 '+(p.gV||'-'));if(p.dV||p.d)a.push('염색 '+(p.dV||'-'));
  if(p.p1V||p.p1||p.p1D)a.push('가공1 '+(p.p1V||'-')+(p.p1D?` (${p.p1D})`:''));if(p.p2V||p.p2||p.p2D)a.push('가공2 '+(p.p2V||'-')+(p.p2D?` (${p.p2D})`:''));
@@ -45,7 +45,7 @@ function prRecalc(){const sel=prices.find(x=>x.id===prSel),inp=prInputs(),p={...
  $('pc_mode').textContent=sel?(dirty?'· 선택 품목에서 바꾼 값으로 계산 중 (저장 전에는 목록에 반영 안 됨)':'· 선택 품목 값'):'· 계산기 (품목 미선택)';
  $('pc_save').textContent=sel?(dirty?'목록에 저장 ●':'목록에 저장'):'새 품목으로 저장';
  const c=(t,v,s,cls='')=>`<div class="card dbk ${cls}"><div class="muted">${t}</div><b>${prW(v)}<small style="font-size:13px"> 원</small></b><small class="muted">${s}</small></div>`;
- $('pc_res').innerHTML=c('NET /YD',r.net,'원가 합계')+c('NET /M',r.netM,'원가 합계 ÷ '+prSet.yd2m)+c('마진액 /YD',r.mg,'마진율 '+prPct(r.m))+c('OFFER /YD',r.off,'마진 포함','pro')+c('OFFER /M',r.offM,'마진 포함','pro')+c('OFFER+VAT /YD',r.offV,'VAT '+prPct(prSet.vat))+c('OFFER+VAT /M',r.offVM,'VAT '+prPct(prSet.vat))+
+ $('pc_res').innerHTML=c('NET /YD',r.net,'원가 합계')+c('NET /M',r.netM,'원가 합계 ÷ '+prSet.yd2m)+c('마진액 /YD',r.mg,'마진율 '+prPct(r.m))+c('마진액 /M',r.mgM,'마진율 '+prPct(r.m))+c('OFFER /YD',r.off,'마진 포함','pro')+c('OFFER /M',r.offM,'마진 포함','pro')+c('OFFER+VAT /YD',r.offV,'VAT '+prPct(prSet.vat))+c('OFFER+VAT /M',r.offVM,'VAT '+prPct(prSet.vat))+
   `<div class="card prchain"><div class="muted" style="margin-bottom:4px">계산 체인 (YD당)</div>생지 ${prW(r.g)}${p.gCur==='USD'?` <small class="muted">($${+(+p.g).toFixed(4)}×${prW(prSet.fx)})</small>`:''} → 염색 ${prW(r.c1)} <small class="muted">(축 ${prPct(r.dS)})</small> → 가공1 ${prW(r.c2)} <small class="muted">(축 ${prPct(r.s1)})</small> → 가공2 ${prW(r.c3)} <small class="muted">(축 ${prPct(r.s2)})</small> → +기타·운임 ${prW(p.e+p.t)}</div>`;
  $('pc_route').textContent=sel?(prRoute(sel)||'-')+(sel.width?` · 폭 ${sel.width}`:''):'(품목을 고르면 공장·가공소 경로가 나와요)';
  $('pc_info').textContent=`환율 ₩${prW(prSet.fx)}/USD  │  1YD = ${prSet.yd2m}m  │  VAT ${prPct(prSet.vat)}`}
