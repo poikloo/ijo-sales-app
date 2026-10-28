@@ -174,26 +174,21 @@ function renderOrder(o){const g=progress(o);let prev=null;
   ${p.ships.map((x,j,a)=>`<tr><td><div class="shmv"><button type="button" tabindex="-1" data-mv="${x.id}:-1" onclick="moveShip('${o.id}','${p.id}','${x.id}',-1)" title="위로"${j?'':' disabled'}>▲</button><button type="button" tabindex="-1" data-mv="${x.id}:1" onclick="moveShip('${o.id}','${p.id}','${x.id}',1)" title="아래로"${j<a.length-1?'':' disabled'}>▼</button><input type="date" value="${esc(x.date)}" onchange="editShip('${o.id}','${p.id}','${x.id}','date',this.value)"></div></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editShip('${o.id}','${p.id}','${x.id}','qty',this.value)"></td>${ssCell(o.id,p.id,x.id)}<td><input value="${esc(x.memo)}" onchange="editShip('${o.id}','${p.id}','${x.id}','memo',this.value)"></td><td><button onclick="delShip('${o.id}','${p.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">출고 내역이 없습니다. [+ 출고]로 추가하세요.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${num(s)}</td><td colspan="2"></td></tr></tfoot></table></div>`}).join('')||'<p class="muted">가공 공정이 없습니다. [수정]에서 공정을 추가하세요.</p>';
  $('pd_wrap').innerHTML=head+stmtsForOrder(o)+`<div class="card"><h2>가공 공정 / 출고 내역</h2>${body}</div>`;ohFit()}
-// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 오른쪽에 유지.
-// 넓은 창: 간격·짧은 값·막대는 그대로 두고, 넘치면 긴 값(200px 넘는 칸)만 글자 13px + 최대 폭 안에서 여러 줄로 줄바꿈 (최대 폭 240→140px)
-// 좁은 창(그래도 넘칠 때): ① 칸 간격 줄이기 ② 긴 값부터 글자 1px씩 줄이기(최소 11px) ③ 짧은 값도 줄이기 ④ 칸 안 줄바꿈 ⑤ 간격 10px·막대 최소 120px
-const OH_MIN=11,OH_BIG=120,OH_LFS=13,OH_LMAX=240,OH_LMIN=140,OH_LONG=200;let ohRO=null;
-function ohFit(){const oh=document.querySelector('#pd_wrap .oh');if(!oh)return;
- const F=[...oh.children].filter(d=>!d.classList.contains('pg')&&d.querySelector('.v')&&!d.querySelector('.dlvc'));
- oh.style.columnGap='';oh.classList.remove('ohtight');F.forEach(d=>{d.classList.remove('ohw','ohl');d.style.maxWidth='';d.querySelector('.v').style.fontSize=''});
+// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 같은 줄 오른쪽에 유지. 칸 간격·짧은 값(16px)은 어떤 창 폭에서도 그대로.
+// 넘치면 ① 긴 값(200px 넘는 칸)만 글자 13px + 최대 폭 240px 안에서 줄바꿈 ② 최대 폭을 10px씩 줄여 더 여러 줄로(140px까지)
+// ③ 막대 최소 폭 220→160px ④ 최대 폭 140→100px ⑤ 그래도 모자라면 최대 폭 140px·막대 200px로 두고 카드를 넓혀 화면 가로 스크롤
+const OH_LFS=13,OH_LMAX=240,OH_LMID=140,OH_LMIN=100,OH_LONG=200,OH_PGMIN=160;let ohRO=null;
+function ohFit(){const oh=document.querySelector('#pd_wrap .oh');if(!oh)return;const card=oh.parentElement,pg=oh.querySelector('.pg');
+ const F=[...oh.children].filter(d=>d!==pg&&d.querySelector('.v')&&!d.querySelector('.dlvc'));
+ card.style.minWidth='';if(pg)pg.style.minWidth='';F.forEach(d=>{d.classList.remove('ohl');d.style.maxWidth='';d.querySelector('.v').style.fontSize=''});
  const over=()=>oh.scrollWidth>oh.clientWidth+1,W=d=>d.getBoundingClientRect().width;
  if(over()){const L=[];
-  const wrapL=(d,m)=>{d.classList.add('ohl');d.style.maxWidth=m+'px';d.querySelector('.v').style.fontSize=OH_LFS+'px';L.push(d)};
-  const cand=[...F].map(d=>[d,W(d)]).filter(x=>x[1]>OH_BIG).sort((a,b)=>b[1]-a[1]);
-  for(const [d,w] of cand)if(w>OH_LONG){wrapL(d,OH_LMAX);if(!over())break}
-  for(let m=OH_LMAX-10;m>=OH_LMIN&&over();m-=10)L.forEach(d=>d.style.maxWidth=m+'px');
-  for(const [d,w] of cand)if(over()&&!L.includes(d))wrapL(d,OH_LMIN)}// 긴 값으로도 모자랄 때만 중간 길이(120px 넘는) 값도
- if(over()){F.forEach(d=>d.style.maxWidth='');oh.style.columnGap='14px'}
- for(let n=0;n<200&&over();n++){let best=null,bw=0;
-  for(const big of [OH_BIG,0]){F.forEach(d=>{const v=d.querySelector('.v'),fs=parseFloat(getComputedStyle(v).fontSize),w=W(d);if(fs>OH_MIN&&w>big&&w>bw){best=v;bw=w}});if(best)break}
-  if(!best)break;best.style.fontSize=(parseFloat(getComputedStyle(best).fontSize)-1)+'px'}
- if(over())F.forEach(d=>{if(W(d)>OH_BIG||d.classList.contains('ohl'))d.classList.add('ohw')});
- if(over()){oh.classList.add('ohtight');F.forEach(d=>{if(W(d)>80)d.classList.add('ohw')})}
+  for(const [d] of F.map(d=>[d,W(d)]).filter(x=>x[1]>OH_LONG).sort((a,b)=>b[1]-a[1])){d.classList.add('ohl');d.style.maxWidth=OH_LMAX+'px';d.querySelector('.v').style.fontSize=OH_LFS+'px';L.push(d);if(!over())break}
+  for(let m=OH_LMAX-10;m>=OH_LMID&&over();m-=10)L.forEach(d=>d.style.maxWidth=m+'px');
+  if(over()&&pg)for(let m=210;m>=OH_PGMIN&&over();m-=10)pg.style.minWidth=m+'px';
+  for(let m=OH_LMID-10;m>=OH_LMIN&&over();m-=10)L.forEach(d=>d.style.maxWidth=m+'px');
+  if(over()){L.forEach(d=>d.style.maxWidth=OH_LMID+'px');if(pg)pg.style.minWidth='200px'}}// 어차피 안 들어가면 읽기 좋은 상태(최대 폭 140px, 막대 200px)로 두고 가로 스크롤
+ if(over())card.style.minWidth=Math.ceil(card.getBoundingClientRect().width+oh.scrollWidth-oh.clientWidth)+'px';
  if(!ohRO&&window.ResizeObserver){ohRO=new ResizeObserver(()=>{if(ohRO._t)return;ohRO._t=requestAnimationFrame(()=>{ohRO._t=0;ohFit()})})}
  if(ohRO&&ohRO._el!==oh){ohRO.disconnect();ohRO.observe(oh);ohRO._el=oh}}
 const findP=(oid,pid)=>{const o=orders.find(x=>x.id===oid);return [o,o&&o.procs.find(p=>p.id===pid)]};
