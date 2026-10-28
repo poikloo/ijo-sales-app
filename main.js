@@ -274,3 +274,5 @@ ipcMain.handle('xlRead',async(e,kind,p,lastHash)=>{const K=XL_KINDS[kind];if(!K)
     try{return {...base,...await K.book(tmp)}}catch(err){return {code:'PARSE',msg:String(err&&err.message||err)}}}
   catch(err){return {code:xlCode(err),msg:String(err&&err.message||err)}}
   finally{fs.promises.rm(tmp,{force:true}).catch(()=>{})}});
+// ===== 구글 로그인 · 구글 드라이브 (gdrive.js) =====
+require('./gdrive').setup({getWin:()=>win,books:{price:priceBook,sales:salesBook},XL_TIMEOUT});
