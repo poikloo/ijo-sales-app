@@ -8,7 +8,7 @@ const prW=n=>Math.round(+n||0).toLocaleString('ko-KR'),prPct=v=>v==null?'':+(v*1
 function prNorm(x){const n=k=>{const v=prNum(x[k]);return v==null?0:v},nn=k=>prNum(x[k]),s=k=>String(x[k]??'').trim();
  return {id:String(x.id||uid()),cat:s('cat'),part:s('part'),code:s('code'),item:s('item'),color:s('color'),width:s('width'),
   gV:s('gV'),gCur:x.gCur==='USD'?'USD':'KRW',g:n('g'),dV:s('dV'),dS:nn('dS'),d:n('d'),p1V:s('p1V'),p1D:s('p1D'),p1S:nn('p1S'),p1:n('p1'),
-  p2V:s('p2V'),p2D:s('p2D'),p2S:nn('p2S'),p2:n('p2'),eD:s('eD'),e:n('e'),t:n('t'),m:nn('m'),memo:s('memo'),example:!!x.example}}
+  p2V:s('p2V'),p2D:s('p2D'),p2S:nn('p2S'),p2:n('p2'),eD:s('eD'),e:n('e'),t:n('t'),m:nn('m'),memo:s('memo'),example:!!x.example,src:x.src==='xl'?'xl':''}}
 function prLoad(r){const o=r&&!Array.isArray(r)?r:{};prices=(Array.isArray(o.prices)?o.prices:[]).filter(x=>x&&typeof x==='object').map(prNorm);
  const s=o.priceSettings&&typeof o.priceSettings==='object'?o.priceSettings:{};prSet={};for(const k in PR_DEF){const v=prNum(s[k]);prSet[k]=v==null?PR_DEF[k]:v}if(!(prSet.yd2m>0))prSet.yd2m=PR_DEF.yd2m}
 const prPayload=()=>({prices,priceSettings:prSet});
@@ -62,7 +62,7 @@ function prRows(){const q=$('pr_k').value.trim().toLowerCase(),c=$('pr_cat').val
 function prList(){const cs=[...new Set(prices.map(p=>p.cat).filter(Boolean))].sort(lsCmp),e=$('pr_cat'),v=e.value,h=`<option value="">전체 품목</option>`+cs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');if(e.dataset.h!==h){e.innerHTML=h;e.dataset.h=h}e.value=cs.includes(v)?v:'';
  const so=$('srt_price'),sh=PR_SK.flatMap(([k,l])=>[1,-1].map(d=>`<option value="${k}:${d}">정렬: ${l} ${d===1?'↑':'↓'}</option>`)).join('');if(so.dataset.h!==sh){so.innerHTML=sh;so.dataset.h=sh}const s=prSortGet();so.value=s.k+':'+s.d;
  const L=prRows(),st=(pr,ax,v)=>pr?`${prW(pr)}${ax?` <small class="muted">${prPct(ax)}</small>`:''}${v?`<br><small class="muted">${esc(v)}</small>`:''}`:(v?`<small class="muted">${esc(v)}</small>`:'');
- $('prtb').innerHTML=L.map(p=>{const r=prCalc(p);return `<tr class="r" onclick="prOpen('${p.id}')"><td>${esc(p.cat)}${tag(p)}</td><td>${esc(p.part)}</td><td>${esc(p.code)}</td><td>${esc(p.item)}</td><td>${esc(p.color)}</td><td>${esc(p.width)}</td>
+ $('prtb').innerHTML=L.map(p=>{const r=prCalc(p);return `<tr class="r" onclick="prOpen('${p.id}')"><td>${esc(p.cat)}${tag(p)}</td><td>${esc(p.part)}</td><td>${esc(p.code)}</td><td>${esc(p.item)}${p.src==='xl'?'<span class="xlt" title="연결된 엑셀 파일에서 온 행">엑셀</span>':''}</td><td>${esc(p.color)}</td><td>${esc(p.width)}</td>
   <td class="n">${p.g?(p.gCur==='USD'?`$${+(+p.g).toFixed(4)}<br><small class="muted">₩${prW(r.g)}</small>`:prW(p.g)):''}${p.gV?`<br><small class="muted">${esc(p.gV)}</small>`:''}</td><td class="n">${st(p.d,p.dS,p.dV)}</td><td class="n">${st(p.p1,p.p1S,p.p1V)}</td><td class="n">${st(p.p2,p.p2S,p.p2V)}</td>
   <td class="n">${p.e||p.t?prW(p.e+p.t):''}${p.memo?`<br><small class="muted" title="${esc(p.memo)}">비고</small>`:''}</td><td class="n"><b>${prW(r.net)}</b></td><td class="n"><b style="color:#2271b1">${prW(r.off)}</b></td></tr>`}).join('')||`<tr><td colspan="13" class="muted">단가 데이터가 없어요. [+ 추가]나 [엑셀 가져오기]로 넣으세요.</td></tr>`;
  $('prcnt').textContent=`${L.length}건`+(L.length!==prices.length?` / 전체 ${prices.length}건`:'')}
@@ -85,13 +85,13 @@ const PE_T=['cat','part','code','item','color','width','gV','dV','p1V','p1D','p2
 function prEdGet(){const o={gCur:$('pe_gCur').value};PE_T.forEach(k=>o[k]=$('pe_'+k).value.trim());PE_N.forEach(k=>o[k]=prNum($('pe_'+k).value)||0);PE_P.forEach(k=>{const v=prNum($('pe_'+k).value);o[k]=v==null?null:v/100});return o}
 function prEdCalc(){const r=prCalc(prNorm(prEdGet()));$('pe_res').innerHTML=`NET <b>${prW(r.net)}</b>원/YD · ${prW(r.netM)}원/M  │  OFFER <b style="color:#2271b1">${prW(r.off)}</b>원/YD · ${prW(r.offM)}원/M  │  OFFER+VAT ${prW(r.offV)}원/YD`}
 function prSave(id){const o=prEdGet();if(!o.item&&!o.code)return uiAlert('ITEM이나 CODE를 입력하세요.');const n=prNorm({...o,id:id||uid()});
- if(id){const i=prices.findIndex(p=>p.id===id);n.example=prices[i].example;prices[i]=n}else{prices.push(n);prSel=n.id;const pk=$('pc_pick');if(pk)pk.value=prLabel(n)}save();dlg.close();render();toast('저장했습니다')}
+ const i=id?prices.findIndex(p=>p.id===id):-1;if(i>=0){n.example=prices[i].example;n.src=prices[i].src;prices[i]=n}else{prices.push(n);prSel=n.id;const pk=$('pc_pick');if(pk)pk.value=prLabel(n)}save();dlg.close();render();toast('저장했습니다')}
 async function prDel(id){if(!await uiConfirm('이 단가를 삭제할까요?'))return;prices=prices.filter(p=>p.id!==id);if(prSel===id)prSel='';save();dlg.close();render();toast('삭제했습니다')}
 // ---- 설정 ----
 const PS_F=[['fx','환율 (₩/USD)',''],['yd2m','1야드 = ? 미터',''],['vat','VAT (%)','p'],['dye','기본 염색 축 (%)','p'],['g1','기본 가공1 축 (%)','p'],['g2','기본 가공2 축 (%)','p'],['margin','기본 마진율 PRO (%)','p']];
 function prSetView(){const b=$('pr_setf');if(!b.dataset.b){b.dataset.b=1;b.innerHTML=PS_F.map(([k,l])=>`<label>${l}<input id="ps_${k}" class="num" inputmode="decimal" onchange="prSetSave('${k}',this)"></label>`).join('')}
  PS_F.forEach(([k,,p])=>{const e=$('ps_'+k);if(document.activeElement!==e)e.value=p?+(prSet[k]*100).toFixed(4):prSet[k]});
- $('pr_setx').textContent=`현재 등록된 ${prices.length}개 품목의 NET·OFFER가 이 값으로 계산돼요. 환율을 바꾸면 USD 생지 단가가 들어간 품목이 모두 바로 다시 계산돼요.`}
+ $('pr_xl').innerHTML=xlCard('price');$('pr_setx').textContent=`현재 등록된 ${prices.length}개 품목의 NET·OFFER가 이 값으로 계산돼요. 환율을 바꾸면 USD 생지 단가가 들어간 품목이 모두 바로 다시 계산돼요.`}
 function prSetSave(k,e){let v=prNum(e.value);if(v==null||v<0||(k==='yd2m'&&!v)||(k==='fx'&&!v)){uiAlert('올바른 숫자를 입력하세요.');e.value='';prSetView();return}
  if((PS_F.find(f=>f[0]===k)||[])[2])v/=100;prSet[k]=v;save();prSetView();toast('설정을 저장했어요 · 모든 단가 다시 계산')}
 async function prSetReset(){if(!await uiConfirm('설정을 기본값(환율 1,400 · 0.9144m · VAT 10% · 축 0% · 마진 20%)으로 되돌릴까요?'))return;prSet={...PR_DEF};save();render()}
@@ -123,5 +123,5 @@ function piRender(){const a=piAnalyze(),mode=(document.querySelector('input[name
  document.querySelectorAll('input[name=pimode]').forEach(e=>e.onchange=piRender);if(!dlg.open)dlg.showModal()}
 async function piRun(){const a=piAnalyze(),over=(document.querySelector('input[name=pimode]:checked')||{}).value==='over',fx=$('pi_fx')&&$('pi_fx').checked;if(A.preImportBackup)await A.preImportBackup();
  let add=0,up=0,sk=0;a.L.forEach((x,i)=>{const {rn,key,dup,...o}=x,j=prices.findIndex(p=>[p.item,p.color,p.part].map(piU).join('|')===key);
-  if(j>=0){if(over){o.id=prices[j].id;prices[j]=o;up++}else sk++}else{o.id=uid()+i;prices.push(o);add++}});
+  if(j>=0){if(over){o.id=prices[j].id;o.src=prices[j].src;prices[j]=o;up++}else sk++}else{o.id=uid()+i;prices.push(o);add++}});
  if(fx&&a.fx)prSet.fx=a.fx;save();dlg.close();prTab='list';render();toast(`가져오기 완료: 추가 ${add}건${up?` · 덮어쓰기 ${up}건`:''}${sk?` · 건너뜀 ${sk}건`:''}${fx?` · 환율 ₩${prW(a.fx)}`:''}`)}

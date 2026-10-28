@@ -236,14 +236,16 @@ ipcMain.handle('ordImportPick',async()=>{const r=await dialog.showOpenDialog(win
   const p2=n=>String(n).padStart(2,'0'),cv=v=>{if(v==null)return '';if(v instanceof Date)return `${v.getUTCFullYear()}-${p2(v.getUTCMonth()+1)}-${p2(v.getUTCDate())}`;if(typeof v==='object'){if('result' in v)return cv(v.result);if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);return ''}return String(v)};
   const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).trim());rows.push(a)});return {name,rows}});
 ipcMain.handle('salesImportPick',async()=>{let f=process.env.IJO_SALES_XLSX;if(!f){const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;f=r.filePaths[0]}
-  const name=path.basename(f);if(/\.csv$/i.test(f))return {name,sheets:[{name:'CSV',rows:csvRows(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,''))}]};
+  return {name:path.basename(f),...await salesBook(f)}});
+async function salesBook(f){if(/\.csv$/i.test(f))return {sheets:[{name:'CSV',rows:csvRows(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,''))}]};
   const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);
   const p2=n=>String(n).padStart(2,'0'),cv=v=>{if(v==null)return '';if(v instanceof Date)return `${v.getUTCFullYear()}-${p2(v.getUTCMonth()+1)}-${p2(v.getUTCDate())}`;if(typeof v==='object'){if('result' in v)return v.result&&typeof v.result==='object'&&v.result.error?'':cv(v.result);if(v.formula||v.sharedFormula)return '';if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);return ''}return String(v)};
-  const sheets=wb.worksheets.map(ws=>{const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).trim());rows.push(a)});return {name:ws.name,rows}});return {name,sheets}});
+  const sheets=wb.worksheets.map(ws=>{const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).trim());rows.push(a)});return {name:ws.name,rows}});return {sheets}}
 ipcMain.handle('priceImportPick',async()=>{let f=process.env.IJO_PRICE_XLSX;if(!f){const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel',extensions:['xlsx']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;f=r.filePaths[0]}
-  const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);
+  return {name:path.basename(f),...await priceBook(f)}});
+async function priceBook(f){const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);
   const cv=v=>{if(v==null)return '';if(v instanceof Date)return v.toISOString().slice(0,10);if(typeof v==='object'){if('result' in v)return v.result&&typeof v.result==='object'?(v.result.error?'':cv(v.result)):cv(v.result);if(v.formula||v.sharedFormula)return '';if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);return ''}return String(v)};
-  const sheets=wb.worksheets.map(ws=>{const rows=[];for(let i=1;i<=ws.rowCount;i++){const row=ws.getRow(i),a=[];for(let j=1;j<=Math.max(22,ws.columnCount);j++){const c=row.getCell(j),v=c.value;a.push([cv(v).trim(),v&&typeof v==='object'&&(v.formula||v.sharedFormula)?String(c.formula||v.formula||''):''])}rows.push(a)}return {name:ws.name,rows}});return {name:path.basename(f),sheets}});
+  const sheets=wb.worksheets.map(ws=>{const rows=[];for(let i=1;i<=ws.rowCount;i++){const row=ws.getRow(i),a=[];for(let j=1;j<=Math.max(22,ws.columnCount);j++){const c=row.getCell(j),v=c.value;a.push([cv(v).trim(),v&&typeof v==='object'&&(v.formula||v.sharedFormula)?String(c.formula||v.formula||''):''])}rows.push(a)}return {name:ws.name,rows}});return {sheets}}
 ipcMain.handle('ctImportPick',async()=>{let f=process.env.IJO_CT_XLSX;if(!f){const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;f=r.filePaths[0]}
   const name=path.basename(f);if(/\.csv$/i.test(f))return {name,rows:csvRows(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,''))};
   const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);const ws=wb.worksheets[0];if(!ws)return {name,rows:[]};
@@ -254,3 +256,21 @@ ipcMain.handle('ctTemplate',async(e,h)=>{const ExcelJS=require('exceljs');const 
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),'거래처_가져오기_양식.xlsx'),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}
   await wb.xlsx.writeFile(p);return p});
 ipcMain.handle('preImportBackup',()=>{try{const d=readData();if(!d)return null;fs.mkdirSync(BK(),{recursive:true});const ts=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().replace(/[:T]/g,'-').slice(0,19);const p=path.join(BK(),`preimport_${ts}.json`);fs.writeFileSync(p,JSON.stringify(d,null,2));return p}catch(e){return null}});
+
+// ===== 연결된 엑셀 파일 (단가·매출): 경로를 기억해 두고 바뀌면 다시 불러옴 =====
+// 구글 드라이브(데스크톱)·OneDrive 폴더의 파일도 OK. 엑셀에서 열려 있어도 읽을 수 있게 임시 폴더로 복사한 뒤 읽음.
+// '온라인 전용' 파일은 읽을 때 내려받으므로 넉넉히 기다림. 결과는 {code:'ENOENT'|'EBUSY'|'TIMEOUT'|'PARSE'} 로 알려 주고 창은 띄우지 않음.
+const XL_KINDS={price:{ext:['xlsx'],book:priceBook},sales:{ext:['xlsx','csv'],book:salesBook}},XL_TIMEOUT=180000;
+const xlCode=e=>{const c=e&&e.code||'';return (c==='ENOENT'||c==='ENOTDIR'||c==='ENODEV'||c==='ENXIO')?'ENOENT':(c==='EBUSY'||c==='EPERM'||c==='EACCES'||c==='ETXTBSY'||c==='EAGAIN')?'EBUSY':c==='TIMEOUT'?'TIMEOUT':'PARSE'};
+const withTimeout=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>{const e=new Error('시간 초과');e.code='TIMEOUT';rej(e)},ms);p.then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})});
+ipcMain.handle('xlPick',async(e,kind)=>{const K=XL_KINDS[kind];if(!K)return null;const r=await dialog.showOpenDialog(win,{title:'자동으로 불러올 엑셀 파일 선택',filters:[{name:'Excel',extensions:K.ext}],properties:['openFile']});return r.canceled||!r.filePaths[0]?null:path.resolve(r.filePaths[0])});
+ipcMain.handle('xlStat',async(e,p)=>{try{const st=await withTimeout(fs.promises.stat(String(p)),15000);if(!st.isFile())return {code:'ENOENT'};return {ok:true,mtime:st.mtimeMs,size:st.size}}catch(err){return {code:xlCode(err),msg:String(err&&err.message||err)}}});
+ipcMain.handle('xlRead',async(e,kind,p,lastHash)=>{const K=XL_KINDS[kind];if(!K)return {code:'PARSE',msg:'unknown'};p=String(p);
+  const tmp=path.join(app.getPath('temp'),`ijo-xl-${kind}-${process.pid}-${Date.now()}${path.extname(p).toLowerCase()||'.xlsx'}`);
+  try{const st=await withTimeout(fs.promises.stat(p),15000);if(!st.isFile())return {code:'ENOENT'};
+    await withTimeout(fs.promises.copyFile(p,tmp),XL_TIMEOUT);
+    const buf=await fs.promises.readFile(tmp),hash=require('crypto').createHash('sha1').update(buf).digest('hex'),base={ok:true,mtime:st.mtimeMs,size:st.size,hash,name:path.basename(p)};
+    if(lastHash&&hash===lastHash)return {...base,same:true};
+    try{return {...base,...await K.book(tmp)}}catch(err){return {code:'PARSE',msg:String(err&&err.message||err)}}}
+  catch(err){return {code:xlCode(err),msg:String(err&&err.message||err)}}
+  finally{fs.promises.rm(tmp,{force:true}).catch(()=>{})}});
