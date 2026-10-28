@@ -21,6 +21,7 @@
       "main.js",
       "preload.js",
       "gdrive.js",
+      "requests.js",
       "findbar-preload.js",
       "ocr-worker.js",
       "app/**/*",

@@ -1,4 +1,4 @@
-const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',testrpt:'TEST REPORT',quality:'품질 기준',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
+const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
 let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash';
 const PR=['높음','보통','낮음'];
@@ -30,13 +30,13 @@ function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
 function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',delivered:!!o.delivered,updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}))}
-function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);brLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);prLoad(r);sllLoad(r);xlLoad(r);data=r?normalize(r):null;
+function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);brLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);prLoad(r);sllLoad(r);xlLoad(r);rqLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
-function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload()}).catch(e=>uiAlert('저장 실패: '+e))}
+function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload()}).catch(e=>uiAlert('저장 실패: '+e))}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
@@ -75,7 +75,8 @@ function _render(){
  if(page==='outwork')renderOutwork();
  if(page==='work')renderWork();
  if(page==='contacts')renderContacts();
- if(page==='settings')renderSupplier();
+ if(page==='settings'){renderSupplier();rqSettings()}
+ if(page==='reqs')renderReqs();
  if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
   const cats=[...new Set(['영업','생산','외주','출고','입찰','기타',...cl.map(c=>c.cat).filter(Boolean)])],cc=$('cc'),cv=cc.value;cc.innerHTML='<option value="">전체 분류</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join('');cc.value=cv;
   const f=$('cf').value,l=cl.filter(c=>(!f||(f==='done')===c.done)&&(!cv||c.cat===cv)&&(!csel||c.due===csel)).sort((a,b)=>a.done-b.done||(a.due||'9').localeCompare(b.due||'9')||PR.indexOf(a.pri)-PR.indexOf(b.pri));
@@ -116,15 +117,15 @@ const attMime=p=>ATT_MIME[(String(p).match(/\.(\w+)$/)||[])[1]?.toLowerCase()]||
 async function bkFiles(k,l){if(!A.attRead)return l;return Promise.all(l.map(async f=>{const b=await A.attRead(k,f.path).catch(()=>null);return b?{...f,mime:attMime(f.path),data:b}:f}))}
 async function bkRestore(k,l){if(!A.attWrite||!Array.isArray(l))return 0;let n=0;for(const f of l)if(f&&f.path&&typeof f.data==='string'){try{await A.attWrite(k,f.path,f.data);n++}catch(e){}}return n}
 async function exportJSON(){const wf=await bkFiles('wf',wfFiles),ss=await bkFiles('ss',shipFiles),br=await bkFiles('br',bizRegs);
- const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),workOrderFiles:wf,shipFiles:ss,bizRegs:br},null,2));if(p)toast('백업 저장: '+p)}
+ const p=await A.saveFile(`이조영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),workOrderFiles:wf,shipFiles:ss,bizRegs:br},null,2));if(p)toast('백업 저장: '+p)}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}
  if(!d)return uiAlert('올바른 백업 파일이 아닙니다.');let raw;try{raw=JSON.parse(t.replace(/^\uFEFF/,''))}catch(e){}const hasCl=raw&&!Array.isArray(raw)&&Array.isArray(raw.checklist),nc=hasCl?normalizeCl(raw.checklist):cl,hasO=raw&&!Array.isArray(raw)&&Array.isArray(raw.orders),no=hasO?normalizeOrders(raw.orders):orders;
- if(await uiConfirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);brImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);slImport(raw);prImport(raw);sllImport(raw);xlImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles),bkRestore('br',raw.bizRegs)]).then(([a,b,c])=>toast('복원 완료'+(a+b+c?` (첨부 파일 ${a+b+c}개)`:'')))}}
+ if(await uiConfirm(`공고 ${d.length}건${hasCl?`, 체크리스트 ${nc.length}건`:''}${hasO?`, 생산 오더 ${no.length}건`:''}을 불러옵니다. 현재 데이터(공고 ${data.length}건${hasCl?`, 체크리스트 ${cl.length}건`:''})를 대체할까요?${hasCl?'':'\n(체크리스트가 없는 예전 백업이라 현재 체크리스트는 그대로 둡니다)'}\n(현재 데이터는 자동 백업 폴더에 남아 있습니다)`)){data=d;cl=nc;orders=no;pv=null;stImport(raw);ctImport(raw);owImport(raw);pcImport(raw);wfImport(raw);ssImport(raw);brImport(raw);crImport(raw);cmImport(raw);ivImport(raw);dlImport(raw);slImport(raw);prImport(raw);sllImport(raw);xlImport(raw);rqImport(raw);save();render();Promise.all([bkRestore('wf',raw.workOrderFiles),bkRestore('ss',raw.shipFiles),bkRestore('br',raw.bizRegs)]).then(([a,b,c])=>toast('복원 완료'+(a+b+c?` (첨부 파일 ${a+b+c}개)`:'')))}}
 async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['공고명','입찰공고번호','수요기관','게시일시','개찰일시','가격','계약대표업체','계약업체(지분율)','지분율합계','상태','개찰결과','비고','예시'];
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
 if(A.onFindBar)A.onFindBar(on=>document.body.classList.toggle('fbon',on));
-const dlg=$('dlg');load();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();
+const dlg=$('dlg');load();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();rqInit();
 
 const UPD={checking:'새 버전 확인 중…',none:'최신 버전입니다',available:'새 버전 내려받는 중…',error:'업데이트 확인 실패(오프라인?)'};
 if(A.onUpdate)A.onUpdate(d=>{$('updst').textContent=d.s==='progress'?`새 버전 내려받는 중… ${d.pct}%`:d.s==='ready'?`v${d.v} 준비 완료 — 재시작하면 적용돼요`:d.s==='available'?`v${d.v} 내려받는 중…`:(UPD[d.s]||'')});

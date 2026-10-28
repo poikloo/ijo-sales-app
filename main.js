@@ -276,3 +276,5 @@ ipcMain.handle('xlRead',async(e,kind,p,lastHash)=>{const K=XL_KINDS[kind];if(!K)
   finally{fs.promises.rm(tmp,{force:true}).catch(()=>{})}});
 // ===== 구글 로그인 · 구글 드라이브 (gdrive.js) =====
 require('./gdrive').setup({getWin:()=>win,books:{price:priceBook,sales:salesBook},XL_TIMEOUT});
+// ===== 요청함: Grok Bot 요청 받기 (requests.js) =====
+require('./requests').setup({getWin:()=>win});

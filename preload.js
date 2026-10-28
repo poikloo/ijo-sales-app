@@ -53,6 +53,12 @@ contextBridge.exposeInMainWorld('api',{
   fbRerun:()=>ipcRenderer.send('fb-rerun'),
   fbOpen:()=>ipcRenderer.invoke('fbOpen'),
   onFindBar:cb=>ipcRenderer.on('fb-state',(e,on)=>cb(on)),
+  reqInfo:()=>ipcRenderer.invoke('reqInfo'),
+  reqList:()=>ipcRenderer.invoke('reqList'),
+  reqOpenFolder:k=>ipcRenderer.invoke('reqOpenFolder',k),
+  reqCheck:(n,h)=>ipcRenderer.invoke('reqCheck',n,h),
+  reqResolve:(n,k,r)=>ipcRenderer.invoke('reqResolve',n,k,r),
+  onReqChanged:cb=>ipcRenderer.on('req-changed',()=>cb()),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),
   onUpdate:cb=>ipcRenderer.on('upd',(e,d)=>cb(d))
 });
