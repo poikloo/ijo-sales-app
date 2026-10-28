@@ -174,19 +174,26 @@ function renderOrder(o){const g=progress(o);let prev=null;
   ${p.ships.map((x,j,a)=>`<tr><td><div class="shmv"><button type="button" tabindex="-1" data-mv="${x.id}:-1" onclick="moveShip('${o.id}','${p.id}','${x.id}',-1)" title="위로"${j?'':' disabled'}>▲</button><button type="button" tabindex="-1" data-mv="${x.id}:1" onclick="moveShip('${o.id}','${p.id}','${x.id}',1)" title="아래로"${j<a.length-1?'':' disabled'}>▼</button><input type="date" value="${esc(x.date)}" onchange="editShip('${o.id}','${p.id}','${x.id}','date',this.value)"></div></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editShip('${o.id}','${p.id}','${x.id}','qty',this.value)"></td>${ssCell(o.id,p.id,x.id)}<td><input value="${esc(x.memo)}" onchange="editShip('${o.id}','${p.id}','${x.id}','memo',this.value)"></td><td><button onclick="delShip('${o.id}','${p.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">출고 내역이 없습니다. [+ 출고]로 추가하세요.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${num(s)}</td><td colspan="2"></td></tr></tfoot></table></div>`}).join('')||'<p class="muted">가공 공정이 없습니다. [수정]에서 공정을 추가하세요.</p>';
  $('pd_wrap').innerHTML=head+stmtsForOrder(o)+`<div class="card"><h2>가공 공정 / 출고 내역</h2>${body}</div>`;ohFit()}
-// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 오른쪽에 유지. 넘치면 ① 칸 간격 줄이기 ② 긴 값(120px 넘는 칸)부터 글자 1px씩 줄이기(최소 11px)
-// ③ 좁은 창에서 그래도 넘치면 짧은 값도 줄이기 ④ 그래도 넘치면 긴 값만 칸 안에서 줄바꿈 (막대 최소 200px)
-const OH_MIN=11,OH_BIG=120;let ohRO=null;
+// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 오른쪽에 유지.
+// 넓은 창: 간격·짧은 값·막대는 그대로 두고, 넘치면 긴 값(200px 넘는 칸)만 글자 13px + 최대 폭 안에서 여러 줄로 줄바꿈 (최대 폭 240→140px)
+// 좁은 창(그래도 넘칠 때): ① 칸 간격 줄이기 ② 긴 값부터 글자 1px씩 줄이기(최소 11px) ③ 짧은 값도 줄이기 ④ 칸 안 줄바꿈 ⑤ 간격 10px·막대 최소 120px
+const OH_MIN=11,OH_BIG=120,OH_LFS=13,OH_LMAX=240,OH_LMIN=140,OH_LONG=200;let ohRO=null;
 function ohFit(){const oh=document.querySelector('#pd_wrap .oh');if(!oh)return;
  const F=[...oh.children].filter(d=>!d.classList.contains('pg')&&d.querySelector('.v')&&!d.querySelector('.dlvc'));
- oh.style.columnGap='';oh.classList.remove('ohtight');F.forEach(d=>{d.classList.remove('ohw');d.querySelector('.v').style.fontSize=''});
- const over=()=>oh.scrollWidth>oh.clientWidth+1;
- if(over())oh.style.columnGap='14px';
+ oh.style.columnGap='';oh.classList.remove('ohtight');F.forEach(d=>{d.classList.remove('ohw','ohl');d.style.maxWidth='';d.querySelector('.v').style.fontSize=''});
+ const over=()=>oh.scrollWidth>oh.clientWidth+1,W=d=>d.getBoundingClientRect().width;
+ if(over()){const L=[];
+  const wrapL=(d,m)=>{d.classList.add('ohl');d.style.maxWidth=m+'px';d.querySelector('.v').style.fontSize=OH_LFS+'px';L.push(d)};
+  const cand=[...F].map(d=>[d,W(d)]).filter(x=>x[1]>OH_BIG).sort((a,b)=>b[1]-a[1]);
+  for(const [d,w] of cand)if(w>OH_LONG){wrapL(d,OH_LMAX);if(!over())break}
+  for(let m=OH_LMAX-10;m>=OH_LMIN&&over();m-=10)L.forEach(d=>d.style.maxWidth=m+'px');
+  for(const [d,w] of cand)if(over()&&!L.includes(d))wrapL(d,OH_LMIN)}// 긴 값으로도 모자랄 때만 중간 길이(120px 넘는) 값도
+ if(over()){F.forEach(d=>d.style.maxWidth='');oh.style.columnGap='14px'}
  for(let n=0;n<200&&over();n++){let best=null,bw=0;
-  for(const big of [OH_BIG,0]){F.forEach(d=>{const v=d.querySelector('.v'),fs=parseFloat(getComputedStyle(v).fontSize),w=d.getBoundingClientRect().width;if(fs>OH_MIN&&w>big&&w>bw){best=v;bw=w}});if(best)break}
+  for(const big of [OH_BIG,0]){F.forEach(d=>{const v=d.querySelector('.v'),fs=parseFloat(getComputedStyle(v).fontSize),w=W(d);if(fs>OH_MIN&&w>big&&w>bw){best=v;bw=w}});if(best)break}
   if(!best)break;best.style.fontSize=(parseFloat(getComputedStyle(best).fontSize)-1)+'px'}
- if(over())F.forEach(d=>{if(d.getBoundingClientRect().width>OH_BIG)d.classList.add('ohw')});
- if(over()){oh.classList.add('ohtight');F.forEach(d=>{if(d.getBoundingClientRect().width>80)d.classList.add('ohw')})}// ⑤ 아주 좁은 창: 간격 10px, 막대 최소 120px
+ if(over())F.forEach(d=>{if(W(d)>OH_BIG||d.classList.contains('ohl'))d.classList.add('ohw')});
+ if(over()){oh.classList.add('ohtight');F.forEach(d=>{if(W(d)>80)d.classList.add('ohw')})}
  if(!ohRO&&window.ResizeObserver){ohRO=new ResizeObserver(()=>{if(ohRO._t)return;ohRO._t=requestAnimationFrame(()=>{ohRO._t=0;ohFit()})})}
  if(ohRO&&ohRO._el!==oh){ohRO.disconnect();ohRO.observe(oh);ohRO._el=oh}}
 const findP=(oid,pid)=>{const o=orders.find(x=>x.id===oid);return [o,o&&o.procs.find(p=>p.id===pid)]};
