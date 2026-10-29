@@ -85,6 +85,9 @@ function setup({getWin}){
   ipcMain.handle('reqFileOpen',(e,rel)=>{const f=attInfo(rel);if(f.error)return f.error;return shell.openPath(f.abs)});
   // 처리 결과에 따라 파일 이동: kind = 'done' | 'rejected' | 'error'
   ipcMain.handle('reqResolve',(e,name,kind,result)=>{if(!['done','rejected','error'].includes(kind))throw new Error('잘못된 처리 종류');inboxPath(name);
-    const to=moveTo(kind,path.basename(name),result&&typeof result==='object'?result:{});sig=sigNow();return to});
+    const r0=result&&typeof result==='object'?{...result}:{},edReq=r0.editedReq;delete r0.editedReq;
+    const to=moveTo(kind,path.basename(name),r0);
+    // 카드에서 고쳐 적용한 경우: 실제로 적용한 요청을 <이름>.edited.json 으로 옆에 남김 (원래 파일은 그대로)
+    if(edReq&&typeof edReq==='object')try{fs.writeFileSync(to.replace(/\.json$/i,'')+'.edited.json',JSON.stringify(edReq,null,2))}catch(err){}sig=sigNow();return to});
 }
 module.exports={setup,TYPES};

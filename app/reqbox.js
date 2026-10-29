@@ -2,8 +2,8 @@
 // <userData>/requests/inbox 의 JSON 요청을 카드로 보여 주고, 사용자가 [적용]을 눌렀을 때만 앱의 기존 로직(normalizeOrders·deriveOrder·stPickOrder·stClean·linkShip·slNorm·prNorm)으로 데이터를 만듦.
 // 미리보기는 '작업용 사본'에 실제로 실행해 본 뒤 되돌리는 방식(dry-run)이라, 화면에 보이는 내용과 적용 결과가 같음.
 // 적용: 자동 백업(preImportBackup) → 사본에서 전부 실행 → 하나라도 실패하면 원래 데이터로 되돌림(전부 아니면 전무) → 저장 → 파일을 done 으로.
-let rqPend=[],rqLog=[],rqErrs=[],rqOpenAfter={},rqBusy=false,rqInfo=null,rqTimer=null;const rqSeen=new Set();
-function rqLoad(r){rqLog=(r&&!Array.isArray(r)&&Array.isArray(r.requestLog)?r.requestLog:[]).filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),file:String(x.file||''),status:x.status==='rejected'?'rejected':'done',at:String(x.at||''),summary:String(x.summary||'')}))}
+let rqEdits={},rqEditOn={},rqPend=[],rqLog=[],rqErrs=[],rqOpenAfter={},rqBusy=false,rqInfo=null,rqTimer=null;const rqSeen=new Set();
+function rqLoad(r){rqLog=(r&&!Array.isArray(r)&&Array.isArray(r.requestLog)?r.requestLog:[]).filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),file:String(x.file||''),status:x.status==='rejected'?'rejected':'done',at:String(x.at||''),summary:String(x.summary||''),...(x.edited?{edited:true,edits:(Array.isArray(x.edits)?x.edits:[]).slice(0,100).map(String)}:{})}))}
 const rqPayload=()=>({requestLog:rqLog.slice(-500)});
 function rqImport(r){if(r&&!Array.isArray(r)&&Array.isArray(r.requestLog))rqLoad(r)}
 const RQ_T={'production.addOrder':'생산 오더 추가','production.updateOrder':'생산 오더 수정','production.addShipment':'출고 내역 추가','production.setDone':'오더 완료 표시','statement.createFromOrder':'거래명세서 작성','sales.addRow':'매출 행 추가','price.addRow':'단가 행 추가','production.attachFile':'파일 첨부'};
@@ -55,7 +55,7 @@ const RQ_H={
   Object.assign(o,v);if(v.lines)o.lines=normLines({lines:v.lines});deriveOrder(o);o.updated=now();
   it.diff=Object.keys(LB).filter(k=>k in v&&before[k]!==o[k]).map(k=>[LB[k],before[k],o[k]]);if(v.lines&&rqLinesTxt(before.lines)!==rqLinesTxt(o.lines))it.diff.push(['색상 / 발주량',rqLinesTxt(before.lines),rqLinesTxt(o.lines)]);
   if(!it.diff.length)it.warns.push('바뀌는 내용이 없습니다')},
- 'production.addShipment'(a,it,ctx){const o=rqFindOrder(a.orderNo,it);const ships=rqShips(a.ships,it,'ships',!a.addProcess);let p=null,isNew=false;
+ 'production.addShipment'(a,it,ctx){let vch=null;const o=rqFindOrder(a.orderNo,it);const ships=rqShips(a.ships,it,'ships',!a.addProcess);let p=null,isNew=false;
   if(a.addProcess!=null&&typeof a.addProcess!=='boolean')it.errors.push('addProcess는 true/false여야 합니다');
   const sh=rqShk(a.shrink,it,'shrink(가공 축 %)');
   if(o){if(a.processNo!=null){const k=rqN(a.processNo);if(!Number.isInteger(k)||k<1||k>o.procs.length)it.errors.push(`processNo ${a.processNo}: 이 오더의 공정은 1~${o.procs.length}번입니다`);else{p=o.procs[k-1];if(a.process!=null&&rqS(a.process)!==p.name)it.errors.push(`processNo ${k}번 공정은 '${p.name}'인데 process는 '${rqS(a.process)}'입니다`)}}
@@ -65,9 +65,9 @@ const RQ_H={
   it.summary=`오더 ${rqS(a.orderNo)}${isNew?`에 새 공정 '${rqS(a.process)}'을(를) 추가하고`:p?`의 '${p.name}' 공정에`:''} 출고 ${ships?ships.length:0}건을 추가합니다`;
   if(it.errors.length||!o||!ships)return;
   if(isNew){p={id:uid(),name:rqS(a.process),vendor:rqS(a.vendor),shrink:null,ships:[]};p.shrink=isRaw(p)?null:sh;o.procs.push(p)}
-  else if(a.vendor!=null||a.shrink!=null)it.warns.push('vendor·shrink는 새 공정(addProcess)일 때만 씁니다 — 기존 공정 정보는 그대로');
+  else{if(a.shrink!=null)it.warns.push('shrink는 새 공정(addProcess)일 때만 씁니다 — 기존 공정의 가공 축은 그대로');if(a.vendor!=null&&rqS(a.vendor)!==p.vendor){vch=[p.vendor,rqS(a.vendor)];p.vendor=rqS(a.vendor)}}
   const s0=sum(p);ships.forEach(s=>p.ships.push({id:uid(),date:s.date,qty:s.qty,memo:s.memo}));o.updated=now();if(ships.length&&ctx)ctx.lastShip[o.id]={pid:p.id,sid:p.ships[p.ships.length-1].id};
-  it.diff=[['공정',isNew?'':p.name,isNew?`${p.name} (새 공정, ${o.procs.length}번째${p.vendor?' · '+p.vendor:''})`:p.name],['출고 소계',`${num(s0)} ${o.unit}`,`${num(sum(p))} ${o.unit}`]];
+  it.diff=[['공정',isNew?'':p.name,isNew?`${p.name} (새 공정, ${o.procs.length}번째${p.vendor?' · '+p.vendor:''})`:p.name],['출고 소계',`${num(s0)} ${o.unit}`,`${num(sum(p))} ${o.unit}`]];if(vch)it.diff.splice(1,0,['가공 업체',vch[0]||'-',vch[1]||'(비움)']);
   if(ships.length)it.table={head:['출고일','출고량 ('+o.unit+')','메모'],rows:ships.map(s=>[s.date,num(s.qty),s.memo])}},
  'production.setDone'(a,it){const o=rqFindOrder(a.orderNo,it);if(a.done!=null&&typeof a.done!=='boolean')it.errors.push('done은 true/false여야 합니다');const v=a.done!==false;
   it.summary=`오더 ${rqS(a.orderNo)}을(를) 오더 완료${v?'로 표시':' 표시 해제'}합니다`;if(it.errors.length||!o)return;
@@ -138,7 +138,7 @@ const RQ_H={
 // 작업용 사본에서 실행 (미리보기·적용 공용). 호출하는 쪽에서 rqWork/rqRestore 로 감쌈
 function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set()},top=[];
  const done=rqLog.find(x=>x.id===req.id&&x.status==='done');if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR'):''} 적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
- const twin=rqPend.find(x=>x!==P&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
+ const twin=rqPend.find(x=>x.file!==P.file&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
  const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],diff:[],table:null};
   rqExtra(a,['type','comment',...(RQ_KEYS[a.type]||[])],'동작',it);try{RQ_H[a.type](a,it,ctx,req,P)}catch(e){it.errors.push('처리 중 오류: '+(e&&e.message||e))}return it});
  return {top,items,ctx,nerr:top.length+items.reduce((s,x)=>s+x.errors.length,0)}}
@@ -148,6 +148,43 @@ function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sale
 function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;stEd=s.stEd}
 function rqPreview(P){const s=rqSnap();try{rqWork();return rqRun(P)}finally{rqRestore(s)}}
 const rqSummary=(P,R)=>R.items.map(it=>`· ${it.title}: ${it.summary}`).join('\n');
+// ---- 카드에서 고치기: 원래 요청은 그대로 두고, 고친 actions 사본(rqEdits[file])으로 미리보기·적용 ----
+const rqEff=P=>rqEdits[P.file]?{...P,req:{...P.req,actions:rqEdits[P.file]}}:P;
+const rqIsEdited=P=>!!rqEdits[P.file]&&JSON.stringify(rqEdits[P.file])!==JSON.stringify(P.req.actions);
+function rqLeaves(v,pre,out){if(v&&typeof v==='object'){for(const k of Object.keys(v))rqLeaves(v[k],pre?pre+'.'+k:k,out)}else out[pre]=v;return out}
+function rqEditDiff(P){const a=rqLeaves(P.req.actions,'',{}),b=rqLeaves(rqEdits[P.file]||P.req.actions,'',{});
+ return [...new Set([...Object.keys(a),...Object.keys(b)])].filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>`actions.${k}: ${a[k]===undefined?'(없음)':JSON.stringify(a[k])} → ${b[k]===undefined?'(없음)':JSON.stringify(b[k])}`)}
+function rqEditToggle(f){const P=rqPend.find(x=>x.file===f);if(!P)return;rqEditOn[f]=!rqEditOn[f];if(rqEditOn[f]&&!rqEdits[f])rqEdits[f]=rqClone(P.req.actions);render()}
+async function rqEditReset(f){if(!await uiConfirm('고친 내용을 버리고 원래 요청대로 되돌릴까요?'))return;delete rqEdits[f];rqEditOn[f]=false;render()}
+const rqGet=(o,path)=>path.split('.').reduce((x,k)=>x==null?undefined:x[k],o);
+function rqPut(o,path,v){const ks=path.split('.');let x=o;for(let i=0;i<ks.length-1;i++){if(x[ks[i]]==null)x[ks[i]]=/^\d+$/.test(ks[i+1])?[]:{};x=x[ks[i]]}const l=ks[ks.length-1];if(v===undefined)delete x[l];else x[l]=v}
+// 입력값 → JSON 값 (t: n 숫자, b 체크, r 절별 수량 목록, 그 밖 문자열; 빈칸이면 항목 삭제)
+function rqSet(el){const f=el.dataset.f,i=+el.dataset.i,path=el.dataset.k,t=el.dataset.t||'';const A0=rqEdits[f];if(!A0)return;const a=A0[i];let v;
+ if(t==='b')v=el.checked;else{const s=el.value.trim();if(s==='')v=undefined;else if(t==='n'){const n=rqN(s);v=isNaN(n)?s:n}else if(t==='r')v=s.split(/[,\s]+/).filter(Boolean).map(x=>{const n=rqN(x);return isNaN(n)?x:n});else v=s}
+ rqPut(a,path,v);
+ // 공정 이름을 바꾸면: 그 오더에 같은 이름 공정이 있으면 그 공정에 넣고(addProcess 끔), 없으면 새 공정으로
+ if(a.type==='production.addShipment'&&path==='process'){const o=orders.find(x=>x.no===rqS(a.orderNo));delete a.processNo;
+  if(o&&o.procs.some(p=>p.name===rqS(a.process))){delete a.addProcess;delete a.shrink}else a.addProcess=true}
+ render()}
+function rqVendors(){return [...new Set([...orders.flatMap(o=>o.procs.map(p=>p.vendor)),...(typeof custs!=='undefined'?custs.map(c=>c.name):[]),...(typeof contacts!=='undefined'?contacts.map(c=>c.company):[])].filter(Boolean))]}
+function rqForm(P,i,a){const f=P.file,id=k=>`rqe_${rqPend.indexOf(P)}_${i}_${k.replace(/\W/g,'_')}`;
+ const inp=(k,label,o={})=>{const v=rqGet(a,k);const val=Array.isArray(v)?v.join(', '):v==null?'':String(v);
+  const at=`id="${id(k)}" data-f="${esc(f)}" data-i="${i}" data-k="${esc(k)}" data-t="${o.t||''}" onchange="rqSet(this)"`;
+  if(o.t==='b')return `<label class="rqel rqeb"><input type="checkbox" ${at} ${v?'checked':''}> ${esc(label)}</label>`;
+  if(o.opts)return `<label class="rqel">${esc(label)}<select ${at}>${o.opts.map(([x,l])=>`<option value="${esc(x)}"${String(val)===x?' selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
+  return `<label class="rqel${o.w?' w':''}">${esc(label)}<input ${at} value="${esc(val)}"${o.list?` list="${o.list}"`:''}${o.ph?` placeholder="${esc(o.ph)}"`:''}${o.t==='d'?' placeholder="YYYY-MM-DD"':''}></label>`};
+ const ships=(base)=>(rqGet(a,base)||[]).map((_,j)=>`<div class="rqer"><span class="muted">${j+1}</span>${inp(`${base}.${j}.date`,'출고일',{t:'d'})}${inp(`${base}.${j}.qty`,'출고량',{t:'n'})}${inp(`${base}.${j}.memo`,'메모',{w:1})}</div>`).join('');
+ const T=a.type;let h='';
+ if(T==='production.addShipment'){const o=orders.find(x=>x.no===rqS(a.orderNo));const pn=[...new Set([...(o?o.procs.map(p=>p.name):[]),...[...document.querySelectorAll('#procs option')].map(x=>x.value)])];
+  h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('process','공정',{list:'rqe_pl_'+id('x'),ph:'기존 공정을 고르면 그 공정에 넣어요'})}<datalist id="rqe_pl_${id('x')}">${pn.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>${inp('vendor',a.addProcess?'가공 업체 (새 공정)':'가공 업체 (기존 공정 업체 바꿈)',{list:'rqe_vl',ph:'비우면 그대로'})}${a.addProcess?inp('shrink','가공 축 %',{t:'n'}):''}</div>${ships('ships')}`}
+ else if(T==='production.addOrder')h=`<div class="rqer">${['no:오더번호','client:거래처','item:품목','fabric:아이템명'].map(x=>{const[k,l]=x.split(':');return inp('order.'+k,l,k==='client'?{list:'rqe_vl'}:{})}).join('')}${inp('order.date','발주일',{t:'d'})}${inp('order.due','납기일',{t:'d'})}</div>`+(a.order&&a.order.lines||[]).map((_,j)=>`<div class="rqer"><span class="muted">${j+1}</span>${inp(`order.lines.${j}.color`,'색상')}${inp(`order.lines.${j}.qty`,'발주량',{t:'n'})}${inp(`order.lines.${j}.unit`,'단위')}</div>`).join('')+(a.order&&a.order.procs||[]).map((p,j)=>`<div class="rqer"><span class="muted">공정${j+1}</span>${inp(`order.procs.${j}.name`,'공정',{list:'procs'})}${inp(`order.procs.${j}.vendor`,'가공 업체',{list:'rqe_vl'})}${inp(`order.procs.${j}.shrink`,'축 %',{t:'n'})}</div>${ships(`order.procs.${j}.ships`)}`).join('')
+ else if(T==='production.updateOrder')h=`<div class="rqer">${inp('orderNo','오더번호')}${Object.keys(a.set||{}).filter(k=>k!=='lines').map(k=>inp('set.'+k,{item:'품목',fabric:'아이템명',client:'거래처',date:'발주일',due:'납기일'}[k]||k,k==='date'||k==='due'?{t:'d'}:{})).join('')}</div>`+(a.set&&Array.isArray(a.set.lines)?a.set.lines.map((_,j)=>`<div class="rqer"><span class="muted">${j+1}</span>${inp(`set.lines.${j}.color`,'색상')}${inp(`set.lines.${j}.qty`,'발주량',{t:'n'})}${inp(`set.lines.${j}.unit`,'단위')}</div>`).join(''):'')
+ else if(T==='production.setDone')h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('done','오더 완료',{t:'b'})}</div>`
+ else if(T==='statement.createFromOrder')h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('date','날짜',{t:'d'})}${inp('customer','공급받는자',{list:'rqe_vl'})}${inp('price','단가',{t:'n'})}</div><div class="rqer">${inp('item','품명')}${inp('spec','규격')}${inp('note','비고')}${inp('dest','납품처')}${inp('contact','담당자')}</div>`+(a.lots||[]).map((_,j)=>`<div class="rqer"><span class="muted">${j+1}</span>${inp(`lots.${j}.lotNo`,'LOT NO.')}${inp(`lots.${j}.color`,'COLOR')}${inp(`lots.${j}.rolls`,'절별 수량 (쉼표로)',{t:'r',w:1})}</div>`).join('')
+ else if(T==='sales.addRow'||T==='price.addRow'){const K=T==='sales.addRow'?RQ_SALES_KEYS:RQ_PRICE_KEYS,NUM=['qty','unitPrice','supply','total','year','g','d','dS','p1','p1S','p2','p2S','e','t','m'];
+  const ks=K.filter(k=>a.row&&a.row[k]!=null||T==='sales.addRow');h=`<div class="rqer">${ks.map(k=>inp('row.'+k,k,k==='date'?{t:'d'}:NUM.includes(k)?{t:'n'}:k==='client'?{list:'rqe_vl'}:{})).join('')}</div>`}
+ else if(T==='production.attachFile')h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('kind','종류',{opts:[['statement','거래명세서'],['workOrder','작업의뢰서'],['purchaseOrder','발주서']]})}${inp('process','공정 (비우면 앞 출고 줄)',{list:'procs'})}${inp('shipDate','출고일',{t:'d'})}${inp('shipQty','출고량',{t:'n'})}${inp('replace','기존 파일 바꾸기',{t:'b'})}</div><div class="muted" style="font-size:11px">공정·출고일을 비워 두면 같은 요청에서 앞에 추가한 출고 줄(고친 내용 그대로)에 붙어요.</div>`;
+ return h?`<div class="rqedit">${h}</div>`:''}
 // ---- 받은편지함 확인 ----
 async function rqRefresh(why){if(!A.reqList)return;let r;try{r=await A.reqList()}catch(e){return}
  rqPend=r.pending||[];const nw=rqPend.filter(x=>!rqSeen.has(x.file+'#'+x.hash));nw.forEach(x=>rqSeen.add(x.file+'#'+x.hash));
@@ -160,10 +197,10 @@ function rqBadge(){const b=$('rqn');if(!b)return;const n=rqPend.length;b.textCon
 function rqInit(){if(!A.reqList)return;A.reqInfo().then(i=>{rqInfo=i;if(page==='reqs'||page==='settings')render()}).catch(()=>{});
  if(A.onReqChanged)A.onReqChanged(()=>rqRefresh('watch'));window.addEventListener('focus',()=>rqRefresh('focus'));setTimeout(()=>rqRefresh('start'),800)}
 // ---- 적용 / 거부 ----
-async function rqApply(file){const P=rqPend.find(x=>x.file===file);if(!P||rqBusy)return;
+async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBusy)return;const P=rqEff(P0),ed=rqIsEdited(P0),edits=ed?rqEditDiff(P0):[];
  const chk=await A.reqCheck(file,P.hash);if(!chk.ok){toast(chk.exists?'요청 파일 내용이 바뀌어 다시 불러왔어요. 카드를 다시 확인해 주세요':'요청 파일이 없어졌어요');return rqRefresh('check')}
  const pv=rqPreview(P);if(pv.nerr){render();return toast('오류가 있어 적용할 수 없어요')}
- if(!await uiConfirm(`이 요청을 적용할까요?\n\n${rqSummary(P,pv)}\n\n(적용하기 전에 자동 백업해요)`))return;
+ if(!await uiConfirm(`이 요청을 적용할까요?${ed?' (카드에서 고친 내용으로)':''}\n\n${rqSummary(P,pv)}\n\n(적용하기 전에 자동 백업해요)`))return;
  rqBusy=true;render();
  try{let bk=null;try{bk=A.preImportBackup?await A.preImportBackup():'-'}catch(e){bk=null}
   if(!bk&&!await uiConfirm('자동 백업을 만들지 못했어요. 그래도 적용할까요?'))return;
@@ -177,29 +214,29 @@ async function rqApply(file){const P=rqPend.find(x=>x.file===file);if(!P||rqBusy
   const oldF=[];for(const {x,r} of added){if(x.kind==='statement'){const o=shipFiles.find(f=>f.shipId===x.sid);if(o){oldF.push(o);shipFiles=shipFiles.filter(f=>f.id!==o.id)}shipFiles.push(normSs({...r,orderId:x.oid,processId:x.pid,shipId:x.sid,addedAt:now()}))}
    else wfFiles.push(normWf({...r,orderId:x.oid,addedAt:now(),kind:x.kind==='purchaseOrder'?'po':'wo'}))}
   stEd=snap.stEd;
-  const sm=rqSummary(P,R);rqLog.push({id:P.req.id,file,status:'done',at:new Date().toISOString(),summary:sm.slice(0,1000)});save();
-  try{await A.reqResolve(file,'done',{id:P.req.id,backup:bk||'',applied:R.items.map(it=>({type:it.type,summary:it.summary,warnings:it.warns})),statementIds:R.ctx.stmtIds,attached:added.map(({x,r})=>({kind:x.kind,name:r.name,path:r.path}))})}catch(e){toast('적용했지만 요청 파일을 done 폴더로 옮기지 못했어요')}
+  const sm=rqSummary(P,R);rqLog.push({id:P.req.id,file,status:'done',at:new Date().toISOString(),summary:sm.slice(0,1000),...(ed?{edited:true,edits:edits.slice(0,100)}:{})});save();
+  try{await A.reqResolve(file,'done',{id:P.req.id,backup:bk||'',applied:R.items.map(it=>({type:it.type,summary:it.summary,warnings:it.warns})),statementIds:R.ctx.stmtIds,...(ed?{edited:true,edits,originalActions:P0.req.actions,editedActions:P.req.actions,editedReq:P.req}:{}),attached:added.map(({x,r})=>({kind:x.kind,name:r.name,path:r.path}))})}catch(e){toast('적용했지만 요청 파일을 done 폴더로 옮기지 못했어요')}
   for(const f of oldF){try{await A.ssDelete(f.path)}catch(e){}}
-  rqPend=rqPend.filter(x=>x.file!==file);rqBadge();
+  delete rqEdits[file];delete rqEditOn[file];rqPend=rqPend.filter(x=>x.file!==file);rqBadge();
   const open=R.ctx.stmtIds.length&&rqOpenAfter[file]!==false&&(rqOpenAfter[file]===true||R.items.some(it=>it.stmt&&it.open!==false));delete rqOpenAfter[file];
   if(open){go('stmt');editStmt(R.ctx.stmtIds[R.ctx.stmtIds.length-1])}else render();
-  toast('요청을 적용했어요'+(R.ctx.stmtIds.length?` · 거래명세서 ${R.ctx.stmtIds.length}건 저장`:'')+(added.length?` · 파일 ${added.length}개 첨부`:''))}
+  toast('요청을 적용했어요'+(ed?' (고친 내용으로)':'')+(R.ctx.stmtIds.length?` · 거래명세서 ${R.ctx.stmtIds.length}건 저장`:'')+(added.length?` · 파일 ${added.length}개 첨부`:''))}
  finally{rqBusy=false;rqBadge();if(page==='reqs')render()}}
 async function rqReject(file){const P=rqPend.find(x=>x.file===file);if(!P||rqBusy)return;
  if(!await uiConfirm('이 요청을 거부할까요?\n데이터는 바뀌지 않고, 요청 파일은 rejected 폴더로 옮겨져요.'))return;
  try{await A.reqResolve(file,'rejected',{id:P.req.id,reason:'사용자가 거부함'})}catch(e){return uiAlert('요청 파일을 옮기지 못했어요: '+(e&&e.message||e))}
  rqLog.push({id:P.req.id,file,status:'rejected',at:new Date().toISOString(),summary:String(P.req.note||'').slice(0,300)});save();
- rqPend=rqPend.filter(x=>x.file!==file);rqBadge();render();toast('요청을 거부했어요')}
+ delete rqEdits[file];delete rqEditOn[file];rqPend=rqPend.filter(x=>x.file!==file);rqBadge();render();toast('요청을 거부했어요')}
 // ---- 화면 ----
 const rqPath=()=>rqInfo?rqInfo.inbox:'';
 function rqFolderBar(){return `<div class="rqbar"><span class="muted">요청 파일 폴더</span><code class="rqp" title="${esc(rqPath())}">${esc(rqPath()||'-')}</code><button onclick="A.reqOpenFolder('inbox')">폴더 열기</button><button onclick="A.copyText(rqPath());toast('경로를 복사했어요')">경로 복사</button><button onclick="rqRefresh('manual');toast('요청함을 확인했어요')">지금 확인</button></div>`}
-function rqCard(P){const R=rqPreview(P),q=P.req,hasSt=R.items.some(it=>it.stmt),def=R.items.some(it=>it.stmt&&it.open!==false),chk=rqOpenAfter[P.file]==null?def:rqOpenAfter[P.file];
+function rqCard(P){const E=rqEff(P),R=rqPreview(E),q=P.req,ed=rqIsEdited(P),on=!!rqEditOn[P.file],hasSt=R.items.some(it=>it.stmt),def=R.items.some(it=>it.stmt&&it.open!==false),chk=rqOpenAfter[P.file]==null?def:rqOpenAfter[P.file];
  const ct=q.createdAt&&!isNaN(Date.parse(q.createdAt))?new Date(q.createdAt).toLocaleString('ko-KR'):'';
  const act=R.items.map((it,i)=>`<div class="rqa${it.errors.length?' bad':''}"><div class="rqat"><span class="rqn2">${i+1}</span><span class="rqty">${esc(it.title)}</span><span>${esc(it.summary)}</span></div>${it.comment?`<div class="muted rqcm">${esc(it.comment)}</div>`:''}
   ${it.diff.length?`<table class="rqd"><tbody>${it.diff.map(([k,b,a])=>`<tr><th>${esc(k)}</th>${b!==''&&b===a?'<td class="rqb rqsame" colspan="2">그대로</td>':b!==''&&b!=null||it.type==='production.updateOrder'||it.type==='production.setDone'||k==='출고 소계'?`<td class="rqb">${esc(b)||'-'}</td><td class="rqar">→</td>`:'<td class="rqb rqnew" colspan="2">새로</td>'}<td class="rqv">${esc(a)}</td></tr>`).join('')}</tbody></table>`:''}
-  ${it.table?`<table class="rqt"><thead><tr>${it.table.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${it.table.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:''}
+  ${on?rqForm(P,i,E.req.actions[i]):''}${it.table?`<table class="rqt"><thead><tr>${it.table.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${it.table.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:''}
   ${it.file?`<div class="rqfl"><button data-r="${esc(it.file)}" onclick="A.reqFileOpen(this.dataset.r).then(r=>{if(r)uiAlert('파일을 열지 못했어요: '+r)})">📎 파일 열어 보기</button></div>`:''}${it.errors.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${it.warns.map(e=>`<div class="rqw">⚠ ${esc(e)}</div>`).join('')}</div>`).join('');
- return `<div class="card rqc${R.nerr?' bad':''}"><div class="rqch"><span class="rqsrc">Grok Bot 요청</span><b>${esc(q.note||'(메모 없음)')}</b><span style="flex:1"></span><span class="muted">${esc(ct)}</span></div>
+ return `<div class="card rqc${R.nerr?' bad':''}"><div class="rqch"><span class="rqsrc">Grok Bot 요청</span><b>${esc(q.note||'(메모 없음)')}</b>${ed?'<span class="rqmod">수정됨</span>':''}<span style="flex:1"></span>${ed?`<button data-f="${esc(P.file)}" onclick="rqEditReset(this.dataset.f)">원래대로</button>`:''}<button data-f="${esc(P.file)}" onclick="rqEditToggle(this.dataset.f)"${rqBusy?' disabled':''}>${on?'수정 닫기':'✎ 수정'}</button><span class="muted">${esc(ct)}</span></div>${on?'<datalist id="rqe_vl">'+rqVendors().map(x=>`<option value="${esc(x)}">`).join('')+'</datalist><div class="rqw">✎ 수정 중 — 칸을 고치고 다른 곳을 누르면 아래 미리보기와 검사가 바로 다시 계산돼요. 원래 요청 파일은 그대로 두고, 적용할 때 고친 내용과 원래 내용을 함께 기록해요.</div>':''}
  <div class="muted rqmeta">id ${esc(q.id)} · 파일 ${esc(P.file)} · 동작 ${R.items.length}개</div>${R.top.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${act}
  <div class="rqf">${hasSt?`<label class="rqo"><input type="checkbox" ${chk?'checked':''} data-f="${esc(P.file)}" onchange="rqOpenAfter[this.dataset.f]=this.checked"> 적용한 뒤 거래명세서 열기</label>`:''}<span style="flex:1"></span>${R.nerr?`<span class="neg">오류 ${R.nerr}건 — 적용할 수 없어요 (고친 요청을 다시 받거나 거부하세요)</span>`:''}
  <button class="d" data-f="${esc(P.file)}" onclick="rqReject(this.dataset.f)"${rqBusy?' disabled':''}>거부</button><button class="p" data-f="${esc(P.file)}" onclick="rqApply(this.dataset.f)"${R.nerr||rqBusy?' disabled':''}>적용</button></div></div>`}
@@ -208,5 +245,5 @@ function renderReqs(){const el=$('rq_wrap');if(!el)return;
  el.innerHTML=`<div class="card"><h2>요청함 <span class="muted" style="font-weight:normal">— Grok Bot이 보낸 작업 요청. 카드를 확인하고 [적용]을 눌러야 반영돼요 (적용 전에 자동 백업)</span></h2>${rqFolderBar()}</div>
  ${rqPend.length?rqPend.map(rqCard).join(''):'<div class="card"><p class="muted" style="margin:0">대기 중인 요청이 없습니다.</p></div>'}
  ${rqErrs.length?`<div class="card"><h2>읽지 못한 요청 파일 <span class="muted" style="font-weight:normal">(error 폴더로 옮김)</span><button style="float:right" onclick="A.reqOpenFolder('error')">error 폴더 열기</button></h2><ul class="rql">${rqErrs.map(e=>`<li><b>${esc(e.file)}</b> — ${esc(e.reason)}</li>`).join('')}</ul></div>`:''}
- ${log.length?`<div class="card"><h2>최근 처리한 요청</h2><ul class="rql">${log.map(x=>`<li><span class="badge ${x.status==='done'?'rqok':''}">${x.status==='done'?'적용':'거부'}</span>${esc(x.at?new Date(x.at).toLocaleString('ko-KR'):'')} · ${esc(x.id)}<br><small class="muted" style="white-space:pre-line">${esc(x.summary)}</small></li>`).join('')}</ul></div>`:''}`}
+ ${log.length?`<div class="card"><h2>최근 처리한 요청</h2><ul class="rql">${log.map(x=>`<li><span class="badge ${x.status==='done'?'rqok':''}">${x.status==='done'?'적용':'거부'}</span>${esc(x.at?new Date(x.at).toLocaleString('ko-KR'):'')} · ${esc(x.id)}${x.edited?' <span class="rqmod">수정됨</span>':''}<br><small class="muted" style="white-space:pre-line">${esc(x.summary)}</small></li>`).join('')}</ul></div>`:''}`}
 function rqSettings(){const el=$('rq_card');if(!el)return;el.innerHTML=`<h2>요청함 (Grok Bot 요청 받기)</h2><p class="muted" style="margin:0 0 8px">이 폴더에 들어온 요청 파일(JSON)은 [요청함] 메뉴에 카드로 나타나요. 직접 [적용]을 누르기 전에는 아무것도 바뀌지 않아요.</p>${rqFolderBar()}<div class="muted" style="margin-top:6px;font-size:12px">처리된 파일: requests\\done · 거부: requests\\rejected · 형식 오류: requests\\error</div>`}
