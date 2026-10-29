@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld('api',{
   reqList:()=>ipcRenderer.invoke('reqList'),
   reqOpenFolder:k=>ipcRenderer.invoke('reqOpenFolder',k),
   reqCheck:(n,h)=>ipcRenderer.invoke('reqCheck',n,h),
+  reqFileOpen:r=>ipcRenderer.invoke('reqFileOpen',r),
   reqResolve:(n,k,r)=>ipcRenderer.invoke('reqResolve',n,k,r),
   onReqChanged:cb=>ipcRenderer.on('req-changed',()=>cb()),
   checkUpdate:()=>ipcRenderer.invoke('checkUpdate'),

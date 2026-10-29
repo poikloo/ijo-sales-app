@@ -203,6 +203,51 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 `eD` 기타 내용 · `e` 기타 금액 · `t` TRANS(운임) · `m` 마진율 · `memo`.
 **비율(`dS`, `p1S`, `p2S`, `m`)은 소수**로 적습니다 (13% → `0.13`). 비워 두면 설정의 기본값.
 
+### 3.8 `production.attachFile` — 오더에 파일 첨부 (출고별 거래명세서 · 작업의뢰서 · 발주서)
+
+첨부할 파일(PDF·JPG·PNG·WEBP·GIF, 20MB까지)은 **요청 JSON보다 먼저** `inbox` 안의 하위 폴더(예: `inbox\files\`)에 넣고, `file`에 inbox 기준 **상대 경로**를 적습니다.
+절대 경로(`C:\...`, `/...`), `..`, 심볼릭 링크, inbox 밖을 가리키는 경로는 카드에서 ⛔ 오류로 막힙니다. base64로 JSON에 넣는 방식은 지원하지 않습니다 (요청 JSON 2MB 제한 그대로).
+
+```json
+{ "type": "production.attachFile", "orderNo": "2610-0101", "kind": "statement",
+  "file": "files/sample_statement.pdf" }
+```
+
+| 항목 | 설명 |
+|---|---|
+| `orderNo` | 필수. 같은 요청 앞쪽 `production.addOrder`로 만든 오더도 됩니다 |
+| `kind` | `statement`(기본, 생산 관리 출고 줄의 **거래명세서** 칸) · `workOrder`(작업의뢰서 메뉴의 작업의뢰서 칸) · `purchaseOrder`(같은 메뉴의 발주서 칸) |
+| `file` | 필수. inbox 기준 상대 경로 |
+| `process` / `processNo` | (statement) 출고 줄을 찾을 공정 |
+| `shipDate` / `shipQty` | (statement) 출고 줄을 고르는 출고일·출고량 |
+| `replace` | (statement) 이미 거래명세서가 붙은 출고 줄이면 `true`일 때만 바꿈 (아니면 오류) |
+
+`statement`에서 어느 출고 줄인지:
+1. `process`·`processNo`·`shipDate`·`shipQty`를 모두 생략하면, **같은 요청 앞쪽에서 이 오더에 마지막으로 추가된 출고 줄**(`production.addShipment`의 마지막 행, 또는 `statement.createFromOrder`의 `linkShip` 행)에 붙입니다. 없으면 오류.
+2. 지정하면 그 조건으로 찾습니다. `shipDate`로 여러 줄이 걸리면 오류(→ `shipQty`·`processNo`로 좁힘), `shipDate` 없이 공정만 주면 그 공정의 마지막 출고 줄(⚠ 표시).
+
+카드에는 파일 이름·크기·붙일 곳과 **📎 파일 열어 보기** 버튼이 나옵니다.
+적용하면 파일이 앱의 원래 첨부 저장소로 **복사**됩니다 (직접 [첨부]를 누른 것과 같은 곳):
+`<데이터 폴더>\statements\<오더id>\` (거래명세서, `data.json`의 `shipFiles`) / `<데이터 폴더>\workorders\<오더id>\` (작업의뢰서·발주서, `workOrderFiles`).
+복사 중 하나라도 실패하면 이미 복사한 파일을 지우고 데이터도 되돌립니다. 원본은 요청 파일과 함께 `done`/`rejected`/`error` 폴더의 `<요청이름>.files\` 로 옮겨집니다.
+
+### 예시: 출고 추가 + 거래명세서 첨부
+
+`inbox\files\sample_statement_2610-0101.pdf` 를 먼저 넣고, 그다음 `2026-10-29_001_attach.json`:
+
+```json
+{
+  "version": 1, "id": "ex-attach-001", "createdAt": "2026-10-29T14:00:00+09:00", "source": "grokbot",
+  "note": "(예시) 염색 출고 + 거래명세서 첨부",
+  "actions": [
+    { "type": "production.addShipment", "orderNo": "2610-0101", "process": "염색",
+      "ships": [ { "date": "2026-10-29", "qty": 1200, "memo": "(예시) 1차 출고" } ] },
+    { "type": "production.attachFile", "orderNo": "2610-0101", "kind": "statement",
+      "file": "files/sample_statement_2610-0101.pdf", "comment": "방금 추가한 출고 줄에 붙임" }
+  ]
+}
+```
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -245,4 +290,5 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - `linkShip`(기본 true)은 마지막 공정에 출고 행을 만듭니다. 같은 요청에서 마지막 공정에 같은 출고를 `addShipment`로 또 넣으면 두 번 잡히니, 둘 중 하나만 쓰세요 (`linkShip: false`).
 - 거래처 정보(등록번호·주소)는 요청으로 만들지 않습니다 — 상호만 넣고 ⚠로 알려 줍니다.
 - 오더 삭제·공정 삭제·출고 수정/삭제, 거래명세서 수정은 아직 요청으로 할 수 없습니다.
+- 첨부(`production.attachFile`)는 파일을 추가만 합니다. 첨부 삭제는 요청으로 할 수 없고, `replace: true`일 때만 기존 거래명세서 파일을 바꿉니다.
 - 백업은 적용 직전 디스크의 `data.json` 기준입니다.
