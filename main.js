@@ -251,6 +251,14 @@ ipcMain.handle('ctImportPick',async()=>{let f=process.env.IJO_CT_XLSX;if(!f){con
   const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);const ws=wb.worksheets[0];if(!ws)return {name,rows:[]};
   const cv=v=>{if(v==null)return '';if(typeof v==='object'){if(v instanceof Date)return v.toISOString().slice(0,10);if('result' in v)return cv(v.result);if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);if(v.hyperlink)return String(v.hyperlink).replace(/^mailto:/,'');return ''}return String(v)};
   const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).trim());rows.push(a)});return {name,rows}});
+// TEST REPORT 엑셀 가져오기: 머리글(품명·시험기관·접수번호 …)이 있는 시트를 찾아 행 배열로 돌려줌 (날짜는 YYYY-MM-DD)
+ipcMain.handle('trImportPick',async()=>{let f=process.env.IJO_TR_XLSX;if(!f){const r=await dialog.showOpenDialog(win,{filters:[{name:'Excel / CSV',extensions:['xlsx','csv']}],properties:['openFile']});if(r.canceled||!r.filePaths[0])return null;f=r.filePaths[0]}
+  const name=path.basename(f);if(/\.csv$/i.test(f))return {name,rows:csvRows(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,''))};
+  const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook();await wb.xlsx.readFile(f);
+  const cv=v=>{if(v==null)return '';if(typeof v==='object'){if(v instanceof Date)return v.toISOString().slice(0,10);if('result' in v)return cv(v.result);if(v.richText)return v.richText.map(x=>x.text).join('');if('text' in v)return String(v.text);return ''}return String(v)};
+  const rd=ws=>{const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).replace(/\u3000/g,' ').trim());rows.push(a)});return rows};
+  const all=wb.worksheets.map(ws=>({sheet:ws.name,rows:rd(ws)})),hit=all.find(x=>x.rows.slice(0,15).some(r=>r.some(c=>/시험기관|접수번호|품\s*명/.test(c))))||all[0];
+  return hit?{name:name+(all.length>1?` [${hit.sheet}]`:''),rows:hit.rows}:{name,rows:[]}});
 ipcMain.handle('ctTemplate',async(e,h)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('거래처');ws.addRow(h);ws.addRow(['(예시)가나상사','홍길동','영업팀','과장','(예시) 서울시 ○○구 ○○로 00','02-000-0000','02-000-0001','010-0000-0000 / 010-0000-0001','example@example.com','www.example.com','예시 행 — 지우고 입력하세요']);
   ws.getRow(1).font={bold:true};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8F0FE'}};ws.columns.forEach((c,i)=>c.width=[18,10,12,10,36,16,16,28,26,22,30][i]||14);ws.views=[{state:'frozen',ySplit:1}];
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),'거래처_가져오기_양식.xlsx'),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}

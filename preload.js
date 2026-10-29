@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api',{
   priceImportPick:()=>ipcRenderer.invoke('priceImportPick'),
   salesImportPick:()=>ipcRenderer.invoke('salesImportPick'),
   ctImportPick:()=>ipcRenderer.invoke('ctImportPick'),
+  trImportPick:()=>ipcRenderer.invoke('trImportPick'),
   ctTemplate:h=>ipcRenderer.invoke('ctTemplate',h),
   preImportBackup:()=>ipcRenderer.invoke('preImportBackup'),
   xlPick:k=>ipcRenderer.invoke('xlPick',k),
