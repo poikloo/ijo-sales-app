@@ -103,7 +103,7 @@ function openForm(id){const x=id?data.find(e=>e.id===id):{status:'진행중',cos
  <div class="w"><div style="font-size:12px;color:#555">계약업체 / 지분율</div><div id="cos">${(x.cos.length?x.cos:[{n:'',s:''}]).map(c=>coRow(c.n,c.s)).join('')}</div><button type="button" onclick="$('cos').insertAdjacentHTML('beforeend',coRow());chk()">+ 업체 추가</button> <span id="sw"></span></div>
  <label>상태<select id="f_status">${ST.map(s=>`<option${s===x.status?' selected':''}>${s}</option>`).join('')}</select></label><label></label>
  <label class="w">개찰결과 메모<textarea id="f_result" rows="2">${esc(x.result)}</textarea></label><label class="w">비고<textarea id="f_memo" rows="2">${esc(x.memo)}</textarea></label></div>`;
- $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveForm('${id||''}')">저장</button>`;chk();if(!dlg.open)dlg.showModal();$('f_name').focus()}
+ $('dfoot').innerHTML=`<button class="p" onclick="saveForm('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;chk();if(!dlg.open)dlg.showModal();$('f_name').focus()}
 async function saveForm(id){const g=k=>$('f_'+k).value.trim(),o={name:g('name'),no:g('no'),org:g('org'),pub:g('pub'),open:g('open'),price:+g('price').replace(/,/g,'')||0,rep:g('rep'),
  cos:[...document.querySelectorAll('#cos .cr')].map(r=>({n:r.querySelector('.cn').value.trim(),s:+r.querySelector('.cs').value||0})).filter(c=>c.n),status:g('status'),result:g('result'),memo:g('memo'),updated:now()};
  if(!o.name)return uiAlert('공고명을 입력하세요.');if(!o.open)return uiAlert('개찰일시를 입력하세요.');
@@ -143,7 +143,7 @@ function openCl(id){const x=id?cl.find(e=>e.id===id):{title:'',due:csel||'',pri:
  $('dbody').innerHTML=`<div class="g"><label class="w">할 일 *<input id="c_title" value="${esc(x.title)}"></label><label>마감일<input id="c_due" type="date" value="${esc(x.due)}"></label>
  <label>우선순위<select id="c_pri">${PR.map(p=>`<option${p===x.pri?' selected':''}>${p}</option>`).join('')}</select></label><label>분류<input id="c_cat" list="cats" value="${esc(x.cat)}"></label>
  <label style="flex-direction:row;align-items:center;gap:6px;font-size:14px"><input id="c_done" type="checkbox" ${x.done?'checked':''}> 완료</label><label class="w">메모<textarea id="c_memo" rows="3">${esc(x.memo)}</textarea></label></div>`;
- $('dfoot').innerHTML=(id?`<button class="d" onclick="delCl('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCl('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('c_title').focus()}
+ $('dfoot').innerHTML=(id?`<button class="d" onclick="delCl('${id}')">삭제</button>`:'')+`<button class="p" onclick="saveCl('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal();$('c_title').focus()}
 function saveCl(id){const o={title:$('c_title').value.trim(),due:$('c_due').value,pri:$('c_pri').value,cat:$('c_cat').value.trim(),memo:$('c_memo').value.trim(),done:$('c_done').checked,updated:now()};
  if(!o.title)return uiAlert('할 일을 입력하세요.');if(id){const i=cl.findIndex(e=>e.id===id);cl[i]={...cl[i],...o}}else cl.push({id:uid(),example:false,...o});save();render();dlg.close();toast('저장했습니다')}
 async function delCl(id){if(await uiConfirm('이 할 일을 삭제할까요?')){cl=cl.filter(e=>e.id!==id);save();dlg.close();render();toast('삭제했습니다')}}
@@ -222,7 +222,7 @@ function openOrder(id){const o=id?orders.find(x=>x.id===id):{no:'',item:'',lines
  <div class="w" style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><label>거래처<input id="o_client" value="${esc(o.client)}"></label><label>품목<input id="o_item" value="${esc(o.item)}" placeholder="예: 야전배낭 몸체"></label></div><label class="w">아이템명<input id="o_fabric" value="${esc(o.fabric||'')}" placeholder="원단 아이템명"></label>
  <div class="w"><div class="lrow lhead"><span>색상</span><span>발주량</span><span>단위</span><span></span></div><div id="flines"></div><button type="button" onclick="flines.push({color:'',qty:0,unit:(flines[flines.length-1]||{}).unit||'YD'});lineRows();const i=$('flines').querySelectorAll('input');i[i.length-2].focus()">+ 추가</button></div></div>
  <div class="fsec" style="margin-top:16px">가공 공정</div><div class="prow phead"><span></span><span>공정</span><span>가공 업체</span><span>가공 축(%)</span><span></span></div><div id="fprocs"></div><button type="button" onclick="fprocs.push({id:uid(),name:'',vendor:'',shrink:null,ships:[]});procRows()">+ 공정 추가</button>`;
- $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveOrder('${id||''}')">저장</button>`;lineRows();procRows();if(!dlg.open)dlg.showModal();$('o_no').focus()}
+ $('dfoot').innerHTML=`<button class="p" onclick="saveOrder('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;lineRows();procRows();if(!dlg.open)dlg.showModal();$('o_no').focus()}
 async function saveOrder(id){const g=k=>$('o_'+k).value.trim(),o={no:g('no'),item:g('item'),lines:normLines({lines:flines.filter(l=>String(l.color).trim()||l.qty)}),client:g('client'),date:g('date'),due:g('due'),fabric:g('fabric'),updated:now(),
  procs:fprocs.filter(p=>p.name.trim()||p.vendor.trim()||(p.ships&&p.ships.length)).map(p=>({id:p.id,name:p.name.trim(),vendor:p.vendor.trim(),shrink:isRaw(p)?null:numOrNull(p.shrink),ships:p.ships||[]}))};
  if(!o.no)return uiAlert('오더번호를 입력하세요.');if(orders.some(x=>x.no===o.no&&x.id!==id)&&!await uiConfirm(`오더번호 ${o.no}이(가) 이미 있습니다. 그래도 저장할까요?`))return;

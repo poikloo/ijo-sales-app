@@ -66,7 +66,7 @@ function renderStmt(){document.querySelectorAll('#p_stmt .tab').forEach(e=>e.cla
 function openCust(id,name){const c=id?custs.find(x=>x.id===id):normCust({name:name||''});if(!c)return;$('dt').textContent=id?'거래처 수정':'거래처 등록';
  $('dbody').innerHTML=`<div class="g">${pForm('cu_',c,true)}
  <label>기본 납품처<input id="cu_dest" value="${esc(c.dest)}"></label><label>기본 담당자<input id="cu_contact" value="${esc(c.contact)}"></label><label class="w">메모<textarea id="cu_memo" rows="2">${esc(c.memo)}</textarea></label></div>`;
- $('dfoot').innerHTML=(id?`<button class="d" onclick="delCust('${id}')">삭제</button>`:'')+`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveCust('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal()}
+ $('dfoot').innerHTML=(id?`<button class="d" onclick="delCust('${id}')">삭제</button>`:'')+`<button class="p" onclick="saveCust('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal()}
 async function saveCust(id){const o={};[...P_FIELDS.map(x=>x[0]),'dest','contact','memo'].forEach(k=>o[k]=$('cu_'+k).value.trim());if(!o.name)return uiAlert('상호를 입력하세요.');
  if(custs.some(c=>c.name===o.name&&c.id!==id)&&!await uiConfirm(`'${o.name}' 거래처가 이미 있습니다. 그래도 저장할까요?`))return;
  let c;if(id){c=custs.find(x=>x.id===id);Object.assign(c,o)}else{c=normCust({...o});custs.push(c)}save();dlg.close();
@@ -199,7 +199,7 @@ function setSupDef(id){supDef=id;save();renderSuppliers();toast('기본 공급�
 function openSup(id){const x=id?sups.find(y=>y.id===id):normSupRec({});if(!x)return;$('dt').textContent=id?'공급자 수정':'공급자 추가';
  $('dbody').innerHTML=`<div class="g">${pForm('sp_',x)}
  <label class="w">연락처 문구 (한 줄씩, 예: 본사☎ … FAX …)<textarea id="sp_contacts" rows="3">${esc(x.contacts)}</textarea></label><label class="w">주의사항 문구 (한 줄씩)<textarea id="sp_notice" rows="3">${esc(x.notice)}</textarea></label></div>`;
- $('dfoot').innerHTML=`<button onclick="importSupplier()" style="margin-right:auto">엑셀 양식에서 가져오기</button><button onclick="dlg.close()">취소</button><button class="p" onclick="saveSup('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('sp_name').focus()}
+ $('dfoot').innerHTML=`<button onclick="importSupplier()" style="margin-right:auto">엑셀 양식에서 가져오기</button><button class="p" onclick="saveSup('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal();$('sp_name').focus()}
 function saveSup(id){const o={};P_FIELDS.forEach(([k])=>o[k]=$('sp_'+k).value.trim());o.contacts=$('sp_contacts').value.replace(/\s+$/,'');o.notice=$('sp_notice').value.replace(/\s+$/,'');
  if(!supHas({...o,notice:null}))return toast('상호나 등록번호 등 한 가지 이상 입력해 주세요.');
  if(id)Object.assign(sups.find(y=>y.id===id),o);else{const x=normSupRec(o);sups.push(x);if(!supDef||!sups.some(y=>y.id===supDef))supDef=x.id}

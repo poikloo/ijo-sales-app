@@ -37,7 +37,7 @@ function openContact(id){const c=id?contacts.find(x=>x.id===id):normContact({});
  ${CT_LISTS.map(([k,l])=>`<div class="w"><div style="font-size:12px;color:#555">${l}</div><div id="ctl_${k}"></div><button type="button" onclick="ctAddRow('${k}')">+ ${l.replace('회사 ','')} 추가</button></div>`).join('')}
  <label>메일 주소<input id="ct_email" type="email" value="${esc(c.email)}"></label><label>홈페이지 주소<input id="ct_web" value="${esc(c.web)}" placeholder="www.example.com"></label><div class="w"><div style="font-size:12px;color:#555;margin-bottom:3px">사업자등록증 <span class="muted">(회사별 — 바로 저장돼요)</span></div>${brBox(c.company)}</div><label class="w">메모<textarea id="ct_memo" rows="3">${esc(c.memo)}</textarea></label></div><p class="muted">모든 항목은 선택 입력입니다.</p>`;
  CT_LISTS.forEach(([k])=>ctListRender(k));brModal();
- $('dfoot').innerHTML=`<button onclick="dlg.close()">취소</button><button class="p" onclick="saveContact('${id||''}')">저장</button>`;if(!dlg.open)dlg.showModal();$('ct_company').focus()}
+ $('dfoot').innerHTML=`<button class="p" onclick="saveContact('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal();$('ct_company').focus()}
 function saveContact(id){const o={};CT_TEXT.forEach(([k])=>o[k]=$('ct_'+k).value.trim());CT_LISTS.forEach(([k])=>o[k]=strArr(ctDraft[k]));o.updated=now();
  if(!CT_TEXT.some(([k])=>o[k])&&!CT_LISTS.some(([k])=>o[k].length)){toast('입력된 내용이 없어요. 한 가지 이상 입력해 주세요.');return}
  if(id){const i=contacts.findIndex(x=>x.id===id);contacts[i]=normContact({...contacts[i],...o})}else contacts.push(normContact({...o,id:uid()}));save();render();toast('저장했습니다');id?viewContact(id):dlg.close()}

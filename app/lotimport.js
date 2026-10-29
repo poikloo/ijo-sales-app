@@ -51,7 +51,7 @@ function liRenderDlg(){const d=liDlg(),has=LI.previews.length;
    <div style="flex:1;overflow:auto;border:1px solid #dde;border-radius:6px;background:#f7f8fa">${has?LI.previews.map(u=>`<img src="${u}" style="width:${LI.zoom?'200%':'100%'};display:block;cursor:zoom-in" onclick="LI.zoom=!LI.zoom;liRenderDlg()">`).join(''):'<p class="muted" style="padding:12px">원본 미리보기가 여기에 보여요.</p>'}</div>
   </div>
   <div style="flex:1;overflow:auto;min-width:0" id="li_grid">${liGrid()}</div></div>
- <div class="df"><span id="li_tot" style="margin-right:auto">${liTotHTML()}</span><button onclick="$('lidlg').close()">취소</button><button onclick="liApply(false)" ${LI.lots.length?'':'disabled'}>추가</button><button class="p" onclick="liApply(true)" ${LI.lots.length?'':'disabled'}>적용</button></div></div>`}
+ <div class="df"><span id="li_tot" style="margin-right:auto">${liTotHTML()}</span><button onclick="liApply(false)" ${LI.lots.length?'':'disabled'}>추가</button><button class="p" onclick="liApply(true)" ${LI.lots.length?'':'disabled'}>적용</button><button onclick="$('lidlg').close()">취소</button></div></div>`}
 function liGrid(){if(!LI.res&&!LI.lots.length)return '<p class="muted">파일을 넣으면 LOT별 수량이 여기에 표로 나와요.</p>';
  const w=LI.res&&LI.res.warnings.length?`<p class="warn">${LI.res.warnings.map(esc).join('<br>')}</p>`:'';
  return w+`<table class="lot" id="li_t"><thead><tr><th style="width:80px">LOT NO.</th><th style="width:90px">COLOR</th>${Array.from({length:10},(_,i)=>`<th>${i+1}</th>`).join('')}<th style="width:44px">절</th><th style="width:70px">수량(YD)</th><th style="width:120px">명세서 절 / YD</th><th style="width:30px"></th></tr></thead>

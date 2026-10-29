@@ -33,7 +33,7 @@ function gPick(kind){return new Promise(async res=>{const s=await A.gStatus();
  d.innerHTML=`<div class="dh">구글 드라이브에서 ${XL_K[kind].t} 파일 선택 <span class="muted" style="font-weight:normal;font-size:12px">엑셀(.xlsx)과 구글 시트만 보여요 · ${esc(s.email)}</span></div>
  <div class="db"><div class="gpt"><button data-m="recent">최근 파일</button><button data-m="folder">내 드라이브</button><button data-m="shared">공유 문서함</button><span style="flex:1"></span><input id="gpq" placeholder="파일 이름 검색" style="width:220px"><button id="gpgo">검색</button></div>
  <div class="gpbc" id="gpbc"></div><div class="gpl" id="gpl"></div></div>
- <div class="df"><span class="muted" id="gpsel" style="flex:1;text-align:left"></span><button data-x="0">취소</button><button class="p" data-x="1" disabled>선택</button></div>`;
+ <div class="df"><span class="muted" id="gpsel" style="flex:1;text-align:left"></span><button class="p" data-x="1" disabled>선택</button><button data-x="0">취소</button></div>`;
  gp={d,mode:'recent',stack:[],q:'',files:[],next:'',sel:null,busy:0,err:'',res,kind};
  const fin=v=>{if(!gp||gp.d!==d)return;gp=null;try{d.close()}catch(e){}d.remove();res(v)};d._fin=fin;
  d.addEventListener('cancel',e=>{e.preventDefault();fin(null)});

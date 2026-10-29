@@ -6,7 +6,7 @@
   const run=()=>new Promise(res=>{
    const prev=document.activeElement;
    const d=document.createElement('dialog');d.className='uidlg';
-   d.innerHTML=`<div class="db"></div><div class="df">${isConfirm?'<button data-v="0">취소</button>':''}<button class="p" data-v="1">확인</button></div>`;
+   d.innerHTML=`<div class="db"></div><div class="df"><button class="p" data-v="1">확인</button>${isConfirm?'<button data-v="0">취소</button>':''}</div>`;
    d.querySelector('.db').textContent=String(msg==null?'':msg);
    let done=false;const fin=v=>{if(done)return;done=true;try{d.close()}catch(e){}d.remove();
     if(prev&&prev.isConnected&&prev!==document.body&&typeof prev.focus==='function')try{prev.focus({preventScroll:true})}catch(e){}
