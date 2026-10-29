@@ -2,9 +2,11 @@
 // <userData>/requests/inbox 의 JSON 요청을 카드로 보여 주고, 사용자가 [적용]을 눌렀을 때만 앱의 기존 로직(normalizeOrders·deriveOrder·stPickOrder·stClean·linkShip·slNorm·prNorm)으로 데이터를 만듦.
 // 미리보기는 '작업용 사본'에 실제로 실행해 본 뒤 되돌리는 방식(dry-run)이라, 화면에 보이는 내용과 적용 결과가 같음.
 // 적용: 자동 백업(preImportBackup) → 사본에서 전부 실행 → 하나라도 실패하면 원래 데이터로 되돌림(전부 아니면 전무) → 저장 → 파일을 done 으로.
-let rqEdits={},rqEditOn={},rqPend=[],rqLog=[],rqErrs=[],rqOpenAfter={},rqBusy=false,rqInfo=null,rqTimer=null;const rqSeen=new Set();
-function rqLoad(r){rqLog=(r&&!Array.isArray(r)&&Array.isArray(r.requestLog)?r.requestLog:[]).filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),file:String(x.file||''),status:x.status==='rejected'?'rejected':'done',at:String(x.at||''),summary:String(x.summary||''),...(x.edited?{edited:true,edits:(Array.isArray(x.edits)?x.edits:[]).slice(0,100).map(String)}:{})}))}
-const rqPayload=()=>({requestLog:rqLog.slice(-500)});
+let rqDoneIds=[],rqEdits={},rqEditOn={},rqPend=[],rqLog=[],rqErrs=[],rqOpenAfter={},rqBusy=false,rqInfo=null,rqTimer=null;const rqSeen=new Set();
+function rqLoad(r){{const a=r&&!Array.isArray(r)&&Array.isArray(r.requestDoneIds)?r.requestDoneIds.map(String):[];rqDoneIds=a}rqLog=(r&&!Array.isArray(r)&&Array.isArray(r.requestLog)?r.requestLog:[]).filter(x=>x&&typeof x==='object'&&x.id).map(x=>({id:String(x.id),file:String(x.file||''),status:x.status==='rejected'?'rejected':'done',at:String(x.at||''),summary:String(x.summary||''),...(x.edited?{edited:true,edits:(Array.isArray(x.edits)?x.edits:[]).slice(0,100).map(String)}:{})}));rqSeedIds()}
+const rqPayload=()=>({requestLog:rqLog.slice(-500),requestDoneIds:rqDoneIds.slice(-5000)});
+// 같은 요청 두 번 적용 막기: 목록(requestLog)을 지워도 남는 '적용한 id' 목록 (예전 데이터는 목록의 적용 기록에서 채움)
+function rqSeedIds(){const st=new Set(rqDoneIds);rqLog.forEach(x=>{if(x.status==='done'&&!st.has(x.id)){st.add(x.id);rqDoneIds.push(x.id)}})}
 function rqImport(r){if(r&&!Array.isArray(r)&&Array.isArray(r.requestLog))rqLoad(r)}
 const RQ_T={'production.addOrder':'생산 오더 추가','production.updateOrder':'생산 오더 수정','production.addShipment':'출고 내역 추가','production.setDone':'오더 완료 표시','statement.createFromOrder':'거래명세서 작성','sales.addRow':'매출 행 추가','price.addRow':'단가 행 추가','production.attachFile':'파일 첨부'};
 const RQ_KEYS={'production.addOrder':['order'],'production.updateOrder':['orderNo','set'],'production.addShipment':['orderNo','process','processNo','addProcess','vendor','shrink','ships'],'production.setDone':['orderNo','done'],
@@ -137,7 +139,7 @@ const RQ_H={
   it.diff=[['품목 / 부위','',[n.cat,n.part].filter(Boolean).join(' / ')],['CODE','',n.code],['ITEM','',n.item],['색상','',n.color],['폭','',n.width],['생지','',n.g?`${n.gV||'-'} ${n.gCur==='USD'?'$'+n.g:prW(n.g)+'원'}`:''],['염색','',n.d||n.dV?`${n.dV||'-'} ${prW(n.d)}원${n.dS!=null?' · 축 '+prPct(n.dS):''}`:''],['가공1','',n.p1||n.p1V?`${n.p1V||'-'} ${n.p1D} ${prW(n.p1)}원`:''],['가공2','',n.p2||n.p2V?`${n.p2V||'-'} ${n.p2D} ${prW(n.p2)}원`:''],['계산 결과','',c?`NET ${prW(c.net)}원/YD · OFFER ${prW(c.off)}원/YD`:'']].filter(r=>r[2]!=='')}};
 // 작업용 사본에서 실행 (미리보기·적용 공용). 호출하는 쪽에서 rqWork/rqRestore 로 감쌈
 function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set()},top=[];
- const done=rqLog.find(x=>x.id===req.id&&x.status==='done');if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR'):''} 적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
+ const done=rqLog.find(x=>x.id===req.id&&x.status==='done')||(rqDoneIds.includes(req.id)?{at:''}:null);if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR')+' ':''}적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
  const twin=rqPend.find(x=>x.file!==P.file&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
  const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],diff:[],table:null};
   rqExtra(a,['type','comment',...(RQ_KEYS[a.type]||[])],'동작',it);try{RQ_H[a.type](a,it,ctx,req,P)}catch(e){it.errors.push('처리 중 오류: '+(e&&e.message||e))}return it});
@@ -214,7 +216,7 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
   const oldF=[];for(const {x,r} of added){if(x.kind==='statement'){const o=shipFiles.find(f=>f.shipId===x.sid);if(o){oldF.push(o);shipFiles=shipFiles.filter(f=>f.id!==o.id)}shipFiles.push(normSs({...r,orderId:x.oid,processId:x.pid,shipId:x.sid,addedAt:now()}))}
    else wfFiles.push(normWf({...r,orderId:x.oid,addedAt:now(),kind:x.kind==='purchaseOrder'?'po':'wo'}))}
   stEd=snap.stEd;
-  const sm=rqSummary(P,R);rqLog.push({id:P.req.id,file,status:'done',at:new Date().toISOString(),summary:sm.slice(0,1000),...(ed?{edited:true,edits:edits.slice(0,100)}:{})});save();
+  const sm=rqSummary(P,R);if(!rqDoneIds.includes(P.req.id))rqDoneIds.push(P.req.id);rqLog.push({id:P.req.id,file,status:'done',at:new Date().toISOString(),summary:sm.slice(0,1000),...(ed?{edited:true,edits:edits.slice(0,100)}:{})});save();
   try{await A.reqResolve(file,'done',{id:P.req.id,backup:bk||'',applied:R.items.map(it=>({type:it.type,summary:it.summary,warnings:it.warns})),statementIds:R.ctx.stmtIds,...(ed?{edited:true,edits,originalActions:P0.req.actions,editedActions:P.req.actions,editedReq:P.req}:{}),attached:added.map(({x,r})=>({kind:x.kind,name:r.name,path:r.path}))})}catch(e){toast('적용했지만 요청 파일을 done 폴더로 옮기지 못했어요')}
   for(const f of oldF){try{await A.ssDelete(f.path)}catch(e){}}
   delete rqEdits[file];delete rqEditOn[file];rqPend=rqPend.filter(x=>x.file!==file);rqBadge();
@@ -227,6 +229,14 @@ async function rqReject(file){const P=rqPend.find(x=>x.file===file);if(!P||rqBus
  try{await A.reqResolve(file,'rejected',{id:P.req.id,reason:'사용자가 거부함'})}catch(e){return uiAlert('요청 파일을 옮기지 못했어요: '+(e&&e.message||e))}
  rqLog.push({id:P.req.id,file,status:'rejected',at:new Date().toISOString(),summary:String(P.req.note||'').slice(0,300)});save();
  delete rqEdits[file];delete rqEditOn[file];rqPend=rqPend.filter(x=>x.file!==file);rqBadge();render();toast('요청을 거부했어요')}
+// ---- 최근 처리 목록 지우기 (목록만 지움: done/rejected 폴더의 파일과 '적용한 id' 기록은 그대로) ----
+function rqChoose(){const nd=rqLog.filter(x=>x.status==='done').length,nr=rqLog.filter(x=>x.status==='rejected').length;
+ return new Promise(res=>{const d=document.createElement('dialog');d.className='uidlg';
+  d.innerHTML=`<div class="db">최근 처리한 요청 목록에서 무엇을 지울까요?\n(적용 ${nd}건 · 거부 ${nr}건 — 목록만 지우고, 요청 파일과 데이터는 그대로예요)</div><div class="df"><button data-v="done"${nd?'':' disabled'}>적용만 삭제</button><button data-v="rejected"${nr?'':' disabled'}>거부만 삭제</button><button class="d" data-v="all"${nd+nr?'':' disabled'}>모두 삭제</button><span style="flex:1"></span><button data-v="">취소</button></div>`;
+  const fin=v=>{try{d.close()}catch(e){}d.remove();res(v)};d.addEventListener('click',e=>{const b=e.target.closest('button[data-v]');if(b)fin(b.dataset.v)});d.addEventListener('cancel',e=>{e.preventDefault();fin('')});
+  document.body.appendChild(d);d.showModal();d.querySelector('button[data-v=""]').focus()})}
+async function rqClearLog(){if(!rqLog.length)return;const v=await rqChoose();if(!v)return;const n0=rqLog.length;
+ rqLog=v==='all'?[]:rqLog.filter(x=>x.status!==v);const n=n0-rqLog.length;if(!n)return;save();render();toast(`목록에서 ${n}건을 지웠어요`)}
 // ---- 화면 ----
 const rqPath=()=>rqInfo?rqInfo.inbox:'';
 function rqFolderBar(){return `<div class="rqbar"><span class="muted">요청 파일 폴더</span><code class="rqp" title="${esc(rqPath())}">${esc(rqPath()||'-')}</code><button onclick="A.reqOpenFolder('inbox')">폴더 열기</button><button onclick="A.copyText(rqPath());toast('경로를 복사했어요')">경로 복사</button><button onclick="rqRefresh('manual');toast('요청함을 확인했어요')">지금 확인</button></div>`}
@@ -245,5 +255,5 @@ function renderReqs(){const el=$('rq_wrap');if(!el)return;
  el.innerHTML=`<div class="card"><h2>요청함 <span class="muted" style="font-weight:normal">— Grok Bot이 보낸 작업 요청. 카드를 확인하고 [적용]을 눌러야 반영돼요 (적용 전에 자동 백업)</span></h2>${rqFolderBar()}</div>
  ${rqPend.length?rqPend.map(rqCard).join(''):'<div class="card"><p class="muted" style="margin:0">대기 중인 요청이 없습니다.</p></div>'}
  ${rqErrs.length?`<div class="card"><h2>읽지 못한 요청 파일 <span class="muted" style="font-weight:normal">(error 폴더로 옮김)</span><button style="float:right" onclick="A.reqOpenFolder('error')">error 폴더 열기</button></h2><ul class="rql">${rqErrs.map(e=>`<li><b>${esc(e.file)}</b> — ${esc(e.reason)}</li>`).join('')}</ul></div>`:''}
- ${log.length?`<div class="card"><h2>최근 처리한 요청</h2><ul class="rql">${log.map(x=>`<li><span class="badge ${x.status==='done'?'rqok':''}">${x.status==='done'?'적용':'거부'}</span>${esc(x.at?new Date(x.at).toLocaleString('ko-KR'):'')} · ${esc(x.id)}${x.edited?' <span class="rqmod">수정됨</span>':''}<br><small class="muted" style="white-space:pre-line">${esc(x.summary)}</small></li>`).join('')}</ul></div>`:''}`}
+ ${log.length?`<div class="card"><h2>최근 처리한 요청 <span class="muted" style="font-weight:normal;font-size:12px">(최근 8건 표시 · ${rqLog.length}건 보관, 500건까지)</span><button style="float:right" onclick="rqClearLog()">목록 지우기</button></h2><ul class="rql">${log.map(x=>`<li><span class="badge ${x.status==='done'?'rqok':''}">${x.status==='done'?'적용':'거부'}</span>${esc(x.at?new Date(x.at).toLocaleString('ko-KR'):'')} · ${esc(x.id)}${x.edited?' <span class="rqmod">수정됨</span>':''}<br><small class="muted" style="white-space:pre-line">${esc(x.summary)}</small></li>`).join('')}</ul></div>`:''}`}
 function rqSettings(){const el=$('rq_card');if(!el)return;el.innerHTML=`<h2>요청함 (Grok Bot 요청 받기)</h2><p class="muted" style="margin:0 0 8px">이 폴더에 들어온 요청 파일(JSON)은 [요청함] 메뉴에 카드로 나타나요. 직접 [적용]을 누르기 전에는 아무것도 바뀌지 않아요.</p>${rqFolderBar()}<div class="muted" style="margin-top:6px;font-size:12px">처리된 파일: requests\\done · 거부: requests\\rejected · 형식 오류: requests\\error</div>`}
