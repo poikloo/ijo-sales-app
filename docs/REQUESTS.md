@@ -300,3 +300,68 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - 오더 삭제·공정 삭제·출고 수정/삭제, 거래명세서 수정은 아직 요청으로 할 수 없습니다.
 - 첨부(`production.attachFile`)는 파일을 추가만 합니다. 첨부 삭제는 요청으로 할 수 없고, `replace: true`일 때만 기존 거래명세서 파일을 바꿉니다.
 - 백업은 적용 직전 디스크의 `data.json` 기준입니다.
+
+## 7. Lookup snapshot (조회용 스냅샷, 읽기 전용)
+
+요청 파일은 앱 데이터를 **바꾸는** 통로이고, 스냅샷은 Grok Bot이 앱 데이터를 **조회만** 하는 통로입니다.
+
+- 경로: `%APPDATA%\이조 영업관리\requests\snapshot\snapshot.json` (+ 같은 폴더의 `README.txt`)
+- 갱신: 앱 시작 시, 그리고 저장할 때마다 약 2초 뒤(디바운스). `snapshot.json.tmp` 에 쓴 뒤 rename 하므로 읽는 쪽은 항상 완전한 파일을 봅니다. UTF-8, BOM 없음.
+- 켜기/끄기: 설정 › **조회용 파일 만들기 (Grok Bot 조회)** (기본 켜짐). 끄면 폴더의 파일을 지우고 더 이상 만들지 않습니다.
+- 넣지 않는 것: 비밀번호·토큰·OAuth·Google Drive 연결 정보, 앱 설정(화면 배치·열 너비 등), 첨부 파일 내용(이름만), 공고 일정·체크리스트.
+- 이 파일을 고쳐도 앱에는 반영되지 않습니다. 변경은 §3 요청 파일로 하세요.
+- `example: true` 인 항목은 앱의 (예시) 데이터입니다. 실제 질문에 답할 때는 제외하세요.
+- 모든 목록 항목에 `search` (검색용으로 주요 글자 칸을 공백으로 이어 붙인 문자열)가 있습니다. 사용자가 말한 품명·색상·업체명을 `search` 에서 부분 일치(공백 무시 권장)로 찾으세요.
+- 금액은 원(KRW), 수량은 각 항목의 `unit`(보통 YD). 소수 둘째 자리 반올림. 비어 있는 값은 `""` 또는 `null`.
+
+### 최상위
+
+| 키 | 설명 |
+|---|---|
+| `schema` | 형식 버전 (현재 `1`). 호환되지 않게 바뀌면 올라갑니다. |
+| `app` / `appVersion` | `"ijo-sales"` / 앱 버전 (예: `"1.4.12"`) |
+| `generatedAt` | 만든 시각 (ISO 8601, UTC) |
+| `readOnly` | 항상 `true` |
+| `priceSettings` | 단가 계산 설정: `fx` 환율(USD→KRW), `yd2m`(0.9144), `vat`(0.1), `defaultDyeShrink`/`defaultProc1Shrink`/`defaultProc2Shrink`/`defaultMargin` (비율, 0.05 = 5%) |
+| `counts` | 각 목록의 건수 |
+| `prices` `sales` `orders` `statements` `testReports` `contacts` | 아래 표 |
+
+### `prices[]` — 단가 관리 (YD당, 원)
+
+| 키 | 화면 이름 |
+|---|---|
+| `category` `part` `code` `item` `color` `width` | 구분 · 부위 · 코드 · 품명 · 색상 · 폭 |
+| `greige` `{vendor,currency,price,priceKRW}` | 생지 업체 · 통화(KRW/USD) · 생지 단가 · 원화 환산 |
+| `dye` `{vendor,shrink,price,cumulative}` | 염색 업체 · 염색 축(비율) · 염색 단가 · 염색 누계 |
+| `proc1` / `proc2` `{vendor,desc,shrink,price,cumulative}` | 가공1/가공2 업체 · 가공 내용 · 축 · **가공 단가(가공료)** · 누계 |
+| `processingFee` | **가공료 합계** = `proc1.price + proc2.price` |
+| `etc` `{desc,price}` / `trans` | 기타부대비용 / TRANS(운임) |
+| `marginRate` | 마진율 (비율) |
+| `net` / `netPerM` | **NET 단가** (/YD) / NET (/M) |
+| `margin` `offer` `offerPerM` `offerVat` `offerVatPerM` | 마진액 · OFFER · OFFER/M · OFFER+VAT · OFFER+VAT/M |
+| `memo` | 메모 |
+
+계산: 염색누계 = 생지 × (1+염색축) + 염색단가 → 가공1누계 = 염색누계 × (1+가공1축) + 가공1단가 → 가공2누계 → NET = 가공2누계 + 기타 + TRANS. 축이 비어 있고 그 공정 단가 > 0 이면 `priceSettings` 의 기본 축을 씁니다(스냅샷의 `shrink` 는 이미 적용된 값).
+
+예) "(예시)방수가방 겉감 원단의 NET단가와 가공료" → `prices` 에서 `search` 에 "방수가방"·"겉감"이 들어간 항목 → `net`, `processingFee` (필요하면 `proc1`/`proc2` 내역과 `color` 별로 나눠 답하기).
+
+### `sales[]` — 매출
+
+`date` `year` `client` `orderNo` `item` `fabric` `process` `color` `unitPrice` `qty` `supply`(공급가액) `total`(합계, VAT 포함) `memo`
+
+### `orders[]` — 생산 관리
+
+`no`(오더번호) `item`(품목) `fabric`(아이템명) `client` `date`(발주일) `due`(납기일) `delivered`(오더 완료) `qty` `unit` `lines[]{color,qty,unit}`,
+`processes[]{step,name,vendor,shrink(가공축 %),shippedQty,shipments[]{date,qty,memo,statementFiles[]}}`, `workOrderFiles[]` `purchaseOrderFiles[]` (첨부 파일 이름)
+
+### `statements[]` — 거래명세서
+
+`no` `date` `orderNo` `item` `spec` `customer{reg,name,ceo,addr,biz,type}` `supplier`(공급자 상호) `dest`(납품처) `contact` `unitPrice` `note` `lots[]{lotNo,color,rolls[],qty}` `totalQty`
+
+### `testReports[]` — TEST REPORT
+
+`name`(품명/의뢰명) `lab`(시험기관) `reportNo`(접수번호) `received`(접수일) `completed`(완료일) `result`(결과) `failedItems`(불합격 항목) `memo` `files[]`(성적서 첨부 이름)
+
+### `contacts[]` — 거래처 정보 (명함)
+
+`company` `name` `team` `title` `email` `web` `addrs[]` `tels[]` `faxes[]` `mobiles[]` `memo`

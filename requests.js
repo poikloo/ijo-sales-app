@@ -67,6 +67,16 @@ function scan(){ensure();const pending=[],errors=[];let waiting=0;let names=[];t
     if(reason){try{moveTo('error',name,{reason,id:req&&typeof req.id==='string'?req.id:''},req&&typeof req==='object'?req:null);errors.push({file:name,reason})}catch(e){}continue}
     pending.push({file:name,hash,mtime:st.mtimeMs,req,files:attMap(req)})}
   return {pending,errors,waiting}}
+const SNAP_README=`이조 영업관리 — 조회용 스냅샷 (읽기 전용)
+=========================================
+snapshot.json 은 앱이 시작할 때와 저장할 때마다(약 2초 뒤) 자동으로 다시 만드는 '조회용' 파일입니다.
+Grok Bot(업무 요청)이 단가·매출·생산·거래명세서·TEST REPORT·거래처 정보를 찾아볼 때 읽습니다.
+
+- 이 파일을 고쳐도 앱 데이터는 바뀌지 않습니다. 변경은 requests\\inbox 에 요청 파일을 넣고 앱의 [요청함]에서 적용하세요.
+- 형식(스키마)은 docs/REQUESTS.md 의 'Lookup snapshot' 절을 보세요. 최상위 schema 값이 형식 버전입니다.
+- 비밀번호·토큰·로그인 정보·앱 설정은 들어 있지 않습니다.
+- 설정 > '조회용 파일 만들기 (Grok Bot 조회)' 를 끄면 이 폴더의 파일이 삭제되고 더 이상 만들지 않습니다.
+`;
 function setup({getWin}){
   let sig='',deb=null,watcher=null;
   const notify=()=>{const w=getWin();if(w&&!w.isDestroyed())w.webContents.send('req-changed')};
@@ -76,6 +86,15 @@ function setup({getWin}){
   app.whenReady().then(()=>{watch();sig=sigNow();
     // fs.watch 가 놓치는 경우(네트워크 드라이브·일부 백신 등)를 위해 5초마다 목록이 바뀌었는지 확인
     setInterval(()=>{if(!watcher)watch();const s=sigNow();if(s!==sig){sig=s;notify()}},POLL_MS)});
+  // ---- 조회용 스냅샷 (Grok Bot 이 읽기만 하는 파일) : requests/snapshot/snapshot.json ----
+  const SNAP=()=>path.join(ROOT(),'snapshot'),SNAPF=()=>path.join(SNAP(),'snapshot.json');
+  ipcMain.handle('snapWrite',(e,json)=>{if(typeof json!=='string'||json.length>200*1024*1024)throw new Error('bad snapshot');JSON.parse(json);
+    fs.mkdirSync(SNAP(),{recursive:true});const tmp=SNAPF()+'.tmp';fs.writeFileSync(tmp,json,'utf8');fs.renameSync(tmp,SNAPF());
+    const rd=path.join(SNAP(),'README.txt');if(!fs.existsSync(rd)||fs.readFileSync(rd,'utf8')!==SNAP_README){fs.writeFileSync(rd+'.tmp',SNAP_README,'utf8');fs.renameSync(rd+'.tmp',rd)}
+    return {path:SNAPF(),mtime:fs.statSync(SNAPF()).mtime.toISOString()}});
+  ipcMain.handle('snapDelete',()=>{for(const f of ['snapshot.json','snapshot.json.tmp','README.txt'])fs.rmSync(path.join(SNAP(),f),{force:true});try{fs.rmdirSync(SNAP())}catch(e){}return true});
+  ipcMain.handle('snapInfo',()=>{try{return {path:SNAPF(),mtime:fs.statSync(SNAPF()).mtime.toISOString()}}catch(e){return {path:SNAPF(),mtime:''}}});
+  ipcMain.handle('snapOpenFolder',()=>{fs.mkdirSync(SNAP(),{recursive:true});return shell.openPath(SNAP())});
   ipcMain.handle('reqInfo',()=>{ensure();return {root:ROOT(),inbox:D.inbox(),done:D.done(),rejected:D.rejected(),error:D.error()}});
   ipcMain.handle('reqList',()=>scan());
   ipcMain.handle('reqOpenFolder',(e,k)=>{ensure();return shell.openPath(D[k]?D[k]():D.inbox())});
