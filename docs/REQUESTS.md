@@ -256,6 +256,27 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - 원래 요청 파일은 바꾸지 않습니다. 적용하면 실제로 적용한 요청을 `done\<이름>.edited.json`으로 남기고, `.result.json`에 `edited`, `edits`(바뀐 칸 목록), `originalActions`, `editedActions`를, `requestLog`에 `edited`·`edits`를 기록합니다.
 - 백업·전부 아니면 전무·같은 id 두 번 적용 금지는 그대로입니다.
 
+### 3.9 `testReport.attachFile` — TEST REPORT에 시험성적서 첨부 (접수번호로 찾기)
+
+| 필드 | 필수 | 설명 |
+|---|---|---|
+| `reportNo` | ✔ | 접수번호. 공백·하이픈·대소문자는 무시하고 **정확히 일치**하는 TEST REPORT 1건을 찾음 |
+| `file` | ✔ | 받은편지함 폴더 기준 상대 경로 (예: `files/…pdf`). 3.8과 같은 규칙 |
+
+- 일치하는 행이 없으면 "일치하는 성적서 없음" 오류 → 적용 불가 (✎ 수정에서 접수번호를 고칠 수 있음). 2건 이상 일치해도 오류.
+- 한 행에 여러 파일 가능 (동작을 여러 개 보내면 됨). 같은 이름 파일이 이미 붙어 있으면 경고 후 건너뜀.
+- 적용하면 TEST REPORT의 성적서(📎) 칸에 들어가고, 스냅샷 `testReports[].files` / `attached`에 반영됨.
+
+```json
+{
+  "version": 1, "id": "ex-tr-001", "createdAt": "2026-10-30T12:00:00+09:00", "source": "grokbot",
+  "note": "(예시) 시험성적서 첨부",
+  "actions": [
+    { "type": "testReport.attachFile", "reportNo": "EX-0003", "file": "files/sample_report_EX-0003.pdf" }
+  ]
+}
+```
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -360,7 +381,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ### `testReports[]` — TEST REPORT
 
-`name`(품명/의뢰명) `lab`(시험기관) `reportNo`(접수번호) `received`(접수일) `completed`(완료일) `result`(결과) `failedItems`(불합격 항목) `memo` `files[]`(성적서 첨부 이름)
+`name`(품명/의뢰명) `lab`(시험기관) `reportNo`(접수번호) `received`(접수일) `completed`(완료일) `result`(결과) `failedItems`(불합격 항목) `memo` `files[]`(성적서 첨부 이름) `attached`(첨부 있음 true/false)
 
 ### `qualityStandards[]` — 품질 기준 (조달청 규격서)
 

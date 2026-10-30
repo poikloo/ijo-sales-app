@@ -8,9 +8,9 @@ const rqPayload=()=>({requestLog:rqLog.slice(-500),requestDoneIds:rqDoneIds.slic
 // 같은 요청 두 번 적용 막기: 목록(requestLog)을 지워도 남는 '적용한 id' 목록 (예전 데이터는 목록의 적용 기록에서 채움)
 function rqSeedIds(){const st=new Set(rqDoneIds);rqLog.forEach(x=>{if(x.status==='done'&&!st.has(x.id)){st.add(x.id);rqDoneIds.push(x.id)}})}
 function rqImport(r){if(r&&!Array.isArray(r)&&Array.isArray(r.requestLog))rqLoad(r)}
-const RQ_T={'production.addOrder':'생산 오더 추가','production.updateOrder':'생산 오더 수정','production.addShipment':'출고 내역 추가','production.setDone':'오더 완료 표시','statement.createFromOrder':'거래명세서 작성','sales.addRow':'매출 행 추가','price.addRow':'단가 행 추가','production.attachFile':'파일 첨부'};
+const RQ_T={'production.addOrder':'생산 오더 추가','production.updateOrder':'생산 오더 수정','production.addShipment':'출고 내역 추가','production.setDone':'오더 완료 표시','statement.createFromOrder':'거래명세서 작성','sales.addRow':'매출 행 추가','price.addRow':'단가 행 추가','production.attachFile':'파일 첨부','testReport.attachFile':'시험성적서 첨부'};
 const RQ_KEYS={'production.addOrder':['order'],'production.updateOrder':['orderNo','set'],'production.addShipment':['orderNo','process','processNo','addProcess','vendor','shrink','ships'],'production.setDone':['orderNo','done'],
- 'statement.createFromOrder':['orderNo','date','lots','customer','item','spec','price','note','dest','contact','linkShip','open'],'sales.addRow':['row'],'price.addRow':['row'],'production.attachFile':['orderNo','kind','file','process','processNo','shipDate','shipQty','replace']};
+ 'statement.createFromOrder':['orderNo','date','lots','customer','item','spec','price','note','dest','contact','linkShip','open'],'sales.addRow':['row'],'price.addRow':['row'],'production.attachFile':['orderNo','kind','file','process','processNo','shipDate','shipQty','replace'],'testReport.attachFile':['reportNo','file']};
 const RQ_ATT_K={statement:'거래명세서',workOrder:'작업의뢰서',purchaseOrder:'발주서'};
 const rqSize=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
 const RQ_ORDER_KEYS=['no','item','fabric','client','date','due','lines','procs','delivered'],RQ_SET_KEYS=['item','fabric','client','date','due','lines'];
@@ -129,6 +129,15 @@ const RQ_H={
   ctx.attach.push({kind,oid:o.id,pid:p?p.id:'',sid:s?s.id:'',abs:fi.abs,name:fi.name,old:old?old.id:''});
   it.diff=[['파일','',`${fi.name} (${rqSize(fi.size)})`],['붙일 곳','',K==='거래명세서'?`생산 관리 › 오더 ${o.no} › '${p.name}' 공정 · ${s.date||'-'} 출고 ${num(s.qty)} ${o.unit} › 거래명세서 칸`:`작업의뢰서 메뉴 › 오더 ${o.no} › ${K} 칸`]];
   if(old)it.diff.push(['기존 파일',old.name,fi.name]);it.file=fi.rel},
+ 'testReport.attachFile'(a,it,ctx,req,P){const no=rqS(a.reportNo),k=trNoKey(no);let t=null,fi=null;
+  if(!no)it.errors.push('reportNo(접수번호)가 없습니다');else{const l=trs.filter(x=>trNoKey(x.no)===k);if(!l.length)it.errors.push('일치하는 성적서 없음');else if(l.length>1)it.errors.push(`접수번호 '${no}'인 성적서가 ${l.length}건입니다`);else t=l[0]}
+  if(typeof a.file!=='string'||!a.file.trim())it.errors.push('file(첨부할 파일 경로)이 없습니다');else{fi=(P&&P.files||{})[a.file];if(!fi)it.errors.push(`file '${a.file}' 정보를 읽지 못했습니다 — [지금 확인]을 눌러 주세요`);else if(fi.error){it.errors.push(fi.error);fi=null}}
+  it.summary=`TEST REPORT ${t?t.no:(no||'?')}에 시험성적서${fi?` '${fi.name}'`:''}을(를) 첨부합니다`;if(it.errors.length||!t||!fi)return;
+  const ex=wfFiles.filter(f=>f.kind==='tr'&&f.orderId===t.id),nk=fi.name.toLowerCase(),dk=t.id+'|'+nk;
+  it.diff=[['접수번호','',t.no],['성적서','',`${t.name}${t.lab?' · '+t.lab:''}`],['접수일 / 완료일','',`${t.recv||'-'} / ${t.done||'-'}`],['결과','',t.result||'-'],['파일','',`${fi.name} (${rqSize(fi.size)})`]];
+  if(ex.length)it.diff.push(['기존 첨부','',ex.map(f=>f.name).join(', ')]);
+  if(ex.some(f=>f.name.toLowerCase()===nk)||ctx.trTaken.has(dk)){it.warns.push(`같은 이름의 파일 '${fi.name}'이(가) 이미 붙어 있어 건너뜁니다`);it.file=fi.rel;return}
+  ctx.trTaken.add(dk);ctx.attach.push({kind:'testReport',tid:t.id,abs:fi.abs,name:fi.name});it.file=fi.rel},
  'price.addRow'(a,it){const r=a.row;if(!rqObj(r)){it.errors.push('row 객체가 없습니다');return}rqExtra(r,RQ_PRICE_KEYS,'row',it);
   if(!rqS(r.item)&&!rqS(r.code))it.errors.push('row.item(ITEM) 또는 row.code(CODE)가 필요합니다');
   for(const k of ['g','d','p1','p2','e','t','dS','p1S','p2S','m'])if(r[k]!=null&&r[k]!==''&&isNaN(rqN(r[k])))it.errors.push(`row.${k} '${r[k]}'이(가) 숫자가 아닙니다`);
@@ -138,7 +147,7 @@ const RQ_H={
   const x={};RQ_PRICE_KEYS.forEach(k=>{if(r[k]!=null)x[k]=r[k]});const n=prNorm({...x,id:uid()});n.example=false;n.src='';prices.push(n);const c=typeof prCalc==='function'?prCalc(n):null;
   it.diff=[['품목 / 부위','',[n.cat,n.part].filter(Boolean).join(' / ')],['CODE','',n.code],['ITEM','',n.item],['색상','',n.color],['폭','',n.width],['생지','',n.g?`${n.gV||'-'} ${n.gCur==='USD'?'$'+n.g:prW(n.g)+'원'}`:''],['염색','',n.d||n.dV?`${n.dV||'-'} ${prW(n.d)}원${n.dS!=null?' · 축 '+prPct(n.dS):''}`:''],['가공1','',n.p1||n.p1V?`${n.p1V||'-'} ${n.p1D} ${prW(n.p1)}원`:''],['가공2','',n.p2||n.p2V?`${n.p2V||'-'} ${n.p2D} ${prW(n.p2)}원`:''],['계산 결과','',c?`NET ${prW(c.net)}원/YD · OFFER ${prW(c.off)}원/YD`:'']].filter(r=>r[2]!=='')}};
 // 작업용 사본에서 실행 (미리보기·적용 공용). 호출하는 쪽에서 rqWork/rqRestore 로 감쌈
-function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set()},top=[];
+function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set(),trTaken:new Set()},top=[];
  const done=rqLog.find(x=>x.id===req.id&&x.status==='done')||(rqDoneIds.includes(req.id)?{at:''}:null);if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR')+' ':''}적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
  const twin=rqPend.find(x=>x.file!==P.file&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
  const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],diff:[],table:null};
@@ -185,6 +194,7 @@ function rqForm(P,i,a){const f=P.file,id=k=>`rqe_${rqPend.indexOf(P)}_${i}_${k.r
  else if(T==='statement.createFromOrder')h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('date','날짜',{t:'d'})}${inp('customer','공급받는자',{list:'rqe_vl'})}${inp('price','단가',{t:'n'})}</div><div class="rqer">${inp('item','품명')}${inp('spec','규격')}${inp('note','비고')}${inp('dest','납품처')}${inp('contact','담당자')}</div>`+(a.lots||[]).map((_,j)=>`<div class="rqer"><span class="muted">${j+1}</span>${inp(`lots.${j}.lotNo`,'LOT NO.')}${inp(`lots.${j}.color`,'COLOR')}${inp(`lots.${j}.rolls`,'절별 수량 (쉼표로)',{t:'r',w:1})}</div>`).join('')
  else if(T==='sales.addRow'||T==='price.addRow'){const K=T==='sales.addRow'?RQ_SALES_KEYS:RQ_PRICE_KEYS,NUM=['qty','unitPrice','supply','total','year','g','d','dS','p1','p1S','p2','p2S','e','t','m'];
   const ks=K.filter(k=>a.row&&a.row[k]!=null||T==='sales.addRow');h=`<div class="rqer">${ks.map(k=>inp('row.'+k,k,k==='date'?{t:'d'}:NUM.includes(k)?{t:'n'}:k==='client'?{list:'rqe_vl'}:{})).join('')}</div>`}
+ else if(T==='testReport.attachFile')h=`<div class="rqer">${inp('reportNo','접수번호')}</div>`
  else if(T==='production.attachFile')h=`<div class="rqer">${inp('orderNo','오더번호')}${inp('kind','종류',{opts:[['statement','거래명세서'],['workOrder','작업의뢰서'],['purchaseOrder','발주서']]})}${inp('process','공정 (비우면 앞 출고 줄)',{list:'procs'})}${inp('shipDate','출고일',{t:'d'})}${inp('shipQty','출고량',{t:'n'})}${inp('replace','기존 파일 바꾸기',{t:'b'})}</div><div class="muted" style="font-size:11px">공정·출고일을 비워 두면 같은 요청에서 앞에 추가한 출고 줄(고친 내용 그대로)에 붙어요.</div>`;
  return h?`<div class="rqedit">${h}</div>`:''}
 // ---- 받은편지함 확인 ----
@@ -211,9 +221,10 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
   catch(e){rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n'+(e&&e.message||e));return}
   // 첨부 파일 복사 (앱의 원래 첨부 저장소로). 하나라도 실패하면 복사한 파일을 지우고 데이터도 되돌림
   const added=[];
-  try{for(const x of R.ctx.attach){const r=x.kind==='statement'?await A.ssAttach(x.oid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
+  try{for(const x of R.ctx.attach){const r=x.kind==='statement'?await A.ssAttach(x.oid,x.abs):x.kind==='testReport'?await A.wfAttach('tr-'+x.tid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
   catch(e){for(const {x,r} of added){try{x.kind==='statement'?await A.ssDelete(r.path):await A.wfDelete(r.path)}catch(_){}}rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n첨부 실패: '+(e&&e.message||e));return}
   const oldF=[];for(const {x,r} of added){if(x.kind==='statement'){const o=shipFiles.find(f=>f.shipId===x.sid);if(o){oldF.push(o);shipFiles=shipFiles.filter(f=>f.id!==o.id)}shipFiles.push(normSs({...r,orderId:x.oid,processId:x.pid,shipId:x.sid,addedAt:now()}))}
+   else if(x.kind==='testReport')wfFiles.push(normWf({...r,orderId:x.tid,addedAt:now(),kind:'tr'}))
    else wfFiles.push(normWf({...r,orderId:x.oid,addedAt:now(),kind:x.kind==='purchaseOrder'?'po':'wo'}))}
   stEd=snap.stEd;
   const sm=rqSummary(P,R);if(!rqDoneIds.includes(P.req.id))rqDoneIds.push(P.req.id);rqLog.push({id:P.req.id,file,status:'done',at:new Date().toISOString(),summary:sm.slice(0,1000),...(ed?{edited:true,edits:edits.slice(0,100)}:{})});save();

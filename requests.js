@@ -6,7 +6,7 @@ const {app,ipcMain,shell}=require('electron');
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const ROOT=()=>path.join(app.getPath('userData'),'requests');
 const D={inbox:()=>path.join(ROOT(),'inbox'),done:()=>path.join(ROOT(),'done'),rejected:()=>path.join(ROOT(),'rejected'),error:()=>path.join(ROOT(),'error')};
-const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile'];
+const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile'];
 const MAX_SIZE=2*1024*1024,SETTLE_MS=1500,POLL_MS=5000;
 function ensure(){for(const k in D)fs.mkdirSync(D[k](),{recursive:true})}
 const isReqFile=n=>/\.json$/i.test(n)&&!/\.result\.json$/i.test(n)&&!/^[.~]/.test(n);
@@ -41,7 +41,7 @@ function attInfo(rel){
   if(!st.size)return {error:`file '${rel}': 빈 파일입니다`};
   if(st.size>MAX_ATT)return {error:`file '${rel}': 파일이 너무 큽니다 (${(st.size/1048576).toFixed(1)}MB, 20MB까지)`};
   return {rel,abs,name:path.basename(abs),size:st.size,mtime:st.mtimeMs}}
-const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.filter(a=>a&&a.type==='production.attachFile'&&typeof a.file==='string').map(a=>a.file))]:[];
+const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.filter(a=>a&&(a.type==='production.attachFile'||a.type==='testReport.attachFile')&&typeof a.file==='string').map(a=>a.file))]:[];
 function attMap(req){const m={};for(const r of attRels(req))m[r]=attInfo(r);return m}
 // 요청 파일을 옮길 때 첨부 원본도 같이: <폴더>\<요청이름>.files\<상대경로>
 function moveAtt(req,dir,n){const m=attMap(req),base=path.join(dir,n.replace(/\.json$/i,'')+'.files');

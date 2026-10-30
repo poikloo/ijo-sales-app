@@ -58,6 +58,7 @@ function tiDetect(h){const n=h.map(x=>String(x||'').toUpperCase().replace(/[\s._
  m.result=f(x=>x.includes('결과')||x.includes('판정')||x.includes('RESULT'));
  m.memo=f(x=>x.includes('비고')||x.includes('메모')||x.includes('NOTE'));
  m.name=f(x=>x.includes('품명')||x.includes('의뢰명')||x.includes('품목')||x.includes('시료')||x.includes('ITEM'));return m}
+const trNoKey=v=>String(v||'').replace(/[\s\-‐-―−]/g,'').toUpperCase();
 const trKey=x=>String(x.no||'').replace(/\s/g,'').toUpperCase()+'|'+String(x.name||'').replace(/\s/g,'')+'|'+(x.recv||'');
 function tiAnalyze(){const R=tiRaw.slice(tiHdr+1),g=(r,k)=>tiMap[k]>=0?String(r[tiMap[k]]??'').trim():'',L=[],bad=[];let rows=0;
  R.forEach((r,i)=>{if(!r.some(c=>String(c||'').trim()))return;rows++;const rn=tiHdr+i+2,o={};TR_F.forEach(([k])=>o[k]=g(r,k));
