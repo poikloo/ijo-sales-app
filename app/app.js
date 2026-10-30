@@ -1,4 +1,4 @@
-const ST=['진행중','개찰완료','낙찰','유찰'],PT={dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
+const ST=['진행중','개찰완료','낙찰','유찰'],PT={gsearch:'통합 검색',dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
 let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash';
 const PR=['높음','보통','낮음'];
@@ -39,7 +39,7 @@ function load(){const r=A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(
 function save(){A.save({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...snapPayload()}).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
-function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
+function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender)gsRender();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
 document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;if(a.dataset.p==='prod')pv=null;go(a.dataset.p)});
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
@@ -49,7 +49,7 @@ function upList(){return data.filter(x=>x.open&&dday(x.open)>=0&&x.status==='진
 function upHTML(list){return list.length?list.map(x=>{const n=dday(x.open);return `<li onclick="view('${x.id}')"><span class="badge ${n===0?'hot':n<=3?'warm':''}">${ddLabel(n)}</span>${tag(x)}<b>${esc(x.name)}</b><br><small>${fdt(x.open)} · ${esc(x.org)}${x.price?' · '+won(x.price):''}</small></li>`}).join(''):'<li>예정된 개찰이 없습니다.</li>'}
 function clChip(c){const od=!c.done&&c.due<ymd(new Date());return `<span class="chip clc${od?' od':''}${c.done?' dn':''}" title="${esc(c.title)}" onclick="event.stopPropagation();openCl('${c.id}')">☐ ${esc(c.title)}</span>`}
 function calHTML(y,m,mini,mode){const pev=mode==='cl'?prodEvents():[];let h='일월화수목금토'.split('').map(d=>`<div class="dn">${d}</div>`).join('');
- const st=new Date(y,m,1-new Date(y,m,1).getDay()),today=new Date().toDateString(),sp=!mini&&$('spub').checked;
+ const st=new Date(y,m,1-new Date(y,m,1).getDay()),today=new Date().toDateString(),sp=!mini&&($('spub')||{}).checked;
  for(let i=0;i<42;i++){const d=new Date(st.getFullYear(),st.getMonth(),st.getDate()+i),ds=ymd(d),cls=`c${d.getMonth()!==m?' o':''}${d.toDateString()===today?' t':''}`;
   const hits=data.filter(x=>x.open&&x.open.startsWith(ds));
   if(mini){h+=`<div class="${cls}${hits.length?' has':''}" ${hits.length?`onclick="view('${hits[0].id}')" title="${esc(hits.map(x=>x.name).join('\n'))}"`:''}>${d.getDate()}${hits.length?'<span class="dot"></span>':''}</div>`;continue}
