@@ -38,7 +38,7 @@ function trOpen(id){const x=id?trs.find(t=>t.id===id):{name:'',lab:'',no:'',recv
  <div class="trg">${inp('result','결과',' list="trress"')}<label style="grid-column:span 3">불합격 항목<input id="tr_fail" value="${esc(x.fail)}" placeholder="예: 인열강도, 발수도"></label></div>
  <label>비고<textarea id="tr_memo" rows="2">${esc(x.memo)}</textarea></label>
  <datalist id="trlabs">${labs.map(v=>`<option value="${esc(v)}">`).join('')}</datalist><datalist id="trress">${ress.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
- ${id?`<div class="muted" style="font-size:12px">성적서 파일(PDF·이미지)은 목록의 📎 칸에서 첨부하거나 끌어다 놓으세요.${x.imp?' · 엑셀에서 가져온 행이라 다시 가져오면 엑셀 내용으로 바뀝니다.':''}</div>`:''}</div>`;
+ ${id&&x.imp?'<div class="muted" style="font-size:12px">엑셀에서 가져온 행이라 다시 가져오면 엑셀 내용으로 바뀝니다.</div>':''}</div>`;
  $('dfoot').innerHTML=`${id?`<button class="d" onclick="trDel('${id}')">삭제</button>`:''}<button class="p" onclick="trSave('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;
  if(!dlg.open)dlg.showModal();setTimeout(()=>$('tr_name').focus(),0)}
 function trSave(id){const o={};TR_F.forEach(([k])=>o[k]=$('tr_'+k).value);if(!o.name.trim())return uiAlert('품명 (의뢰명)을 입력하세요.');
