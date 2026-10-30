@@ -25,19 +25,20 @@ function snapBuild(){
  const ST=stmts.map(s=>{const lots=s.lots.map(l=>{const rolls=l.rolls.filter(v=>v!=='');return {lotNo:l.lotNo,color:l.color,rolls,qty:r2(rolls.reduce((a,b)=>a+(+b||0),0))}});
   return {id:s.id,no:s.no,date:s.date,orderNo:s.orderNo,item:s.item,spec:s.spec,customer:{...s.cust},supplier:s.sup?s.sup.name||'':'',dest:s.dest,contact:s.contact,unitPrice:s.price===''?null:s.price,note:s.note,
    lots,totalQty:r2(lots.reduce((a,l)=>a+l.qty,0)),example:!!s.example,search:snapS([s.orderNo,s.item,s.spec,s.cust&&s.cust.name,s.dest,s.note,...lots.flatMap(l=>[l.lotNo,l.color])])}});
- const TR=trs.map(x=>({id:x.id,name:x.name,lab:x.lab,reportNo:x.no,received:x.recv,completed:x.done,result:x.result,failedItems:x.fail,memo:x.memo,files:fnames(wfFiles,f=>f.kind==='tr'&&f.orderId===x.id),example:!!x.example,
+ const TR=trs.map(x=>({id:x.id,name:x.name,lab:x.lab,reportNo:x.no,received:x.recv,completed:x.done,result:x.result,failedItems:x.fail,memo:x.memo,linkedQuality:x.qs&&qsGet(x.qs.id)?{name:qsGet(x.qs.id).name,fabric:(qsGet(x.qs.id).fabrics.find(f=>f.id===x.qs.fab)||{}).name||'',results:x.qs.res}:null,files:fnames(wfFiles,f=>f.kind==='tr'&&f.orderId===x.id),example:!!x.example,
   search:snapS([x.name,x.lab,x.no,x.result,x.fail,x.memo])}));
  const CT=contacts.map(c=>({id:c.id,company:c.company,name:c.name,team:c.team,title:c.title,email:c.email,web:c.web,addrs:c.addrs,tels:c.tels,faxes:c.faxes,mobiles:c.mobiles,memo:c.memo,example:!!c.example,
   search:snapS([c.company,c.name,c.team,c.title,c.email,c.memo,...c.tels,...c.mobiles])}));
+ const QS=typeof qsSnap==='function'?qsSnap():[];
  return {schema:SNAP_SCHEMA,app:'ijo-sales',appVersion:appVer,generatedAt:new Date().toISOString(),readOnly:true,
   priceSettings:{fx:S.fx,yd2m:S.yd2m,vat:S.vat,defaultDyeShrink:S.dye,defaultProc1Shrink:S.g1,defaultProc2Shrink:S.g2,defaultMargin:S.margin},
-  counts:{prices:P.length,sales:SL.length,orders:O.length,statements:ST.length,testReports:TR.length,contacts:CT.length},
-  prices:P,sales:SL,orders:O,statements:ST,testReports:TR,contacts:CT}}
+  counts:{prices:P.length,sales:SL.length,orders:O.length,statements:ST.length,testReports:TR.length,contacts:CT.length,qualityStandards:QS.length},
+  prices:P,sales:SL,orders:O,statements:ST,testReports:TR,contacts:CT,qualityStandards:QS}}
 async function snapWrite(){snapT=0;if(!snapOn||!A.snapWrite)return;try{const r=await A.snapWrite(JSON.stringify(snapBuild(),null,1));snapLast=r&&r.mtime||'';snapErr=''}catch(e){snapErr=String(e&&e.message||e)}if(page==='settings')snapSettings()}
 function snapSched(){if(!snapOn||!A.snapWrite)return;clearTimeout(snapT);snapT=setTimeout(snapWrite,2000)}
 async function snapToggle(v){snapOn=!!v;save();if(!snapOn){clearTimeout(snapT);snapT=0;try{await A.snapDelete()}catch(e){}snapLast='';toast('조회용 파일을 삭제했어요')}else{await snapWrite();toast('조회용 파일을 만들었어요')}snapSettings()}
 async function snapInit(){try{const i=await A.info();appVer=i&&i.version||''}catch(e){}if(!A.snapWrite)return;if(snapOn)snapWrite();else A.snapDelete().catch(()=>{})}
 function snapSettings(){const el=$('snap_card');if(!el)return;const d=snapLast?new Date(snapLast):null,t=d?ymd(d)+' '+d.toTimeString().slice(0,8):'-';
- el.innerHTML=`<h2>조회용 파일 (Grok Bot 조회)</h2><p class="muted" style="margin:0 0 8px">켜 두면 단가·매출·생산·거래명세서·TEST REPORT·거래처 정보를 읽기 전용 파일(requests\\snapshot\\snapshot.json)로 저장해, Grok Bot이 "○○ 원단의 NET단가와 가공료" 같은 질문에 답할 수 있어요. 비밀번호·토큰·설정은 들어가지 않아요.</p>
+ el.innerHTML=`<h2>조회용 파일 (Grok Bot 조회)</h2><p class="muted" style="margin:0 0 8px">켜 두면 단가·매출·생산·거래명세서·TEST REPORT·품질 기준·거래처 정보를 읽기 전용 파일(requests\\snapshot\\snapshot.json)로 저장해, Grok Bot이 "○○ 원단의 NET단가와 가공료" 같은 질문에 답할 수 있어요. 비밀번호·토큰·설정은 들어가지 않아요.</p>
  <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="snap_on" ${snapOn?'checked':''} onchange="snapToggle(this.checked)"> 조회용 파일 만들기 (Grok Bot 조회)</label>
  <div class="rqbar" style="margin-top:8px"><span class="muted">마지막 저장</span><b>${snapOn?esc(t):'꺼짐'}</b>${snapErr?`<span class="neg">오류: ${esc(snapErr)}</span>`:''}<span style="flex:1"></span><button onclick="A.snapOpenFolder()"${A.snapOpenFolder?'':' disabled'}>폴더 열기</button>${snapOn?'<button onclick="snapWrite().then(()=>toast(\'조회용 파일을 다시 만들었어요\'))">지금 만들기</button>':''}</div>`}

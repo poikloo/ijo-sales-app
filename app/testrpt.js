@@ -5,7 +5,7 @@ const TR_F=[['name','품명 (의뢰명)'],['lab','시험기관'],['no','접수�
 const trDate=v=>{v=String(v||'').trim();let m=v.match(/^(\d{4})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/);if(m)return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
  m=v.match(/^(\d{2})[-./](\d{1,2})[-./](\d{1,2})$/);if(m)return `20${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
  if(/^\d{5}(\.\d+)?$/.test(v)){const d=new Date(Date.UTC(1899,11,30)+Math.floor(+v)*864e5);return d.toISOString().slice(0,10)}return v};
-const normTr=x=>{const o={id:String(x.id||uid())};TR_F.forEach(([k])=>o[k]=String(x[k]??'').replace(/\u3000/g,' ').trim());o.recv=trDate(o.recv);o.done=trDate(o.done);o.imp=!!x.imp;o.updated=String(x.updated||'');if(x.example)o.example=true;return o};
+const normTr=x=>{const o={id:String(x.id||uid())};TR_F.forEach(([k])=>o[k]=String(x[k]??'').replace(/\u3000/g,' ').trim());o.recv=trDate(o.recv);o.done=trDate(o.done);o.imp=!!x.imp;o.updated=String(x.updated||'');if(x.qs&&typeof x.qs==='object'&&x.qs.id){const r={};if(x.qs.res&&typeof x.qs.res==='object')for(const [k,v] of Object.entries(x.qs.res))if(String(v??'').trim())r[k]=String(v).trim();o.qs={id:String(x.qs.id),fab:String(x.qs.fab||''),res:r}}if(x.example)o.example=true;return o};
 const trLoad=r=>{const a=r&&!Array.isArray(r)?r.testReports:null;trs=Array.isArray(a)?a.filter(x=>x&&typeof x==='object').map(normTr):[];if(r&&r.testReportSort)trSortK=String(r.testReportSort)};
 const trPayload=()=>({testReports:trs,testReportSort:trSortK});
 function trImport(raw){if(raw&&!Array.isArray(raw)&&Array.isArray(raw.testReports))trs=raw.testReports.filter(x=>x&&typeof x==='object').map(normTr)}
@@ -24,9 +24,9 @@ function renderTr(){
  l=l.map((x,i)=>[x,i]).sort(([a,i],[b,j])=>{const va=a[sk]||'',vb=b[sk]||'';if(!va!==!vb)return va?-1:1;return (lsCmp(va,vb)||lsCmp(a.recv,b.recv)||i-j)*d}).map(p=>p[0]);
  const ok=l.filter(x=>trRes(x.result)==='ok').length,ng=l.filter(x=>trRes(x.result)==='ng').length;
  $('trsum').innerHTML=`<b>${l.length}</b>건${l.length!==trs.length?` <small class="muted">/ 전체 ${trs.length}</small>`:''} · 합격 <b class="trok">${ok}</b> · 불합격 <b class="neg">${ng}</b>${l.length-ok-ng?` · 기타 ${l.length-ok-ng}`:''}`;
- $('trtb').innerHTML=l.length?l.map(x=>`<tr class="r" onclick="trOpen('${x.id}')"><td><b>${esc(x.name)}</b>${x.example?' <small class="muted">(예시)</small>':''}</td><td>${esc(x.lab)}</td><td class="mono">${esc(x.no)}</td><td class="dt">${esc(x.recv)}</td><td class="dt">${esc(x.done)}</td><td style="text-align:center">${trBadge(x.result)}</td><td>${x.fail?`<span class="neg">${esc(x.fail)}</span>`:''}</td><td><small>${esc(x.memo)}</small></td>${wfCell(x,wfFiles.filter(f=>f.orderId===x.id),'tr').replace('<td class="wfc"','<td class="wfc" onclick="event.stopPropagation()"')}</tr>`).join('')
+ $('trtb').innerHTML=l.length?l.map(x=>`<tr class="r${x.id===trCmpId?' cur':''}" onclick="trRow('${x.id}')"><td><b>${esc(x.name)}</b>${x.example?' <small class="muted">(예시)</small>':''}</td><td>${esc(x.lab)}</td><td class="mono">${esc(x.no)}</td><td class="dt">${esc(x.recv)}</td><td class="dt">${esc(x.done)}</td><td style="text-align:center">${trBadge(x.result)}${x.qs&&qsGet(x.qs.id)?' <small class="muted" title="품질 기준 연결됨">⚖</small>':''}</td><td>${x.fail?`<span class="neg">${esc(x.fail)}</span>`:''}</td><td><small>${esc(x.memo)}</small></td>${wfCell(x,wfFiles.filter(f=>f.orderId===x.id),'tr').replace('<td class="wfc"','<td class="wfc" onclick="event.stopPropagation()"')}</tr>`).join('')
   :`<tr><td colspan="9">${trs.length?'조건에 맞는 성적서가 없습니다.':'TEST REPORT가 없습니다. [엑셀 가져오기] 또는 [+ 추가]로 등록하세요.'}</td></tr>`;
- if(window.wfPopRender)wfPopRender()}
+ if(window.wfPopRender)wfPopRender();if(trCmpId&&!$('trcmp').innerHTML)trCmpRender()}
 function trSort(v){trSortK=v;save();render()}
 // ---- 추가 / 수정 ----
 function trOpen(id){const x=id?trs.find(t=>t.id===id):{name:'',lab:'',no:'',recv:ymd(new Date()),done:'',result:'',fail:'',memo:''};if(!x)return;
@@ -77,7 +77,7 @@ function tiRender(){const h=tiRaw[tiHdr],a=tiAnalyze(),man=trs.length-a.old;
  $('dfoot').innerHTML=`<button class="p" onclick="tiRun()"${a.L.length?'':' disabled'}>가져오기 (${a.L.length}건)</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal()}
 async function tiRun(){const a=tiAnalyze();if(A.preImportBackup)await A.preImportBackup();
  const old=new Map();trs.filter(t=>t.imp).forEach(t=>{const k=trKey(t);if(!old.has(k))old.set(k,t.id)});const keep=new Set();
- const nl=a.L.map(x=>{const id=old.get(trKey(x));if(id&&!keep.has(id)){keep.add(id);return {...x,id}}return x});
+ const nl=a.L.map(x=>{const id=old.get(trKey(x));if(id&&!keep.has(id)){keep.add(id);const p=trs.find(t=>t.id===id);return {...x,id,qs:p&&p.qs}}return x});
  const gone=trs.filter(t=>t.imp&&!keep.has(t.id)).map(t=>t.id),orph=wfFiles.filter(f=>f.kind==='tr'&&gone.includes(f.orderId));
  for(const f of orph){try{await A.wfDelete(f.path)}catch(e){}}wfFiles=wfFiles.filter(f=>!orph.includes(f));
  const t=now();trs=[...trs.filter(x=>!x.imp),...nl.map(x=>normTr({...x,imp:true,updated:t}))];

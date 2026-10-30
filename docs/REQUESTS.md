@@ -324,7 +324,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `readOnly` | 항상 `true` |
 | `priceSettings` | 단가 계산 설정: `fx` 환율(USD→KRW), `yd2m`(0.9144), `vat`(0.1), `defaultDyeShrink`/`defaultProc1Shrink`/`defaultProc2Shrink`/`defaultMargin` (비율, 0.05 = 5%) |
 | `counts` | 각 목록의 건수 |
-| `prices` `sales` `orders` `statements` `testReports` `contacts` | 아래 표 |
+| `prices` `sales` `orders` `statements` `testReports` `contacts` `qualityStandards` | 아래 표 |
 
 ### `prices[]` — 단가 관리 (YD당, 원)
 
@@ -361,6 +361,11 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `testReports[]` — TEST REPORT
 
 `name`(품명/의뢰명) `lab`(시험기관) `reportNo`(접수번호) `received`(접수일) `completed`(완료일) `result`(결과) `failedItems`(불합격 항목) `memo` `files[]`(성적서 첨부 이름)
+
+### `qualityStandards[]` — 품질 기준 (조달청 규격서)
+
+`name` `category`(분류) `specNo`(규격서 번호) `revised`(개정일) `irApplied` `usage` `material` `color` `memo` `fabrics[]{name,tests[]{item,division,standard,unit,method}}` `patterns[]{name,appliesTo,grade,colorfastness[]{color,일광,…},irMethod,irColors[],irReflectance[]{nm,ranges[]}}`
+(`testReports[].linkedQuality` = `{name,fabric,results}` 연결된 품질 기준과 입력한 결과값)
 
 ### `contacts[]` — 거래처 정보 (명함)
 
