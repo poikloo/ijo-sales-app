@@ -27,7 +27,7 @@ function gsRender(){const el=$('gsres');if(!el)return;const q=$('gsq').value,{R,
  const cats=GS_C.filter(([k])=>k!=='quality'||(window.qualities||[]).length),tot=cats.reduce((a,[k])=>a+(R[k]||[]).length,0);
  if(gsTab!=='all'&&!cats.some(c=>c[0]===gsTab))gsTab='all';
  $('gstabs').innerHTML=[['all','전체',tot],...cats.map(([k,l])=>[k,l,(R[k]||[]).length])].map(([k,l,n])=>`<span class="${k===gsTab?'on':''}${n?'':' z'}" onclick="gsSetTab('${k}')">${l} ${n}</span>`).join('');
- if(!terms.length){$('gsmeta').textContent='';el.innerHTML='<div class="gsempty">단가·생산·매출·거래명세서·TEST REPORT·거래처를 한 번에 찾아요. 여러 단어는 모두 포함된 결과만 보여요.</div>';return}
+ if(!terms.length){$('gsmeta').textContent='';el.innerHTML='';return}
  $('gsmeta').textContent=`약 ${(gsTab==='all'?tot:(R[gsTab]||[]).length).toLocaleString()}건 (${(ms/1000).toFixed(2)}초)`;
  const secs=cats.filter(([k])=>(gsTab==='all'||gsTab===k)&&(R[k]||[]).length);
  el.innerHTML=secs.length?secs.map(([k,l,c,crumb])=>{const L=R[k],show=gsTab==='all'?L.slice(0,3):L;

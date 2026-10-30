@@ -123,11 +123,11 @@ table.rqt th,table.rqt td{border:1px solid #e2e4e7;padding:3px 10px;text-align:l
  <div class="dw" data-w="kpi2"><div class="dws" id="dbk2"></div></div>
  <div class="dw" data-w="kpi3"><div class="dws" id="dbk3"></div></div>
  <div class="dw" data-w="clock"><div class="card dbk"><div class="muted">현재 날짜·시간</div><b id="dbclk"></b><small class="muted" id="dbcld"></small></div></div>
- <div class="dw" data-w="month"><div class="card dwf"><div class="calhead" style="flex-wrap:wrap;justify-content:flex-start"><h2 style="margin:0 8px 0 0">월 출고 현황</h2><button onclick="dbMv(-1)">◀</button><b id="dbym"></b><button onclick="dbMv(1)">▶</button><button onclick="dbM=null;render()">이번 달</button><span class="muted dbcap">YD 단위 오더만 · 거래처별은 최종 공정 출고, 공정별은 각 공정 출고</span></div>
+ <div class="dw" data-w="month"><div class="card dwf"><div class="calhead" style="flex-wrap:wrap;justify-content:flex-start"><h2 style="margin:0 8px 0 0">월 출고 현황</h2><button onclick="dbMv(-1)">◀</button><b id="dbym"></b><button onclick="dbMv(1)">▶</button><button onclick="dbM=null;render()">이번 달</button></div>
   <div class="dgrid dwb"><div><h3 class="dbh">거래처별</h3><div id="dbcli"></div></div><div><h3 class="dbh">공정별</h3><div id="dbproc"></div></div></div></div></div>
- <div class="dw" data-w="orders"><div class="card dwf"><h2>진행중 오더 요약 <span class="muted" style="font-weight:normal">(납기일 순 · 진행률 = 최종 공정 출고 ÷ 발주량)</span></h2>
+ <div class="dw" data-w="orders"><div class="card dwf"><h2>진행중 오더 요약</h2>
   <div class="tw dwb"><table class="ul"><colgroup><col style="width:100px"><col style="width:110px"><col><col style="width:90px"><col style="width:150px"><col style="width:96px"></colgroup><thead><tr><th>오더번호</th><th>거래처</th><th>품목</th><th>현재 공정</th><th>진행률</th><th class="dt">납기일</th></tr></thead><tbody id="dbord"></tbody></table></div></div></div>
- <div class="dw" data-w="vendor"><div class="card dwf"><h2>가공 업체별 작업량</h2><p class="muted" style="margin:-4px 0 8px;font-size:12px">진행중 오더에서 지금 진행 중인 공정(출고가 발주량에 못 미친 첫 공정)의 업체 기준 · 남은 양 = 발주량 − 그 공정 출고량</p>
+ <div class="dw" data-w="vendor"><div class="card dwf"><h2>가공 업체별 작업량</h2>
   <div class="tw dwb"><table class="ul"><thead><tr><th>가공 업체</th><th style="text-align:right">오더</th><th style="text-align:right">남은 양</th></tr></thead><tbody id="dbven"></tbody></table></div></div></div>
  <div class="dw" data-w="sales"><div class="card dwf" id="dbsales"></div></div>
  <div class="dw" data-w="trend"><div class="card dwf"><h2>월별 출고 추이 <span class="muted" style="font-weight:normal">(최근 12개월 · 최종 공정 출고 YD)</span></h2><div id="dbtr" class="dwb" style="overflow:hidden"></div></div></div>
@@ -189,7 +189,7 @@ table.rqt th,table.rqt td{border:1px solid #e2e4e7;padding:3px 10px;text-align:l
  <div id="pr_set" style="display:none"><div class="card" style="max-width:640px"><h2>단가 계산 설정</h2><div class="pcf" id="pr_setf"></div><p class="muted" id="pr_setx" style="font-size:12px;margin:10px 0"></p><button onclick="prSetReset()">기본값으로</button></div><div class="card xlc" id="pr_xl" style="max-width:900px;margin-top:14px"></div></div>
 </section>
 <section class="page" id="p_gsearch"><div class="gswrap">
- <div class="gsbox"><span>🔍</span><input id="gsq" placeholder="단가·생산·매출·거래명세서·TEST REPORT·거래처 통합 검색" oninput="gsInput()" onkeydown="if(event.key==='Escape')gsClear()"><span id="gsx" class="gsx" title="지우기" onclick="gsClear()">✕</span><span class="gsk">Ctrl+K</span></div>
+ <div class="gsbox"><span>🔍</span><input id="gsq" placeholder="" oninput="gsInput()" onkeydown="if(event.key==='Escape')gsClear()"><span id="gsx" class="gsx" title="지우기" onclick="gsClear()">✕</span><span class="gsk">Ctrl+K</span></div>
  <div class="gstabs" id="gstabs"></div><div class="muted gsmeta" id="gsmeta"></div><div id="gsres"></div></div></section>
 <section class="page" id="p_testrpt">
  <div class="card"><div class="filters"><input id="trk" placeholder="검색 (품명·시험기관·접수번호·불합격 항목·비고)" oninput="render()" style="min-width:200px;width:240px"><select id="trlab" onchange="render()"></select><select id="trres" onchange="render()"></select><select id="tryr" onchange="render()"></select><select id="trsrt" title="정렬" onchange="trSort(this.value)"><option value="recv:-1">정렬: 접수일 ↓</option><option value="recv:1">정렬: 접수일 ↑</option><option value="done:-1">정렬: 완료일 ↓</option><option value="done:1">정렬: 완료일 ↑</option><option value="name:1">정렬: 품명 ↑</option><option value="lab:1">정렬: 시험기관 ↑</option><option value="no:1">정렬: 접수번호 ↑</option><option value="result:1">정렬: 결과 ↑</option></select><span id="trsum" class="trsum"></span><span style="flex:1"></span><button onclick="trImportOpen()">엑셀 가져오기</button><button class="p" onclick="trOpen()">+ 추가</button></div>
