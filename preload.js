@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api',{
   stmtXlsx:(s,sup,n)=>ipcRenderer.invoke('stmtXlsx',s,sup,n),
   owXlsx:(r,sup,n)=>ipcRenderer.invoke('owXlsx',r,sup,n),
   importSupplierXlsx:()=>ipcRenderer.invoke('importSupplierXlsx'),
+  webSearch:(en,q)=>ipcRenderer.invoke('webSearch',en,q),
   openExternal:u=>ipcRenderer.invoke('openExternal',u),
   copyText:t=>ipcRenderer.invoke('copyText',t),
   pathForFile:f=>{try{return webUtils.getPathForFile(f)}catch(e){return ''}},
