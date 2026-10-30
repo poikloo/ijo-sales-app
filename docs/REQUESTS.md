@@ -277,6 +277,53 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 }
 ```
 
+### 3.10 `quality.addItem` — 품질 기준에 품목 추가 (규격서 내용)
+
+```json
+{ "type": "quality.addItem", "item": {
+  "name": "(예시) 다목적 방수포", "category": "국방규격", "specNo": "EX-QS-001", "revised": "2026-03-15",
+  "org": "(예시)관리기관", "drawing": "(예시) 도면 EX-D-01", "memo": "(예시) 봉제·포장·표시 요약",
+  "types": [ { "type": "1형", "stockNo": "EX-0000-00-000-0001", "color": "녹색" } ],
+  "fabrics": [
+    { "name": "겉감", "usage": "본체", "material": "나일론 100%", "color": "녹색", "ref": "표 1",
+      "yarn": "N 210D", "weave": "평직", "width": "150cm 이상",
+      "tests": [ { "item": "인장강도", "standard": "경 800 이상 / 위 700 이상", "method": "KS K 0520", "unit": "N", "memo": "" } ] }
+  ],
+  "appendix": [
+    { "title": "염색견뢰도", "columns": ["색상","일광","세탁"], "rows": [["녹색","4","4-5"]] },
+    { "title": "적외선 반사율", "markdown": "| nm | 녹색 |\n|---|---|\n| 700 | 10~30 |" }
+  ] } }
+```
+
+- 필수: `name`. 나머지는 선택. `category`=분류, `specNo`=규격번호, `revised`=제정/개정일, `org`=관리기관, `drawing`=관련 도면.
+- `types[]` (형별): `type`, `stockNo`(재고번호), `color`.
+- `fabrics[]` → 원단 탭 하나씩. `usage`(용도/부위), `material`(재질/구성), `color`, `ref`(적용기준 참조), `yarn`/`weave`/`width`(사종/조직/폭, 선택).
+- `tests[]` → 시험항목 행. `item`, `standard`(경/위 포함 그대로), `method`, `unit`(선택), `memo`(비고).
+- `appendix[]` → 무늬·색상 탭 아래 "부록" 표. `{title, columns, rows}` 또는 `{title, markdown}` (마크다운 표, 표 밖 줄은 글로 표시) 또는 마크다운 문자열.
+- **합치기 규칙**: 같은 `specNo`(+`category`를 주면 분류도 같아야 함)인 품목이 이미 있으면 새로 만들지 않고 합침(경고 표시).
+  - 원단: 이름이 같으면(공백·대소문자 무시) 그 원단을 통째로 바꿈, 없으면 추가. 보내지 않은 원단은 그대로.
+  - 부록: 제목이 같으면 바꿈, 없으면 추가. `types`는 보내면 통째로 바꿈. 나머지 칸은 보낸 것만 바뀜.
+  - 일치하는 품목이 2건 이상이면 오류.
+
+### 3.11 `quality.updateItem` — 품질 기준 품목 고치기
+
+```json
+{ "type": "quality.updateItem", "specNo": "EX-QS-001", "set": { "revised": "2026-09-01", "org": "(예시)관리기관2" } }
+```
+
+- 찾기: `itemId`(스냅샷 `qualityStandards[].id`) 또는 `specNo`(+`category`). 없거나 2건 이상이면 오류.
+- `set`에는 addItem `item`과 같은 키. 합치기 규칙도 같음.
+
+### 3.12 `quality.attachFile` — 품질 기준에 규격서 파일 첨부
+
+```json
+{ "type": "quality.attachFile", "specNo": "EX-QS-001", "file": "files/sample_spec_EX-QS-001.hwp" }
+```
+
+- 찾기는 updateItem과 같음 (`itemId` 또는 `specNo`+`category`). 같은 요청 앞쪽 addItem으로 만든 품목도 찾음.
+- `file`: inbox 기준 경로. 허용: hwp, hwpx, pdf, jpg/png/webp/gif.
+- 품목 머리의 📎 버튼으로 열림 (pdf·사진은 미리보기, hwp는 PC 기본 프로그램). 같은 이름 파일이 있으면 경고 후 건너뜀.
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -385,7 +432,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ### `qualityStandards[]` — 품질 기준 (조달청 규격서)
 
-`name` `category`(분류) `specNo`(규격서 번호) `revised`(개정일) `irApplied` `usage` `material` `color` `memo` `fabrics[]{name,tests[]{item,division,standard,unit,method}}` `patterns[]{name,appliesTo,grade,colorfastness[]{color,일광,…},irMethod,irColors[],irReflectance[]{nm,ranges[]}}`
+`id` `name` `category`(분류) `specNo`(규격서 번호) `revised`(개정일) `org` `drawing` `irApplied` `usage` `material` `color` `memo` `types[]{type,stockNo,color}` `attached[]`(첨부 파일명) `appendix[]{title,columns,rows,text}` `fabrics[]{name,usage,material,color,ref,yarn,weave,width,tests[]{item,division,standard,unit,method,memo}}` `patterns[]{name,appliesTo,grade,colorfastness[]{color,일광,…},irMethod,irColors[],irReflectance[]{nm,ranges[]}}`
 (`testReports[].linkedQuality` = `{name,fabric,results}` 연결된 품질 기준과 입력한 결과값)
 
 ### `contacts[]` — 거래처 정보 (명함)

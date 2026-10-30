@@ -4,7 +4,7 @@ const ATT_OK=/\.(pdf|jpe?g|png|webp|gif)$/i,attIsImg=n=>/\.(jpe?g|png|webp|gif)$
 const attTag=n=>attIsImg(n)?'<i class="ftag img">IMG</i>':'';
 const attSaveLbl=n=>attIsImg(n)?'이미지':'PDF 파일';
 let wfFiles=[];
-const normWf=x=>({id:String(x.id||uid()),orderId:String(x.orderId||''),name:String(x.name||''),path:String(x.path||''),addedAt:String(x.addedAt||''),kind:x.kind==='po'||x.kind==='tr'?x.kind:'wo'});
+const normWf=x=>({id:String(x.id||uid()),orderId:String(x.orderId||''),name:String(x.name||''),path:String(x.path||''),addedAt:String(x.addedAt||''),kind:x.kind==='po'||x.kind==='tr'||x.kind==='qs'?x.kind:'wo'});
 const wfLoad=r=>{const a=r&&!Array.isArray(r)?r.workOrderFiles:null;wfFiles=Array.isArray(a)?a.filter(x=>x&&typeof x==='object'&&x.path).map(normWf):[]};
 const wfPayload=()=>({workOrderFiles:wfFiles});
 function wfImport(raw){if(raw&&!Array.isArray(raw)&&Array.isArray(raw.workOrderFiles))wfFiles=raw.workOrderFiles.filter(x=>x&&x.path).map(normWf)}

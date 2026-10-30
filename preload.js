@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('api',{
   pathForFile:f=>{try{return webUtils.getPathForFile(f)}catch(e){return ''}},
   wfAttach:(oid,p)=>ipcRenderer.invoke('wfAttach',oid,p),
   wfPick:()=>ipcRenderer.invoke('wfPick'),
+  wfOpenExt:p=>ipcRenderer.invoke('wfOpenExt',p),
   wfPreview:(p,n)=>ipcRenderer.invoke('wfPreview',p,n),
   wfSaveAs:(p,n)=>ipcRenderer.invoke('wfSaveAs',p,n),
   wfDelete:p=>ipcRenderer.invoke('wfDelete',p),

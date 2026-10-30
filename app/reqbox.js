@@ -147,16 +147,16 @@ const RQ_H={
   const x={};RQ_PRICE_KEYS.forEach(k=>{if(r[k]!=null)x[k]=r[k]});const n=prNorm({...x,id:uid()});n.example=false;n.src='';prices.push(n);const c=typeof prCalc==='function'?prCalc(n):null;
   it.diff=[['품목 / 부위','',[n.cat,n.part].filter(Boolean).join(' / ')],['CODE','',n.code],['ITEM','',n.item],['색상','',n.color],['폭','',n.width],['생지','',n.g?`${n.gV||'-'} ${n.gCur==='USD'?'$'+n.g:prW(n.g)+'원'}`:''],['염색','',n.d||n.dV?`${n.dV||'-'} ${prW(n.d)}원${n.dS!=null?' · 축 '+prPct(n.dS):''}`:''],['가공1','',n.p1||n.p1V?`${n.p1V||'-'} ${n.p1D} ${prW(n.p1)}원`:''],['가공2','',n.p2||n.p2V?`${n.p2V||'-'} ${n.p2D} ${prW(n.p2)}원`:''],['계산 결과','',c?`NET ${prW(c.net)}원/YD · OFFER ${prW(c.off)}원/YD`:'']].filter(r=>r[2]!=='')}};
 // 작업용 사본에서 실행 (미리보기·적용 공용). 호출하는 쪽에서 rqWork/rqRestore 로 감쌈
-function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set(),trTaken:new Set()},top=[];
+function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set(),trTaken:new Set(),qsTaken:new Set()},top=[];
  const done=rqLog.find(x=>x.id===req.id&&x.status==='done')||(rqDoneIds.includes(req.id)?{at:''}:null);if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR')+' ':''}적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
  const twin=rqPend.find(x=>x.file!==P.file&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
  const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],diff:[],table:null};
   rqExtra(a,['type','comment',...(RQ_KEYS[a.type]||[])],'동작',it);try{RQ_H[a.type](a,it,ctx,req,P)}catch(e){it.errors.push('처리 중 오류: '+(e&&e.message||e))}return it});
  return {top,items,ctx,nerr:top.length+items.reduce((s,x)=>s+x.errors.length,0)}}
 const rqClone=v=>JSON.parse(JSON.stringify(v));
-function rqSnap(){return {orders,stmts,sales,prices,stEd}}
-function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sales);prices=rqClone(prices)}
-function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;stEd=s.stEd}
+function rqSnap(){return {orders,stmts,sales,prices,qualities,stEd}}
+function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sales);prices=rqClone(prices);qualities=rqClone(qualities)}
+function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;qualities=s.qualities;stEd=s.stEd}
 function rqPreview(P){const s=rqSnap();try{rqWork();return rqRun(P)}finally{rqRestore(s)}}
 const rqSummary=(P,R)=>R.items.map(it=>`· ${it.title}: ${it.summary}`).join('\n');
 // ---- 카드에서 고치기: 원래 요청은 그대로 두고, 고친 actions 사본(rqEdits[file])으로 미리보기·적용 ----
@@ -221,9 +221,10 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
   catch(e){rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n'+(e&&e.message||e));return}
   // 첨부 파일 복사 (앱의 원래 첨부 저장소로). 하나라도 실패하면 복사한 파일을 지우고 데이터도 되돌림
   const added=[];
-  try{for(const x of R.ctx.attach){const r=x.kind==='statement'?await A.ssAttach(x.oid,x.abs):x.kind==='testReport'?await A.wfAttach('tr-'+x.tid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
+  try{for(const x of R.ctx.attach){const r=x.kind==='statement'?await A.ssAttach(x.oid,x.abs):x.kind==='testReport'?await A.wfAttach('tr-'+x.tid,x.abs):x.kind==='quality'?await A.wfAttach('qs-'+x.qid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
   catch(e){for(const {x,r} of added){try{x.kind==='statement'?await A.ssDelete(r.path):await A.wfDelete(r.path)}catch(_){}}rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n첨부 실패: '+(e&&e.message||e));return}
   const oldF=[];for(const {x,r} of added){if(x.kind==='statement'){const o=shipFiles.find(f=>f.shipId===x.sid);if(o){oldF.push(o);shipFiles=shipFiles.filter(f=>f.id!==o.id)}shipFiles.push(normSs({...r,orderId:x.oid,processId:x.pid,shipId:x.sid,addedAt:now()}))}
+   else if(x.kind==='quality')wfFiles.push(normWf({...r,orderId:x.qid,addedAt:now(),kind:'qs'}))
    else if(x.kind==='testReport')wfFiles.push(normWf({...r,orderId:x.tid,addedAt:now(),kind:'tr'}))
    else wfFiles.push(normWf({...r,orderId:x.oid,addedAt:now(),kind:x.kind==='purchaseOrder'?'po':'wo'}))}
   stEd=snap.stEd;

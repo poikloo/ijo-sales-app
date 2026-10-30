@@ -152,13 +152,15 @@ ipcMain.handle('copyText',(e,t)=>{require('electron').clipboard.writeText(String
 const ATT_EXT=/\.(pdf|jpe?g|png|webp|gif)$/i,ATT_IMG=['jpg','jpeg','png','webp','gif'];
 const ATT_FILTERS=[{name:'PDF·이미지',extensions:['pdf',...ATT_IMG]},{name:'PDF',extensions:['pdf']},{name:'이미지',extensions:ATT_IMG}];
 const attSaveFilter=a=>{const x=path.extname(a).slice(1).toLowerCase();return [x==='pdf'?{name:'PDF',extensions:['pdf']}:{name:'이미지',extensions:[x]}]};
+const QS_EXT=/\.(pdf|jpe?g|png|webp|gif|hwpx?)$/i;
 const WF=()=>path.join(DIR(),'workorders');
 function wfAbs(rel){const a=path.resolve(WF(),String(rel||''));if(!a.startsWith(path.resolve(WF())+path.sep))throw new Error('잘못된 경로');return a}
 ipcMain.handle('wfPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:ATT_FILTERS,properties:['openFile','multiSelections']});return r.canceled?[]:r.filePaths});
-ipcMain.handle('wfAttach',(e,oid,src)=>{oid=String(oid).replace(/[^\w-]/g,'');src=String(src);if(!oid||!ATT_EXT.test(src)||!fs.statSync(src).isFile())throw new Error('PDF·이미지 파일이 아닙니다');
+ipcMain.handle('wfAttach',(e,oid,src)=>{oid=String(oid).replace(/[^\w-]/g,'');src=String(src);if(!oid||!(ATT_EXT.test(src)||oid.startsWith('qs-')&&QS_EXT.test(src))||!fs.statSync(src).isFile())throw new Error('PDF·이미지 파일이 아닙니다');
   const dir=path.join(WF(),oid);fs.mkdirSync(dir,{recursive:true});const ext=path.extname(src),base=path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'작업의뢰서';
   let name=base+ext,i=2;while(fs.existsSync(path.join(dir,name)))name=`${base} (${i++})${ext}`;fs.copyFileSync(src,path.join(dir,name));
   return {id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),name,path:oid+'/'+name}});
+ipcMain.handle('wfOpenExt',async(e,rel)=>{const a=wfAbs(rel);if(!fs.existsSync(a))return false;if(process.env.IJO_SHOT)return true;const r=await shell.openPath(a);return !r});
 ipcMain.handle('wfPreview',(e,rel,name)=>{const a=wfAbs(rel);if(!fs.existsSync(a))return false;
   const w=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});
@@ -206,7 +208,7 @@ app.on('will-quit',()=>{if(ocrW)ocrW.then(w=>w.terminate()).catch(()=>{})});
 // ===== 백업용 첨부 파일 (base64) =====
 const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):k==='br'?brAbs(rel):wfAbs(rel);
 ipcMain.handle('attRead',(e,k,rel)=>{try{const a=attAbs(k,rel);return fs.existsSync(a)?fs.readFileSync(a).toString('base64'):null}catch(err){return null}});
-ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!ATT_EXT.test(a))throw new Error('PDF·이미지만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
+ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!(ATT_EXT.test(a)||k==='wf'&&/^qs-/.test(String(rel))&&QS_EXT.test(a)))throw new Error('PDF·이미지만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
 ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));

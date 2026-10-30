@@ -6,7 +6,7 @@ const {app,ipcMain,shell}=require('electron');
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const ROOT=()=>path.join(app.getPath('userData'),'requests');
 const D={inbox:()=>path.join(ROOT(),'inbox'),done:()=>path.join(ROOT(),'done'),rejected:()=>path.join(ROOT(),'rejected'),error:()=>path.join(ROOT(),'error')};
-const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile'];
+const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile','quality.addItem','quality.updateItem','quality.attachFile'];
 const MAX_SIZE=2*1024*1024,SETTLE_MS=1500,POLL_MS=5000;
 function ensure(){for(const k in D)fs.mkdirSync(D[k](),{recursive:true})}
 const isReqFile=n=>/\.json$/i.test(n)&&!/\.result\.json$/i.test(n)&&!/^[.~]/.test(n);
@@ -25,8 +25,8 @@ function structErr(r){
     if(!TYPES.includes(a.type))return `actions[${i}].type '${String(a.type)}'은(는) 지원하지 않습니다 (지원: ${TYPES.join(', ')})`}
   return ''}
 // ---- 첨부 파일 (production.attachFile): 요청 파일 옆(inbox 안 하위 폴더, 예: inbox\files\x.pdf)에 둔 파일만 허용 ----
-const ATT_EXT=/\.(pdf|jpe?g|png|webp|gif)$/i,MAX_ATT=20*1024*1024;
-function attInfo(rel){
+const ATT_EXT=/\.(pdf|jpe?g|png|webp|gif)$/i,ATT_EXT_QS=/\.(pdf|jpe?g|png|webp|gif|hwpx?)$/i,MAX_ATT=20*1024*1024;
+function attInfo(rel,qs){
   if(typeof rel!=='string'||!rel.trim())return {error:'file(첨부할 파일 경로)이 없습니다'};
   if(rel.length>260)return {error:'file 경로가 너무 깁니다'};
   if(path.isAbsolute(rel)||path.win32.isAbsolute(rel)||/^[a-zA-Z]:/.test(rel)||/^[\\/]/.test(rel))return {error:`file '${rel}': 절대 경로는 쓸 수 없습니다 — 요청함 inbox 폴더 기준 상대 경로(예: files/명세서.pdf)만 됩니다`};
@@ -34,15 +34,15 @@ function attInfo(rel){
   if(/[\x00-\x1f:*?"<>|]/.test(rel))return {error:`file '${rel}': 경로에 쓸 수 없는 문자가 있습니다`};
   const root=path.resolve(D.inbox()),abs=path.resolve(root,rel);
   if(!abs.startsWith(root+path.sep))return {error:`file '${rel}': 요청함 폴더 밖의 파일은 쓸 수 없습니다`};
-  if(!ATT_EXT.test(abs))return {error:`file '${rel}': PDF·이미지(JPG·PNG·WEBP·GIF)만 첨부할 수 있습니다`};
+  if(!(qs?ATT_EXT_QS:ATT_EXT).test(abs))return {error:`file '${rel}': ${qs?'HWP·HWPX·':''}PDF·이미지(JPG·PNG·WEBP·GIF)만 첨부할 수 있습니다`};
   let st;try{st=fs.lstatSync(abs)}catch(e){return {error:`file '${rel}': 파일이 없습니다 (요청 파일보다 먼저 넣어 주세요)`}}
   if(st.isSymbolicLink()||!st.isFile())return {error:`file '${rel}': 일반 파일이 아닙니다`};
   try{const real=fs.realpathSync(abs),rr=fs.realpathSync(root);if(!real.startsWith(rr+path.sep))return {error:`file '${rel}': 요청함 폴더 밖의 파일은 쓸 수 없습니다`}}catch(e){return {error:`file '${rel}': 파일을 확인하지 못했습니다`}}
   if(!st.size)return {error:`file '${rel}': 빈 파일입니다`};
   if(st.size>MAX_ATT)return {error:`file '${rel}': 파일이 너무 큽니다 (${(st.size/1048576).toFixed(1)}MB, 20MB까지)`};
   return {rel,abs,name:path.basename(abs),size:st.size,mtime:st.mtimeMs}}
-const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.filter(a=>a&&(a.type==='production.attachFile'||a.type==='testReport.attachFile')&&typeof a.file==='string').map(a=>a.file))]:[];
-function attMap(req){const m={};for(const r of attRels(req))m[r]=attInfo(r);return m}
+const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.filter(a=>a&&(a.type==='production.attachFile'||a.type==='testReport.attachFile'||a.type==='quality.attachFile')&&typeof a.file==='string').map(a=>a.file))]:[];
+function attMap(req){const m={},qs=new Set(req.actions.filter(a=>a&&a.type==='quality.attachFile').map(a=>a.file));for(const r of attRels(req))m[r]=attInfo(r,qs.has(r));return m}
 // 요청 파일을 옮길 때 첨부 원본도 같이: <폴더>\<요청이름>.files\<상대경로>
 function moveAtt(req,dir,n){const m=attMap(req),base=path.join(dir,n.replace(/\.json$/i,'')+'.files');
   for(const k in m){const f=m[k];if(f.error)continue;try{const to=path.join(base,f.rel);fs.mkdirSync(path.dirname(to),{recursive:true});fs.renameSync(f.abs,to)}catch(e){}}}
