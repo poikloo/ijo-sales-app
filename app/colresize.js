@@ -1,4 +1,5 @@
 // 목록 칸 넓이 조절 (엑셀처럼 머리글 오른쪽 경계를 끌어서 조절, 더블클릭=기본값)
+// 사용법: <table data-rz="고유id"> + <colgroup>(칸마다 <col>) + <thead> 만 있으면 crInit()가 자동 적용 (넓이는 data.json colWidths에 저장)
 let colWidths={};
 function crLoad(r){colWidths=(r&&r.colWidths&&typeof r.colWidths==='object')?r.colWidths:{}}
 function crPayload(){return {colWidths}}
