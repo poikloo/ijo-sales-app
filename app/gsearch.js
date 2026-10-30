@@ -19,7 +19,7 @@ function gsRun(q){const t0=performance.now(),terms=q.trim().split(/\s+/).map(gsN
 function gsHi(s,terms){s=String(s||'');if(!terms||!terms.length)return esc(s);
  const re=new RegExp(terms.map(w=>[...w].map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('\\s*')).sort((a,b)=>b.length-a.length).join('|'),'gi');
  let o='',i=0;s.replace(re,(m,p)=>{if(!m)return m;o+=esc(s.slice(i,p))+'<mark>'+esc(m)+'</mark>';i=p+m.length;return m});return o+esc(s.slice(i))}
-function gsWebUpd(){const q=($('gsq')||{}).value||'',on=navigator.onLine;['gsw_g','gsw_n'].forEach(id=>{const b=$(id);if(!b)return;b.disabled=!q.trim()||!on;b.title=on?'':'인터넷 연결 없음'})}
+function gsWebUpd(){const q=($('gsq')||{}).value||'',on=navigator.onLine;['gsw_g'].forEach(id=>{const b=$(id);if(!b)return;b.disabled=!q.trim()||!on;b.title=on?'':'인터넷 연결 없음'})}
 async function gsWeb(en){const q=$('gsq').value.trim();if(!q||!navigator.onLine||!A.webSearch)return;try{await A.webSearch(en,q)}catch(e){uiAlert('브라우저를 열지 못했습니다: '+e)}}
 window.addEventListener('online',gsWebUpd);window.addEventListener('offline',gsWebUpd);
 function gsInput(){gsRender()}

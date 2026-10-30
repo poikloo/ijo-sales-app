@@ -116,7 +116,7 @@ ipcMain.handle('importSupplierXlsx',async()=>{const r=await dialog.showOpenDialo
   const v=a=>{const c=ws.getCell(a).value;if(c==null)return '';if(typeof c==='object'){if(c.richText)return c.richText.map(t=>t.text).join('');if('result' in c)return String(c.result??'');if(c.text)return c.text}return String(c).trim()};
   return {reg:v('C5'),name:v('C6'),ceo:v('F6'),addr:v('C7'),biz:v('C9'),type:v('F9'),notice:[v('B40'),v('B41')].filter(Boolean).join('\n'),
     contacts:[v('A42'),v('A43')].filter(Boolean).map(t=>t.replace(/\s*인수자\s*\(인\)\s*$/,'').trimEnd()).join('\n')}});
-ipcMain.handle('webSearch',(e,en,q)=>{q=String(q||'').trim().slice(0,500);const B={google:'https://www.google.com/search?q=',naver:'https://search.naver.com/search.naver?query='}[en];if(!B||!q)return false;const u=B+encodeURIComponent(q);if(!u.startsWith(B))return false;if(process.env.IJO_SHOT){console.log('WEBSEARCH '+u);return true}return shell.openExternal(u).then(()=>true)});
+ipcMain.handle('webSearch',(e,en,q)=>{q=String(q||'').trim().slice(0,500);const B={google:'https://www.google.com/search?q='}[en];if(!B||!q)return false;const u=B+encodeURIComponent(q);if(!u.startsWith(B))return false;if(process.env.IJO_SHOT){console.log('WEBSEARCH '+u);return true}return shell.openExternal(u).then(()=>true)});
 ipcMain.handle('openExternal',(e,u)=>{if(/^(https?:|mailto:)/i.test(String(u)))return shell.openExternal(String(u))});
 ipcMain.handle('copyText',(e,t)=>{require('electron').clipboard.writeText(String(t))});
 // 첨부 파일 공통: PDF + 이미지(JPG·PNG·WEBP·GIF)
