@@ -6,7 +6,7 @@ const {app,ipcMain,shell}=require('electron');
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const ROOT=()=>path.join(app.getPath('userData'),'requests');
 const D={inbox:()=>path.join(ROOT(),'inbox'),done:()=>path.join(ROOT(),'done'),rejected:()=>path.join(ROOT(),'rejected'),error:()=>path.join(ROOT(),'error')};
-const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile','quality.addItem','quality.updateItem','quality.attachFile'];
+const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile','testReport.setResults','quality.addItem','quality.updateItem','quality.attachFile'];
 const MAX_SIZE=2*1024*1024,SETTLE_MS=1500,POLL_MS=5000;
 function ensure(){for(const k in D)fs.mkdirSync(D[k](),{recursive:true})}
 const isReqFile=n=>/\.json$/i.test(n)&&!/\.result\.json$/i.test(n)&&!/^[.~]/.test(n);

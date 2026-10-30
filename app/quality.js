@@ -153,7 +153,11 @@ async function qsPatDel(pid){const q=qsGet(qsSel);if(!q)return;if(!await uiConfi
 
 // ===== 판정: 기준 문자열 vs 결과 =====
 const qsNum=s=>{s=String(s||'').replace(/,/g,'').replace(/급/g,'').trim();const m=s.match(/^(\d+)\s*-\s*(\d+)$/);if(m&&+m[2]-+m[1]===1)return (+m[1]+ +m[2])/2;const n=s.match(/-?\d+(?:\.\d+)?/);return n?+n[0]:NaN};
-function qsJudge(std,res){std=String(std||'').replace(/,/g,'').trim();res=String(res||'').trim();if(!res||!std||std==='-')return null;
+// "경 800 이상 / 위 700 이상" 처럼 구분이 한 칸에 같이 있는 기준: 결과도 "경 950 / 위 780"
+const QS_PT=/^\s*(경|위|건|습|종|횡|MD|CD)\s*[:]?\s*/i;
+const qsParts=v=>{const L=String(v||'').split('/').map(x=>x.trim()).filter(Boolean),o={};for(const x of L){const m=x.match(QS_PT);if(!m)return null;o[m[1].toUpperCase()]=x.slice(m[0].length).trim()}return Object.keys(o).length>1?o:null};
+function qsJudge(std,res){const sp=qsParts(std);if(sp){const rp=qsParts(res)||(()=>{const m=String(res||'').match(QS_PT);return m?{[m[1].toUpperCase()]:String(res).slice(m[0].length).trim()}:null})();if(!rp)return null;const J=Object.keys(sp).map(k=>rp[k]?qsJudge1(sp[k],rp[k]):null);return J.includes(false)?false:J.every(x=>x===true)?true:null}return qsJudge1(std,res)}
+function qsJudge1(std,res){std=String(std||'').replace(/,/g,'').trim();res=String(res||'').trim();if(!res||!std||std==='-')return null;
  const v=qsNum(res);let m;
  if((m=std.match(/^±\s*(\d+(?:\.\d+)?)/)))return isNaN(v)?null:Math.abs(v)<=+m[1];
  if((m=std.match(/^(-?\d+(?:\.\d+)?)\s*(?:-|~)\s*(\d+(?:\.\d+)?)\s*급?\s*이상/)))return isNaN(v)?null:v>=(+m[1]+ +m[2])/2;
@@ -175,7 +179,7 @@ function trCmpGuess(t){const n=gsN(t.name);let best=null,bl=0;qualities.forEach(
 function trCmpLink(){const t=trs.find(x=>x.id===trCmpId);if(!t)return;const q=qsGet($('tc_q').value);t.qs=q?{id:q.id,fab:(q.fabrics.find(f=>f.id===$('tc_f').value)||q.fabrics[0]||{}).id||'',res:(t.qs&&t.qs.res)||{}}:undefined;if(!q)delete t.qs;trCmpRender()}
 function trCmpQ(){const t=trs.find(x=>x.id===trCmpId);if(!t)return;const q=qsGet($('tc_q').value);if(q){t.qs={id:q.id,fab:(q.fabrics[0]||{}).id||'',res:(t.qs&&t.qs.res)||{}}}else delete t.qs;trCmpRender()}
 function trCmpCalc(t,q,f){const res=(t.qs&&t.qs.res)||{},L=[];let prev=null;
- (f?f.rows:[]).forEach(r=>{const j=qsJudge(r.std,res[r.id]);L.push({k:r.id,item:r.item,div:r.div,same:r.item===prev,j,label:r.item+(r.div&&r.div!=='-'?`(${r.div})`:'')});prev=r.item});
+ (f?f.rows:[]).forEach(r=>{const j=trJ(t,r);L.push({k:r.id,item:r.item,div:r.div,same:r.item===prev,j,label:r.item+(r.div&&r.div!=='-'?`(${r.div})`:'')});prev=r.item});
  const pats=q?q.patterns.filter(p=>!p.applies||!f||p.applies.split(/[,·]/).map(s=>gsN(s)).includes(gsN(f.name))):[];
  pats.forEach(p=>{p.fast.forEach((c,ci)=>c.v.forEach((sv,i)=>{const k=`F|${p.id}|${ci}|${i}`;if(!sv||!res[k])return;L.push({k,j:qsJudge(/이상|이하/.test(sv)?sv:sv+' 이상',res[k]),label:`견뢰도 ${c.color} ${QS_FAST[i]}`,fast:1})}));
   p.ir.forEach((r,ri)=>r.v.forEach((sv,i)=>{const k=`I|${p.id}|${ri}|${i}`;if(!sv||!res[k])return;L.push({k,j:qsJudge(sv,res[k]),label:`IR ${p.irColors[i]} ${r.nm}nm`,ir:1})}))});
@@ -185,7 +189,8 @@ function trCmpRender(){const sec=$('p_testrpt'),el=$('trcmp');if(!sec||!el)retur
  const q=t.qs&&qsGet(t.qs.id),f=q&&(q.fabrics.find(x=>x.id===t.qs.fab)||q.fabrics[0]),res=(t.qs&&t.qs.res)||{};
  const {L,pats}=q?trCmpCalc(t,q,f):{L:[],pats:[]},ok=L.filter(x=>x.j===true).length,ng=L.filter(x=>x.j===false),done=ok+ng.length;
  const iv=k=>`<input data-k="${esc(k)}" value="${esc(res[k]||'')}" oninput="trCmpIn(this)">`;
- const rowsH=f?f.rows.map((r,i)=>{const j=qsJudge(r.std,res[r.id]),same=i>0&&f.rows[i-1].item===r.item;return `<tr class="${j===false?'x':''}"><td>${same?'':esc(r.item)}</td><td>${esc(r.div)||'-'}</td><td>${esc(r.std)}</td><td>${esc(r.unit)}</td><td>${iv(r.id)}</td><td>${qsOX(j)}</td><td>${same?'':esc(r.method)}</td></tr>`}).join(''):'';
+ const rowsH=f?f.rows.map((r,i)=>{const j=trJ(t,r),same=i>0&&f.rows[i-1].item===r.item;return `<tr class="${j===false?'x':''}"><td>${same?'':esc(r.item)}</td><td>${esc(r.div)||'-'}</td><td>${esc(r.std)}</td><td>${esc(r.unit)}</td><td>${iv(r.id)}</td><td>${qsOX(j)}${t.qs.jd&&r.id in t.qs.jd?'<small class="muted" title="직접 판정">*</small>':''}${t.qs.rm&&t.qs.rm[r.id]?`<div class="muted" style="font-size:11px">${esc(t.qs.rm[r.id])}</div>`:''}</td><td>${same?'':esc(r.method)}</td></tr>`}).join(''):'';
+ const exH=t.qs&&t.qs.extra&&t.qs.extra.length?`<div class="muted" style="font-size:12px;margin-top:6px">⚠ 기준에 없는 항목: ${t.qs.extra.map(e=>esc([e.item,e.part&&`(${e.part})`,e.value,e.unit,e.judge===true?'O':e.judge===false?'X':''].filter(Boolean).join(' '))).join(' · ')}</div>`:'';
  const patH=pats.map(p=>(p.fast.length?`<details${p.fast.some((c,ci)=>c.v.some((_,i)=>res[`F|${p.id}|${ci}|${i}`]))?' open':''}><summary>염색견뢰도 (${esc(p.name)} · ${p.fast.length}색)</summary><table class="qst" style="margin-top:6px"><thead><tr><th>색상</th>${QS_FAST.map(x=>`<th>${x.replace(' ','<br>')}</th>`).join('')}</tr></thead><tbody>${p.fast.map((c,ci)=>`<tr><td class="l">${esc(c.color)}</td>${c.v.map((sv,i)=>{const k=`F|${p.id}|${ci}|${i}`,j=sv?qsJudge(/이상|이하/.test(sv)?sv:sv+' 이상',res[k]):null;return `<td${j===false?' style="background:#fdecea"':''}><small class="muted">${esc(sv)}↑</small>${sv?iv(k):''}<span class="ox">${qsOX(j)}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></details>`:'')+
   (p.ir.length?`<details${p.ir.some((r,ri)=>r.v.some((_,i)=>res[`I|${p.id}|${ri}|${i}`]))?' open':''}><summary>적외선 반사율 (${esc(p.name)} · ${esc(p.ir[0].nm)}~${esc(p.ir[p.ir.length-1].nm)}nm)</summary><table class="qst" style="margin-top:6px"><thead><tr><th>nm</th>${p.irColors.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${p.ir.map((r,ri)=>`<tr><td><b>${esc(r.nm)}</b></td>${r.v.map((sv,i)=>{const k=`I|${p.id}|${ri}|${i}`,j=qsJudge(sv,res[k]);return `<td${j===false?' style="background:#fdecea"':''}><small class="muted">${esc(sv)}</small>${sv?iv(k):''}<span class="ox">${qsOX(j)}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></details>`:'')).join('');
  el.innerHTML=`<div class="hd"><b>${esc(t.no||t.name)} · 기준 비교</b>${wfCell(t,wfFiles.filter(f=>f.orderId===t.id),'tr').replace(/^<td/,'<span').replace(/<\/td>$/,'</span>')}<button onclick="trOpen('${t.id}')">성적서 수정</button><button onclick="trCmpClose()" title="닫기">✕</button></div>
@@ -194,12 +199,13 @@ function trCmpRender(){const sec=$('p_testrpt'),el=$('trcmp');if(!sec||!el)retur
   :'<div class="muted" style="font-size:12px">등록된 품질 기준이 없습니다.</div>'}
  ${q?`<div class="cmpsum ${ng.length?'ng':done&&done===L.length?'ok':''}" id="tc_sum">${trCmpSum(L)}</div>
  ${f&&f.rows.length?`<table class="qst" data-rz="tr_cmp"><colgroup><col style="width:15%"><col style="width:9%"><col style="width:15%"><col style="width:10%"><col style="width:17%"><col style="width:8%"><col></colgroup><thead><tr><th>항목</th><th>구분</th><th>기준</th><th>단위</th><th>결과</th><th>판정</th><th>시험방법</th></tr></thead><tbody>${rowsH}</tbody></table>`:'<div class="muted" style="font-size:12px">이 원단에 시험항목이 없습니다.</div>'}
- ${patH}
+ ${exH}${patH}
  <div class="df" style="justify-content:flex-start;padding:0"><button class="p" onclick="trCmpSave()">확인</button><button onclick="trCmpClose()">취소</button></div>`:''}`;
  crInit()}
+const trJ=(t,r)=>{const jd=t.qs&&t.qs.jd;return jd&&r.id in jd?jd[r.id]:qsJudge(r.std,((t.qs&&t.qs.res)||{})[r.id])};
 function trCmpSum(L){const ok=L.filter(x=>x.j===true).length,ng=L.filter(x=>x.j===false),pend=L.length-ok-ng.length;
  return `총 ${L.length}항목 · 합격 ${ok} · 불합격 ${ng.length}${pend?` · 미입력 ${pend}`:''}${ng.length?' → 불합격':pend?'':' → 합격'}`}
-function trCmpIn(inp){const t=trs.find(x=>x.id===trCmpId);if(!t||!t.qs)return;t.qs.res=t.qs.res||{};const v=inp.value.trim();if(v)t.qs.res[inp.dataset.k]=v;else delete t.qs.res[inp.dataset.k];
+function trCmpIn(inp){const t=trs.find(x=>x.id===trCmpId);if(!t||!t.qs)return;t.qs.res=t.qs.res||{};const v=inp.value.trim();if(v)t.qs.res[inp.dataset.k]=v;else delete t.qs.res[inp.dataset.k];if(t.qs.jd)delete t.qs.jd[inp.dataset.k];
  const q=qsGet(t.qs.id),f=q&&(q.fabrics.find(x=>x.id===t.qs.fab)||q.fabrics[0]),{L}=trCmpCalc(t,q,f),me=L.find(x=>x.k===inp.dataset.k),td=inp.closest('td'),tr=inp.closest('tr');
  if(!me&&td&&inp.dataset.k.includes('|')){td.style.background='';const o=td.querySelector('.ox');if(o)o.innerHTML=qsOX(null)}
  if(me){if(tr&&!me.fast&&!me.ir){tr.classList.toggle('x',me.j===false);const c=tr.cells[5];if(c)c.innerHTML=qsOX(me.j)}else if(td){td.style.background=me.j===false?'#fdecea':'';const o=td.querySelector('.ox');if(o)o.innerHTML=qsOX(me.j)}}

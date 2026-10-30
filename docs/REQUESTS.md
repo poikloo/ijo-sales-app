@@ -324,6 +324,33 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - `file`: inbox 기준 경로. 허용: hwp, hwpx, pdf, jpg/png/webp/gif.
 - 품목 머리의 📎 버튼으로 열림 (pdf·사진은 미리보기, hwp는 PC 기본 프로그램). 같은 이름 파일이 있으면 경고 후 건너뜀.
 
+### 3.13 `testReport.setResults` — TEST REPORT 기준 비교에 시험 결과 입력
+
+```json
+{ "type": "testReport.setResults", "reportNo": "EX-0101", "name": "겉감",
+  "link": { "specNo": "EX-QS-001", "fabric": "겉감" },
+  "replace": true,
+  "results": [
+    { "item": "인장강도", "part": "경", "value": "950", "unit": "N" },
+    { "item": "인장강도", "part": "위", "value": "780", "unit": "N" },
+    { "item": "인열강도", "value": "35", "judge": "pass", "memo": "(예시) 재시험" }
+  ] }
+```
+
+- **성적서 찾기**: `id`(스냅샷 `testReports[].id`)가 있으면 그것으로 찾음(`reportNo`도 주면 일치해야 함). 없으면 `reportNo`(공백·하이픈 무시).
+  같은 접수번호가 여러 건이면 `name`(품명 일부)과 `received`(접수일)로 좁힘. 그래도 0건 또는 2건 이상이면 오류 → `id`로 보내 주세요.
+- `link` (선택): `qualityItemId` 또는 `specNo` 또는 `name`(품목명; `specNo`와 같이 주면 둘 다 맞아야 함), `fabric`(원단 이름; 없으면 지금 연결된 원단 또는 첫 원단).
+  없으면 지금 연결된 기준을 쓰고, 연결이 없으면 품명으로 자동 연결(경고), 그것도 안 되면 오류. 연결 기준/원단이 바뀌면 기존 입력값은 지움.
+- `results[]`: `item`(필수), `part`(경/위/건/습 등, 선택), `value`(문자열), `unit`(선택; 기준 단위와 다르면 경고), `judge`(`"pass"`/`"fail"`/`null`), `memo`.
+  - 매칭: 연결된 원단의 시험항목 `item`과 비교(공백·대소문자 무시, 없으면 포함 관계). `part`가 있으면 `구분`과 맞춤.
+    구분 없이 기준이 "경 900 이상 / 위 800 이상"처럼 한 칸이면 결과를 "경 950 / 위 780"으로 모아 넣고 경·위 각각 판정.
+  - 맞는 행이 없거나 여러 개면 카드에 ⚠ 표시, 값은 "기준에 없는 항목"으로 보관(패널 아래 표시, 스냅샷 `rows[].unmatched`).
+  - `judge`가 null/없으면 앱이 기준과 비교해 자동 판정. pass/fail을 주면 그 값을 씀(패널 판정 옆 `*`). 패널에서 값을 고치면 직접 판정은 풀림.
+- `overall` (선택, pass/fail): 결과 칸. 없으면 계산 — 불합격 하나라도 있으면 불합격, 모두 합격이면 합격, 미입력이 있으면 그대로(경고).
+- `failedItems` (선택, 문자열 또는 배열): 불합격 항목 칸. 없으면 불합격 판정 항목으로 채움.
+- `replace`: `true`면 이 성적서의 기존 입력값·판정·메모를 지우고 새로 넣음. `false`/없음이면 보낸 항목만 덮어씀.
+- 스냅샷 `testReports[].linkedQuality` = `{name, fabric, specNo, qualityItemId, results, rows[]{item,part,standard,unit,value,judge,manual,memo,unmatched}}`.
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -433,7 +460,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `qualityStandards[]` — 품질 기준 (조달청 규격서)
 
 `id` `name` `category`(분류) `specNo`(규격서 번호) `revised`(개정일) `org` `drawing` `irApplied` `usage` `material` `color` `memo` `types[]{type,stockNo,color}` `attached[]`(첨부 파일명) `appendix[]{title,columns,rows,text}` `fabrics[]{name,usage,material,color,ref,yarn,weave,width,tests[]{item,division,standard,unit,method,memo}}` `patterns[]{name,appliesTo,grade,colorfastness[]{color,일광,…},irMethod,irColors[],irReflectance[]{nm,ranges[]}}`
-(`testReports[].linkedQuality` = `{name,fabric,results}` 연결된 품질 기준과 입력한 결과값)
+(`testReports[].linkedQuality` = `{name,fabric,specNo,qualityItemId,results,rows[]}` 연결된 품질 기준과 입력한 결과값 · 판정, 3.13 참고)
 
 ### `contacts[]` — 거래처 정보 (명함)
 

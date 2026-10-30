@@ -154,9 +154,9 @@ function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:
   rqExtra(a,['type','comment',...(RQ_KEYS[a.type]||[])],'동작',it);try{RQ_H[a.type](a,it,ctx,req,P)}catch(e){it.errors.push('처리 중 오류: '+(e&&e.message||e))}return it});
  return {top,items,ctx,nerr:top.length+items.reduce((s,x)=>s+x.errors.length,0)}}
 const rqClone=v=>JSON.parse(JSON.stringify(v));
-function rqSnap(){return {orders,stmts,sales,prices,qualities,stEd}}
-function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sales);prices=rqClone(prices);qualities=rqClone(qualities)}
-function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;qualities=s.qualities;stEd=s.stEd}
+function rqSnap(){return {orders,stmts,sales,prices,qualities,trs,stEd}}
+function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sales);prices=rqClone(prices);qualities=rqClone(qualities);trs=rqClone(trs)}
+function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;qualities=s.qualities;trs=s.trs;stEd=s.stEd}
 function rqPreview(P){const s=rqSnap();try{rqWork();return rqRun(P)}finally{rqRestore(s)}}
 const rqSummary=(P,R)=>R.items.map(it=>`· ${it.title}: ${it.summary}`).join('\n');
 // ---- 카드에서 고치기: 원래 요청은 그대로 두고, 고친 actions 사본(rqEdits[file])으로 미리보기·적용 ----
