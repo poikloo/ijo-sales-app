@@ -29,7 +29,7 @@ function blAuto(ym){const R={};orders.forEach(o=>{if(!o.client)return;const last
   if(!sh.length){if((o.date||'').slice(0,7)===ym)(R[o.client]=R[o.client]||[]);return}
   const p=blPrice(o);(R[o.client]=R[o.client]||[]).push({ref:o.id,orderNo:o.no,item:o.item||o.no,spec:blSpec(o),unit:o.unit||'YD',qty:sh.reduce((a,s)=>a+(+s.qty||0),0),price:p.price,priceSrc:p.src,
    ships:sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||''})).sort((a,b)=>a.date.localeCompare(b.date))})});return R}
-function blCalc(l){if(l.vat==='inc'){const t=f10(l.total),s=f10(t/1.1);return {sup:s,vat:t-s,tot:t}}const s=f10((+l.qty||0)*(+l.price||0)),v=f10(s/10);return {sup:s,vat:v,tot:s+v}}
+function blCalc(l){if(l.vat==='inc')return {sup:0,vat:0,tot:f10(l.total)};const s=f10((+l.qty||0)*(+l.price||0)),v=f10(s/10);return {sup:s,vat:v,tot:s+v}}
 // 화면용 청구서 (잠금 시 고정본)
 function blView(key,A0){const [ym,client]=[key.slice(0,7),key.slice(8)],b=bills[key]||blNormBill({ym,client}),Am=A0||blAuto(ym),auto=Am[client]||[],warn=[];let lines=[],ships=[];
  if(b.locked&&b.frozen){lines=b.frozen.lines||[];ships=b.frozen.ships||[];const ids=new Set(ships.map(s=>s.id)),extra=auto.flatMap(a=>a.ships).filter(s=>!ids.has(s.id));

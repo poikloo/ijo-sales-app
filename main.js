@@ -51,22 +51,22 @@ ipcMain.handle('stmtPreview',async(e,html,name)=>{const {w,f}=await renderPDF(ht
   v.setMenu(null);v.webContents.setWindowOpenHandler(()=>({action:'deny'}));v.on('page-title-updated',ev=>ev.preventDefault());v.on('closed',()=>fs.rmSync(pf,{force:true}));await v.loadFile(pf);return true});
 ipcMain.handle('stmtPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4'},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});
 ipcMain.handle('billXlsx',async(e,d,name)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('청구내역서',{pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0,footer:0}}});
-  ws.columns=[24,12,12,14,12,15,18].map(w=>({width:w}));const thin={style:'thin'},B={top:thin,left:thin,bottom:thin,right:thin},F={name:'맑은 고딕',size:10},N='#,##0',HF='FFF2F2F2';let r=1;
-  const put=(R,C,v,o={})=>{const c=ws.getCell(R,C);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:'middle',horizontal:o.h||'center',wrapText:!!o.wrap};if(o.fmt)c.numFmt=o.fmt;if(o.fill)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};if(o.b)c.border=B;return c};
-  const row=(vals,o={})=>{vals.forEach((v,i)=>put(r,i+1,v,{b:1,...o,...((o.cols||{})[i]||{})}));ws.getRow(r).height=o.ht||20;r++};
+  ws.columns=[30,13,13,15,13,16,24].map(w=>({width:w}));const thin={style:'thin'},B={top:thin,left:thin,bottom:thin,right:thin},F={name:'맑은 고딕',size:10},N='#,##0',HF='FFF2F2F2';let r=1;
+  const put=(R,C,v,o={})=>{const c=ws.getCell(R,C);c.value=v;c.font={...F,...(o.font||{})};c.alignment={vertical:'middle',horizontal:o.h||'center',wrapText:true,indent:(o.h==='left'||o.h==='right')&&o.b?1:0};if(o.fmt)c.numFmt=o.fmt;if(o.fill)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};if(o.b)c.border=B;return c};
+  const row=(vals,o={})=>{vals.forEach((v,i)=>put(r,i+1,v,{b:1,...o,...((o.cols||{})[i]||{})}));{const n=Math.max(1,...vals.map((v,i)=>Math.ceil([...String(v==null?'':v)].reduce((t,ch)=>t+(/[\u3131-\uD79D]/.test(ch)?1.8:1),0)/((ws.getColumn(i+1).width||10)+(i===3&&vals[4]===''?ws.getColumn(5).width:0)-2))));ws.getRow(r).height=o.ht||(n>1?n*15+8:24)}r++};
   ws.mergeCells(r,1,r,7);put(r,1,d.title,{font:{size:18,bold:true,underline:true}});ws.getRow(r).height=34;r+=2;
   ws.mergeCells(r,1,r,3);put(r,1,d.client+' 귀하',{h:'left',font:{size:12,bold:true}});ws.mergeCells(r,4,r,7);put(r,4,'세금계산서 발행 일자: '+(d.issue||''),{h:'right'});r+=2;
   put(r,1,'1. 청구 내역',{h:'left',font:{bold:true,size:11}});r++;
-  row(['품명','수량(y)','단가','공급가액','부가세','총액','비고'],{fill:HF,font:{bold:true}});
+  row(['품명','수량(YD)','단가','공급가액','부가세','총액','비고'],{fill:HF,font:{bold:true}});
   const num={h:'right',fmt:N};
   d.lines.forEach(l=>row([l.item+(l.spec?' ('+l.spec+')':''),l.qty||null,l.price||null,l.sup,l.vat,l.tot,l.memo||''],{cols:{0:{h:'left',wrap:1},1:num,2:num,3:num,4:num,5:num,6:{h:'left',wrap:1}}}));
   row(['합 계',d.T.qty||null,'',d.T.sup,d.T.vat,d.T.tot,''],{fill:HF,font:{bold:true},cols:{1:num,3:num,4:num,5:num}});r++;
   put(r,1,'2. 출고 내역',{h:'left',font:{bold:true,size:11}});r++;
-  row(['품명','일자','수량(y)','출고처','','도착지','비고'],{fill:HF,font:{bold:true}});ws.mergeCells(r-1,4,r-1,5);
+  row(['품명','일자','수량(YD)','출고처','','도착지','비고'],{fill:HF,font:{bold:true}});ws.mergeCells(r-1,4,r-1,5);
   d.ships.forEach(s=>{row([s.item,s.date,s.qty,s.from,'',s.dest,s.memo||''],{cols:{0:{h:'left',wrap:1},2:num,6:{h:'left'}}});ws.mergeCells(r-1,4,r-1,5)});
   row(['합 계','',d.ships.reduce((a,s)=>a+(+s.qty||0),0),'','','',''],{fill:HF,font:{bold:true},cols:{2:num}});ws.mergeCells(r-1,4,r-1,5);r+=2;
   const P=d.party||{},foot=[['은 행',P.bank],['예 금 주',P.holder],['계좌번호',P.account],['주 소',P.addr],['청 구 인',P.name],['대 표',(P.ceo||'')+'  (인)']];
-  foot.forEach(([k,v])=>{put(r,1,k+':',{h:'left',font:{bold:true}});ws.mergeCells(r,2,r,7);put(r,2,v||'',{h:'left'});ws.getRow(r).height=19;r++});
+  foot.forEach(([k,v])=>{if(k==='주 소')r++;put(r,1,k+':',{h:'left',font:{bold:true}});ws.mergeCells(r,2,r,7);put(r,2,v||'',{h:'left'});ws.getRow(r).height=19;r++});
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}
   await wb.xlsx.writeFile(p);return p});
 ipcMain.handle('stmtXlsx',async(e,s,sup,name)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('거래명세서',{pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.24,right:0.24,top:0.3,bottom:0.3,header:0,footer:0}}});
