@@ -36,7 +36,7 @@ function trOpen(id){const x=id?trs.find(t=>t.id===id):{name:'',lab:'',no:'',recv
  $('dbody').innerHTML=`<div class="trform">${inp('name','품명 (의뢰명) *',' style="width:100%"')}
  <div class="trg">${inp('lab','시험기관',' list="trlabs"')}${inp('no','접수번호')}<label>접수일<input id="tr_recv" type="date" value="${esc(x.recv)}"></label><label>완료일<input id="tr_done" type="date" value="${esc(x.done)}"></label></div>
  <div class="trg">${inp('result','결과',' list="trress"')}<label style="grid-column:span 3">불합격 항목<input id="tr_fail" value="${esc(x.fail)}" placeholder="예: 인열강도, 발수도"></label></div>
- <label>비고<textarea id="tr_memo" rows="2">${esc(x.memo)}</textarea></label>
+ <label>비고<textarea id="tr_memo" rows="2">${esc(x.memo)}</textarea></label>${id?`<div style="font-size:12px;display:flex;align-items:center;gap:6px"><span>시험성적서</span>${attCell('tr',id,{tag:'span'})}</div>`:''}
  <datalist id="trlabs">${labs.map(v=>`<option value="${esc(v)}">`).join('')}</datalist><datalist id="trress">${ress.map(v=>`<option value="${esc(v)}">`).join('')}</datalist>
  ${id&&x.imp?'<div class="muted" style="font-size:12px">엑셀에서 가져온 행이라 다시 가져오면 엑셀 내용으로 바뀝니다.</div>':''}</div>`;
  $('dfoot').innerHTML=`${id?`<button class="d" onclick="trDel('${id}')">삭제</button>`:''}<button class="p" onclick="trSave('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;

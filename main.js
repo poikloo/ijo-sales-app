@@ -155,7 +155,7 @@ const attSaveFilter=a=>{const x=path.extname(a).slice(1).toLowerCase();return [x
 const QS_EXT=/\.(pdf|jpe?g|png|webp|gif|hwpx?)$/i;
 const WF=()=>path.join(DIR(),'workorders');
 function wfAbs(rel){const a=path.resolve(WF(),String(rel||''));if(!a.startsWith(path.resolve(WF())+path.sep))throw new Error('잘못된 경로');return a}
-ipcMain.handle('wfPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:ATT_FILTERS,properties:['openFile','multiSelections']});return r.canceled?[]:r.filePaths});
+ipcMain.handle('wfPick',async(e,k)=>{const r=await dialog.showOpenDialog(win,{filters:k==='qs'?[{name:'규격서',extensions:['pdf','hwp','hwpx',...ATT_IMG]}]:ATT_FILTERS,properties:['openFile','multiSelections']});return r.canceled?[]:r.filePaths});
 ipcMain.handle('wfAttach',(e,oid,src)=>{oid=String(oid).replace(/[^\w-]/g,'');src=String(src);if(!oid||!(ATT_EXT.test(src)||oid.startsWith('qs-')&&QS_EXT.test(src))||!fs.statSync(src).isFile())throw new Error('PDF·이미지 파일이 아닙니다');
   const dir=path.join(WF(),oid);fs.mkdirSync(dir,{recursive:true});const ext=path.extname(src),base=path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'작업의뢰서';
   let name=base+ext,i=2;while(fs.existsSync(path.join(dir,name)))name=`${base} (${i++})${ext}`;fs.copyFileSync(src,path.join(dir,name));
@@ -192,6 +192,8 @@ ipcMain.handle('brAttach',(e,src)=>{src=String(src);if(!BR_EXT.test(src)||!fs.st
 ipcMain.handle('brPreview',(e,rel,name,ttl)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;
   const w=new BrowserWindow({width:900,height:1000,parent:win,title:(ttl==='명함'?'명함':'사업자등록증')+' - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});
+ipcMain.handle('brSaveAs',async(e,rel,name)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;const r=process.env.IJO_SHOT&&process.env.IJO_SAVEAS?{filePath:process.env.IJO_SAVEAS}:await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),path.basename(String(name||path.basename(a)))),filters:attSaveFilter(a)});
+  if(r.canceled||!r.filePath)return null;fs.copyFileSync(a,r.filePath);return r.filePath});
 ipcMain.handle('brDelete',(e,rel)=>{const a=brAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
 // ===== 수량 가져오기: 오프라인 OCR (tesseract.js 워커 + 번들된 eng 데이터, 네트워크 사용 안 함) =====
 const unp=p=>p.replace(/app\.asar([\\/])/,'app.asar.unpacked$1');
