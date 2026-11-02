@@ -51,7 +51,7 @@ contextBridge.exposeInMainWorld('api',{
   ssDelete:p=>ipcRenderer.invoke('ssDelete',p),
   brPick:()=>ipcRenderer.invoke('brPick'),
   brAttach:p=>ipcRenderer.invoke('brAttach',p),
-  brPreview:(p,n)=>ipcRenderer.invoke('brPreview',p,n),
+  brPreview:(p,n,t)=>ipcRenderer.invoke('brPreview',p,n,t),
   brDelete:p=>ipcRenderer.invoke('brDelete',p),
   attRead:(k,p)=>ipcRenderer.invoke('attRead',k,p),
   attWrite:(k,p,b)=>ipcRenderer.invoke('attWrite',k,p,b),

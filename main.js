@@ -189,8 +189,8 @@ ipcMain.handle('brAttach',(e,src)=>{src=String(src);if(!BR_EXT.test(src)||!fs.st
   const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),dir=path.join(BR(),id);fs.mkdirSync(dir,{recursive:true});
   const ext=path.extname(src),name=(path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'사업자등록증')+ext;fs.copyFileSync(src,path.join(dir,name));
   return {id,name,path:id+'/'+name}});
-ipcMain.handle('brPreview',(e,rel,name)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;
-  const w=new BrowserWindow({width:900,height:1000,parent:win,title:'사업자등록증 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ipcMain.handle('brPreview',(e,rel,name,ttl)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;
+  const w=new BrowserWindow({width:900,height:1000,parent:win,title:(ttl==='명함'?'명함':'사업자등록증')+' - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});
 ipcMain.handle('brDelete',(e,rel)=>{const a=brAbs(rel);fs.rmSync(a,{force:true});try{fs.rmdirSync(path.dirname(a))}catch(e){}return true});
 // ===== 수량 가져오기: 오프라인 OCR (tesseract.js 워커 + 번들된 eng 데이터, 네트워크 사용 안 함) =====

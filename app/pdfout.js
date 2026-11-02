@@ -10,7 +10,7 @@ const pE=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 async function pdfSave(html,name){if(!A.htmlPDF)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');try{const p=await A.htmlPDF(html,name);if(p)toast('PDF 저장: '+p)}catch(e){uiAlert('PDF 저장 실패: '+(e.message||e))}}
 // 화면에 보이는(필터된) 표 읽기
 function pdfGrab(tb){const t=$(tb)&&$(tb).closest('table');if(!t)return null;const ths=[...t.querySelectorAll('thead th')],keep=ths.map((h,i)=>h.innerText.trim()?i:-1).filter(i=>i>=0);
- const rows=[...t.querySelectorAll('tbody tr')].filter(r=>r.offsetParent!==null||!r.closest('.page:not(.on)')).map(r=>[...r.children]).filter(c=>c.length>=keep.length&&!(c.length===1)).map(c=>keep.map(i=>c[i]?c[i].innerText.replace(/\s*\n\s*/g,' ').trim():''));
+ const rows=[...t.querySelectorAll('tbody tr')].filter(r=>r.offsetParent!==null||!r.closest('.page:not(.on)')).map(r=>[...r.children]).filter(c=>c.length>=keep.length&&!(c.length===1)).map(c=>keep.map(i=>c[i]?c[i].dataset.x!=null?c[i].dataset.x:c[i].innerText.replace(/\s*\n\s*/g,' ').trim():''));
  const al=keep.map(i=>{const c=t.querySelector(`tbody tr td:nth-child(${i+1})`);return c?getComputedStyle(c).textAlign:''});return {h:keep.map(i=>ths[i].innerText.trim()),rows,al}}
 async function pdfList(tb,title,name){const g=pdfGrab(tb);if(!g)return;const land=g.h.length>7;
  const body=`<h1>${pE(title)}</h1><div class="sub">${pE(new Date().toLocaleString('ko-KR'))} · ${g.rows.length}건</div><table><thead><tr>${g.h.map(h=>`<th>${pE(h)}</th>`).join('')}</tr></thead><tbody>${g.rows.map(r=>`<tr>${r.map((v,i)=>`<td class="${g.al[i]==='right'?'r':g.al[i]==='center'?'c':''}">${pE(v)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${g.h.length}" class="c">항목이 없습니다.</td></tr>`}</tbody></table>`;

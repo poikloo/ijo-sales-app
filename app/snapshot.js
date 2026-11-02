@@ -27,7 +27,7 @@ function snapBuild(){
    lots,totalQty:r2(lots.reduce((a,l)=>a+l.qty,0)),example:!!s.example,search:snapS([s.orderNo,s.item,s.spec,s.cust&&s.cust.name,s.dest,s.note,...lots.flatMap(l=>[l.lotNo,l.color])])}});
  const TR=trs.map(x=>({id:x.id,name:x.name,lab:x.lab,reportNo:x.no,received:x.recv,completed:x.done,result:x.result,failedItems:x.fail,memo:x.memo,linkedQuality:x.qs&&qsGet(x.qs.id)?{name:qsGet(x.qs.id).name,fabric:(qsGet(x.qs.id).fabrics.find(f=>f.id===x.qs.fab)||{}).name||'',values:x.qs.res,results:trSnapRows(x),specNo:qsGet(x.qs.id).spec,qualityItemId:x.qs.id,rows:trSnapRows(x)}:null,files:fnames(wfFiles,f=>f.kind==='tr'&&f.orderId===x.id),attached:wfFiles.some(f=>f.kind==='tr'&&f.orderId===x.id),example:!!x.example,
   search:snapS([x.name,x.lab,x.no,x.result,x.fail,x.memo])}));
- const CT=contacts.map(c=>({id:c.id,company:c.company,name:c.name,team:c.team,title:c.title,email:c.email,web:c.web,addrs:c.addrs,tels:c.tels,faxes:c.faxes,mobiles:c.mobiles,memo:c.memo,example:!!c.example,
+ const CT=contacts.map(c=>({id:c.id,company:c.company,name:c.name,team:c.team,title:c.title,email:c.email,web:c.web,addrs:c.addrs,tels:c.tels,faxes:c.faxes,mobiles:c.mobiles,memo:c.memo,cards:(c.cards||[]).map(f=>f.name),businessReg:(brOf(c.company)||{}).name||'',example:!!c.example,
   search:snapS([c.company,c.name,c.team,c.title,c.email,c.memo,...c.tels,...c.mobiles])}));
  const QS=typeof qsSnap==='function'?qsSnap():[];
  const BL=typeof blSnap==='function'?blSnap():[];

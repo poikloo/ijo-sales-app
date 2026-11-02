@@ -26,7 +26,7 @@ const brIcon=n=>attIsImg(n)?'IMG':'PDF';
 function brInner(company){const f=brOf(company);if(!brKey(company))return '<small class="muted">회사명 없음</small>';
  return f?`<span class="brchip" title="${esc(f.name)} — 눌러서 열기" onclick="brPreview('${f.id}')"><i${attIsImg(f.name)?' class="img"':''}>${brIcon(f.name)}</i>${esc(f.name)}</span><button class="brb" title="다른 파일로 교체" onclick="brPick(brCo(this))">교체</button><button class="brb ssx" title="삭제" onclick="brDel('${f.id}')">✕</button>`
   :`<button class="brb" title="PDF·이미지를 이 칸에 끌어다 놓아도 돼요" onclick="brPick(brCo(this))">첨부</button>`}
-function brCell(c){return `<td class="brd" data-nolr data-brc="${esc(c.company)}" onclick="event.stopPropagation()" ondragover="brOver(event)" ondragleave="this.classList.remove('wfdrop')" ondrop="brDrop(event)"><div class="ssb">${brInner(c.company)}</div></td>`}
+function brCell(c){return `<td class="brd" data-nolr data-brc="${esc(c.company)}" data-x="${esc((brOf(c.company)||{}).name||'')}" onclick="event.stopPropagation()" ondragover="brOver(event)" ondragleave="this.classList.remove('wfdrop')" ondrop="brDrop(event)"><div class="ssb">${brInner(c.company)}</div></td>`}
 // 명함 보기/수정 창 안의 사업자등록증 영역
 function brModal(){const el=$('ct_br');if(!el)return;const co=$('ct_company')?$('ct_company').value.trim():el.dataset.brc;el.dataset.brc=co;
  el.innerHTML=`<div class="ssb">${brInner(co)}${brOf(co)?'':(brKey(co)?'<small class="muted">또는 끌어놓기 · 같은 회사의 모든 명함에 함께 표시돼요</small>':'')}</div>`}
