@@ -1,5 +1,5 @@
 // ===== 청구서 (월말 결산: 같은 달 · 같은 거래처 = 한 장) =====
-// 자동 줄: 생산 관리 최종 공정 출고(그 달) × 단가(매출 관리: 오더번호 행 우선, 없으면 거래처+품목 최근 단가)
+// 자동 줄: 매출 관리 행(오더번호) 수량·단가 그대로. 매출 행 없는 오더는 최종 공정 출고(그 달) × 최근 단가
 let bills={},billInfo={},blYm='',blSel=null,blF={k:'',st:''},blDraft=null;
 const BL_INFO=[['name','청구인 (상호)'],['ceo','대표'],['addr','주소'],['bank','은행'],['holder','예금주'],['account','계좌번호']];
 const blKey=(ym,c)=>ym+'|'+c;
@@ -25,32 +25,40 @@ function blPrice(o){const pick=l=>l.filter(x=>+x.unitPrice>0).sort((a,b)=>(b.dat
  const b=pick(sales.filter(x=>blNk(x.client)===blNk(o.client)&&blNk(x.item)===blNk(o.item)));if(b)return {price:+b.unitPrice,src:'최근 단가'};return {price:0,src:''}}
 function blSpec(o){return [...new Set((o.lines||[]).map(l=>l.color).filter(Boolean))].join(', ')}
 // 그 달 자동 줄 (거래처별)
-function blAuto(ym){const R={};orders.forEach(o=>{if(!o.client)return;const last=o.procs[o.procs.length-1],sh=last?last.ships.filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty):[];
+// 매출 관리 행이 있는 오더: 그 행의 수량·단가 그대로 (매출일 달, 없으면 최근 출고 달 — 한 달에만). 없으면 출고 합계 × 단가
+function blSlYm(x,o){if(blDate(x.date))return x.date.slice(0,7);const last=o&&o.procs[o.procs.length-1],d=last?last.ships.map(s=>blDate(s.date)).filter(Boolean).sort().pop():'';return d?d.slice(0,7):''}
+function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
+ orders.forEach(o=>{if(!o.client)return;const last=o.procs[o.procs.length-1],sh=last?last.ships.filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty):[],k=blNk(o.no);if(k)ON.add(k);
+  const SH=sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||''})).sort((a,b)=>a.date.localeCompare(b.date));
+  const S=k?sales.filter(x=>blNk(x.orderNo)===k):[];
+  if(S.length){const M=S.filter(x=>blSlYm(x,o)===ym);M.forEach((x,i)=>add(o.client,{ref:S.length===1?o.id:o.id+'|'+x.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:i?[]:SH}));
+   if(!M.length&&SH.length)add(o.client,{ref:o.id,shipOnly:1,ships:SH});return}
   if(!sh.length){if((o.date||'').slice(0,7)===ym)(R[o.client]=R[o.client]||[]);return}
-  const p=blPrice(o);(R[o.client]=R[o.client]||[]).push({ref:o.id,orderNo:o.no,item:o.item||o.no,spec:blSpec(o),unit:o.unit||'YD',qty:sh.reduce((a,s)=>a+(+s.qty||0),0),price:p.price,priceSrc:p.src,
-   ships:sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||''})).sort((a,b)=>a.date.localeCompare(b.date))})});return R}
+  const p=blPrice(o);add(o.client,{ref:o.id,orderNo:o.no,item:o.item||o.no,spec:blSpec(o),unit:o.unit||'YD',qty:SH.reduce((a,s)=>a+s.qty,0),price:p.price,priceSrc:p.src,ships:SH})});
+ sales.forEach(x=>{if(!x.client||(x.orderNo&&ON.has(blNk(x.orderNo)))||blSlYm(x)!==ym)return;
+  add(x.client,{ref:'s:'+x.id,orderNo:x.orderNo,item:x.item||x.fabric||'-',spec:x.color,unit:'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:[]})});return R}
 function blCalc(l){if(l.vat==='inc')return {sup:0,vat:0,tot:f10(l.total)};const s=f10((+l.qty||0)*(+l.price||0)),v=f10(s/10);return {sup:s,vat:v,tot:s+v}}
 // 화면용 청구서 (잠금 시 고정본)
 function blView(key,A0){const [ym,client]=[key.slice(0,7),key.slice(8)],b=bills[key]||blNormBill({ym,client}),Am=A0||blAuto(ym),auto=Am[client]||[],warn=[];let lines=[],ships=[];
  if(b.locked&&b.frozen){lines=b.frozen.lines||[];ships=b.frozen.ships||[];const ids=new Set(ships.map(s=>s.id)),extra=auto.flatMap(a=>a.ships).filter(s=>!ids.has(s.id));
   if(extra.length)warn.push({t:`청구완료 후 출고 ${extra.length}건 (${extra.reduce((x,s)=>x+s.qty,0).toLocaleString('ko-KR')}) 미포함`,c:'wn'})}
- else{auto.forEach(a=>{const s=b.lines.find(l=>l.src==='auto'&&l.ref===a.ref);
+ else{auto.forEach(a=>{if(a.shipOnly){ships.push(...a.ships);return}const s=b.lines.find(l=>l.src==='auto'&&l.ref===a.ref);
    if(s&&s.removed){warn.push({t:`청구서 미포함 출고: ${a.item} ${a.qty.toLocaleString('ko-KR')}`,c:'wn'});return}
-   let L;if(s&&s.edited){L={...s,badge:'m',auto:a};if(s.autoQty!==a.qty||s.autoPrice!==a.price)L.changed=true}else L={id:'a_'+a.ref,src:'auto',ref:a.ref,item:a.item,spec:a.spec,qty:a.qty,price:a.price,vat:'ex',total:0,memo:'',badge:'a',auto:a,priceSrc:a.priceSrc};
+   let L;if(s&&s.edited){L={...s,badge:'m',auto:a};if(s.autoQty!==a.qty||s.autoPrice!==a.price)L.changed=true}else L={id:'a_'+a.ref,src:'auto',ref:a.ref,item:a.item,spec:a.spec,qty:a.qty,price:a.price,vat:'ex',total:0,memo:'',badge:a.sl?'s':'a',auto:a,priceSrc:a.priceSrc,sample:a.sample};
    L.orderNo=a.orderNo;lines.push(L);ships.push(...a.ships)});
-  b.lines.filter(l=>l.src==='auto'&&!l.removed&&!auto.some(a=>a.ref===l.ref)).forEach(l=>lines.push({...l,badge:'m',gone:true}));
+  b.lines.filter(l=>l.src==='auto'&&!l.removed&&!auto.some(a=>!a.shipOnly&&a.ref===l.ref)).forEach(l=>lines.push({...l,badge:'m',gone:true}));
   b.lines.filter(l=>l.src==='manual').forEach(l=>{lines.push({...l,badge:'u'});if(l.date&&l.qty)ships.push({id:'m_'+l.id,date:l.date,qty:l.qty,item:l.item,orderNo:'',memo:''})});
-  lines.forEach(l=>{l.c=blCalc(l);if(l.vat==='ex'&&l.qty&&!l.price)warn.push({t:`단가 없음: ${l.item}`,c:'wn'});if(l.changed)warn.push({t:`자동 값 바뀜 (수정한 줄): ${l.item}`,c:'wn2'})});
+  lines.forEach(l=>{l.c=blCalc(l);if(l.vat==='ex'&&l.qty&&!l.price&&!l.sample)warn.push({t:`단가 없음: ${l.item}`,c:'wn'});if(l.changed)warn.push({t:`자동 값 바뀜 (수정한 줄): ${l.item}`,c:'wn2'})});
   ships.sort((a,b)=>a.date.localeCompare(b.date))}
  lines.forEach(l=>{if(!l.c)l.c=blCalc(l)});
  const T=lines.reduce((a,l)=>({qty:a.qty+(+l.qty||0),sup:a.sup+l.c.sup,vat:a.vat+l.c.vat,tot:a.tot+l.c.tot}),{qty:0,sup:0,vat:0,tot:0});
  return {key,ym,client,b,lines,ships,warn,T,status:b.locked?'done':'todo',empty:!lines.length}}
 function blMonth(ym){const A0=blAuto(ym),ks=new Set([...Object.keys(A0).map(c=>blKey(ym,c)),...Object.keys(bills).filter(k=>k.startsWith(ym+'|'))]);return [...ks].map(k=>blView(k,A0)).sort((a,b)=>a.client.localeCompare(b.client,'ko'))}
-function blAllMonths(){const s=new Set(Object.values(bills).map(b=>b.ym));orders.forEach(o=>{if(o.date)s.add(o.date.slice(0,7));o.procs.forEach(p=>p.ships.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7))))});return [...s].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort()}
+function blAllMonths(){const s=new Set(Object.values(bills).map(b=>b.ym));orders.forEach(o=>{if(o.date)s.add(o.date.slice(0,7));o.procs.forEach(p=>p.ships.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7))))});sales.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7)));return [...s].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort()}
 function blPending(){const cur=blCurYm();return blAllMonths().filter(m=>m<cur).flatMap(m=>blMonth(m)).filter(v=>v.status==='todo'&&v.T.tot>0)}
 const blYmTxt=ym=>ym?`${ym.slice(0,4)}년 ${+ym.slice(5)}월`:'';
 function blShift(d){const [y,m]=blYm.split('-').map(Number),t=new Date(y,m-1+d,1);blYm=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');blSel=null;render()}
-const BL_BD={a:'<span class="blbd a">자동</span>',m:'<span class="blbd m">수정됨</span>',u:'<span class="blbd u">수동</span>'};
+const BL_BD={a:'<span class="blbd a">자동</span>',s:'<span class="blbd s">매출 연동</span>',m:'<span class="blbd m">수정됨</span>',u:'<span class="blbd u">수동</span>'};
 function renderBill(){if(!blYm)blYm=blCurYm();const el=$('blv');if(!el)return;if(blSel&&!(bills[blSel]||blMonth(blSel.slice(0,7)).some(v=>v.key===blSel)))blSel=null;
  el.innerHTML=blSel?blDetailHTML(blView(blSel)):blListHTML();if(typeof crInit==='function')crInit()}
 function blListHTML(){const L=blMonth(blYm),k=blNk(blF.k),l=L.filter(v=>(!blF.st||v.status===blF.st)&&(!k||blNk([v.client,...v.lines.map(x=>x.item+' '+(x.orderNo||''))].join(' ')).includes(k))),
@@ -69,7 +77,7 @@ function blDetailHTML(v){const lk=v.b.locked,P=blParty(),dest=v.b.dest||v.client
  ${v.warn.length?`<div class="blalert">${v.warn.map(w=>`<span class="${w.c}">⚠ ${esc(w.t)}</span>`).join('')}</div>`:''}
  <div class="card"><div class="blmeta"><span>세금계산서 발행 일자 <b>${esc(blIssue(v))}</b></span><span>도착지 <b>${esc(dest)}</b></span>${v.b.memo?`<span>비고 <b>${esc(v.b.memo)}</b></span>`:''}</div>
  <h3>1. 청구 내역</h3><div class="tw"><table class="blt" data-rz="bill_lines"><colgroup><col style="width:240px"><col style="width:130px"><col style="width:90px"><col style="width:90px"><col style="width:120px"><col style="width:110px"><col style="width:130px"><col style="width:120px"><col></colgroup><thead><tr><th>품명</th><th>오더 · 규격</th><th class="r">수량</th><th class="r">단가</th><th class="r">공급가액</th><th class="r">부가세</th><th class="r">총액</th><th>비고</th><th>구분</th></tr></thead><tbody>
- ${v.lines.map(l=>`<tr class="r" ${lk?'':`onclick="blLine('${esc(v.key)}','${esc(l.id)}')"`}><td><b>${esc(l.item)}</b></td><td class="muted">${esc([l.orderNo,l.spec].filter(Boolean).join(' · '))}</td><td class="r">${(+l.qty||0).toLocaleString('ko-KR')}</td><td class="r">${l.vat==='inc'?'<small class="muted">VAT 포함</small>':l.price?'₩'+blWon(l.price):'<span class="wn">없음</span>'}</td><td class="r">${blWon(l.c.sup)}</td><td class="r">${blWon(l.c.vat)}</td><td class="r"><b>${blWon(l.c.tot)}</b></td><td>${esc(l.memo)}</td><td>${BL_BD[l.badge]||''}${l.priceSrc==='오더 단가'?' <small class="muted">오더 단가</small>':''}${!lk?` <button class="blrb" onclick="event.stopPropagation();blLine('${esc(v.key)}','${esc(l.id)}')">수정</button>`:''}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">청구 줄이 없습니다.</td></tr>'}
+ ${v.lines.map(l=>`<tr class="r" ${lk?'':`onclick="blLine('${esc(v.key)}','${esc(l.id)}')"`}><td><b>${esc(l.item)}</b></td><td class="muted">${esc([l.orderNo,l.spec].filter(Boolean).join(' · '))}</td><td class="r">${(+l.qty||0).toLocaleString('ko-KR')}</td><td class="r">${l.vat==='inc'?'<small class="muted">VAT 포함</small>':l.price?'₩'+blWon(l.price):l.sample?'<small class="muted">샘플</small>':'<span class="wn">없음</span>'}</td><td class="r">${blWon(l.c.sup)}</td><td class="r">${blWon(l.c.vat)}</td><td class="r"><b>${blWon(l.c.tot)}</b></td><td>${esc(l.memo)}</td><td>${BL_BD[l.badge]||''}${l.priceSrc==='오더 단가'?' <small class="muted">오더 단가</small>':''}${!lk?` <button class="blrb" onclick="event.stopPropagation();blLine('${esc(v.key)}','${esc(l.id)}')">수정</button>`:''}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">청구 줄이 없습니다.</td></tr>'}
  <tr class="bltot"><td>합 계</td><td></td><td class="r">${v.T.qty.toLocaleString('ko-KR')}</td><td></td><td class="r">${blWon(v.T.sup)}</td><td class="r">${blWon(v.T.vat)}</td><td class="r">₩${blWon(v.T.tot)}</td><td></td><td></td></tr></tbody></table></div></div>
  <div class="card"><h3>2. 출고 내역</h3><div class="tw"><table class="blt" data-rz="bill_ships"><colgroup><col style="width:240px"><col style="width:110px"><col style="width:110px"><col style="width:100px"><col style="width:180px"><col style="width:180px"><col></colgroup><thead><tr><th>품명</th><th>일자</th><th>오더</th><th class="r">수량</th><th>출고처</th><th>도착지</th><th>비고</th></tr></thead><tbody>
  ${v.ships.map(s=>`<tr><td>${esc(s.item)}</td><td>${esc(s.date)}</td><td>${esc(s.orderNo)}</td><td class="r">${(+s.qty||0).toLocaleString('ko-KR')}</td><td>${esc(P.name)}</td><td>${esc(dest)}</td><td>${esc(s.memo)}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">출고 내역이 없습니다.</td></tr>'}
@@ -139,7 +147,7 @@ function blSettings(){const el=$('bl_card');if(!el)return;const s=typeof defSup=
 // 조회용 스냅샷
 function blSnap(){return blAllMonths().flatMap(m=>blMonth(m)).filter(v=>!v.empty||bills[v.key]).map(v=>({id:v.key,month:v.ym,client:v.client,status:v.status==='done'?'청구완료':'미청구',locked:!!v.b.locked,issueDate:blIssue(v),
  qty:v.T.qty,supply:v.T.sup,vat:v.T.vat,total:v.T.tot,warnings:v.warn.map(w=>w.t),
- lines:v.lines.map(l=>({item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:+l.qty||0,unitPrice:l.vat==='inc'?null:+l.price||0,vatIncluded:l.vat==='inc',supply:l.c.sup,vat:l.c.vat,total:l.c.tot,memo:l.memo,source:{a:'auto',m:'edited',u:'manual'}[l.badge]||''})),
+ lines:v.lines.map(l=>({item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:+l.qty||0,unitPrice:l.vat==='inc'?null:+l.price||0,vatIncluded:l.vat==='inc',supply:l.c.sup,vat:l.c.vat,total:l.c.tot,memo:l.memo,source:{a:'auto',s:'sales',m:'edited',u:'manual'}[l.badge]||''})),
  shipments:v.ships.map(s=>({date:s.date,item:s.item,orderNo:s.orderNo,qty:s.qty})),search:snapS([v.client,v.ym,...v.lines.flatMap(l=>[l.item,l.orderNo,l.spec,l.memo])])}))}
 (()=>{const s=document.createElement('style');s.textContent=`
 .blsum{display:flex;gap:10px;margin-bottom:10px}.blsum>div{flex:1;background:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 1px 3px #0001}.blsum small{color:#777}.blsum b{display:block;font-size:18px;margin-top:2px}
@@ -148,7 +156,7 @@ function blSnap(){return blAllMonths().flatMap(m=>blMonth(m)).filter(v=>!v.empty
 table.blt{min-width:0;width:100%;table-layout:fixed}table.blt td,table.blt th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}table.blt .r{text-align:right}table.blt .c{text-align:center}table.blt tr.bltot td{background:#f5f7fa;font-weight:700}
 .blst{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}.blst.n{background:#fff1dc;color:#b56a00}.blst.d{background:#e2f5e8;color:#16803c}.blst.e{background:#eef0f3;color:#777}
 .wn{color:#c62828;font-size:12px}.wn2{color:#b56a00;font-size:12px}
-.blbd{font-size:10.5px;padding:1px 6px;border-radius:8px;font-weight:600}.blbd.a{background:#e3edfb;color:#1f6fd1}.blbd.m{background:#fff1dc;color:#b56a00}.blbd.u{background:#efe6fb;color:#6b3fb3}
+.blbd{font-size:10.5px;padding:1px 6px;border-radius:8px;font-weight:600}.blbd.a{background:#e3edfb;color:#1f6fd1}.blbd.m{background:#fff1dc;color:#b56a00}.blbd.s{background:#e3f4ea;color:#1e7b45}.blbd.u{background:#efe6fb;color:#6b3fb3}
 .blrb{font-size:11px;padding:1px 8px;margin-left:4px}
 .blhd{display:flex;align-items:center;gap:8px;margin-bottom:10px}.blhd h2{font-size:16px;margin:0 6px}
 .blmeta{display:flex;gap:20px;color:#555;margin-bottom:10px}.blmeta b{color:#222}#p_bill h3{font-size:14px;margin:4px 0 8px}#p_bill .card{margin-bottom:10px}
