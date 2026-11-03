@@ -1,7 +1,9 @@
 // 목록 칸 넓이 조절 (엑셀처럼 머리글 오른쪽 경계를 끌어서 조절, 더블클릭=기본값)
 // 사용법: <table data-rz="고유id"> + <colgroup>(칸마다 <col>) + <thead> 만 있으면 crInit()가 자동 적용 (넓이는 data.json colWidths에 저장)
 let colWidths={};
-function crLoad(r){colWidths=(r&&r.colWidths&&typeof r.colWidths==='object')?r.colWidths:{}}
+function crLoad(r){colWidths=(r&&r.colWidths&&typeof r.colWidths==='object')?r.colWidths:{};
+ // v1.7.0 이전 생산 관리 넓이(10칸) → 선택 칸(30px) 앞에 붙여 'prod2'로 옮김
+ const o=colWidths.prod;if(Array.isArray(o)){if(o.length===10&&!colWidths.prod2)colWidths.prod2=[30,...o];delete colWidths.prod}}
 function crPayload(){return {colWidths}}
 function crImport(r){crLoad(r);if(r&&r.listSort)lsLoad(r);document.querySelectorAll('table[data-rz]').forEach(crApply)}
 function crCols(t){return [...t.querySelectorAll('colgroup col')]}
@@ -18,7 +20,7 @@ function crReset(t,i){const id=t.dataset.rz,w=colWidths[id];if(!w)return;
 function crResetAll(t){delete colWidths[t.dataset.rz];crApply(t);save()}
 function crInit(){document.querySelectorAll('table[data-rz]').forEach(t=>{
  crApply(t);
- [...t.tHead.rows[0].cells].forEach((th,i)=>{if(th.querySelector('.rzh'))return;const h=document.createElement('span');h.className='rzh';h.title='끌어서 칸 넓이 조절 · 더블클릭: 기본값';th.appendChild(h);
+ [...t.tHead.rows[0].cells].forEach((th,i)=>{if(th.querySelector('.rzh')||th.hasAttribute('data-norz'))return;const h=document.createElement('span');h.className='rzh';h.title='끌어서 칸 넓이 조절 · 더블클릭: 기본값';th.appendChild(h);
   h.addEventListener('click',e=>e.stopPropagation());
   h.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();crReset(t,i)});
   h.addEventListener('mousedown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();
