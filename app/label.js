@@ -1,15 +1,21 @@
-// ===== 라벨 인쇄: 폼텍 주소용 라벨 3106 (A4, 64×34mm, 3열×8행 = 24칸) =====
+// ===== 라벨 인쇄: 폼텍 주소용 라벨 3106 (24칸) · 3105 (21칸) =====
 // 규격 (폼텍 FAQ · 3106 규격표): 위 여백 12.5mm, 왼쪽 여백 6.5mm, 가로 간격(칸 왼쪽→다음 칸 왼쪽) 66.5mm, 세로 간격 34mm
-const LB={w:64,h:34,cols:3,rows:8,top:12.5,left:6.5,px:66.5,py:34};
-const LB_N=LB.cols*LB.rows,LB_FF="'Malgun Gothic','맑은 고딕','Noto Sans CJK KR','Noto Sans KR',sans-serif";
-const lbOff=()=>{try{const o=JSON.parse(localStorage.getItem('ijo_lbl_off')||'{}');return {x:+o.x||0,y:+o.y||0}}catch(e){return {x:0,y:0}}};
+// 3105 (폼텍 LS-3105 규격표): 위 15.8mm, 왼쪽 7mm, 가로 간격 66mm, 세로 간격 38.1mm, 63.5×38.1mm 3열×7행 = 21칸
+const LBS={'3106':{w:64,h:34,cols:3,rows:8,top:12.5,left:6.5,px:66.5,py:34},'3105':{w:63.5,h:38.1,cols:3,rows:7,top:15.8,left:7,px:66,py:38.1}};
+const LBK=['3106','3105'];
+let lbSheet=LBS[localStorage.getItem('ijo_lbl_sheet')]?localStorage.getItem('ijo_lbl_sheet'):'3106',LB=LBS[lbSheet],LB_N=LB.cols*LB.rows;
+function lbUse(k){if(!LBS[k])return;lbSheet=k;LB=LBS[k];LB_N=LB.cols*LB.rows;localStorage.setItem('ijo_lbl_sheet',k);if(lbStart>LB_N)lbStart=1}
+const LB_FF="'Malgun Gothic','맑은 고딕','Noto Sans CJK KR','Noto Sans KR',sans-serif";
+// 보정값: 용지별 {3106:{x,y},3105:{x,y}} (예전 {x,y}는 3106으로)
+const lbOffAll=()=>{try{const o=JSON.parse(localStorage.getItem('ijo_lbl_off')||'{}');return ('x' in o||'y' in o)?{'3106':o}:o}catch(e){return {}}};
+const lbOff=(k=lbSheet)=>{const o=lbOffAll()[k]||{};return {x:+o.x||0,y:+o.y||0}};
 let lbRows=[],lbStart=1;
 // 긴 글자는 칸 폭에 맞게 줄임 (mm 단위 글자 크기)
 let lbCtx=null;
-function lbFs(t,max=5.2,min=2.2,wmm=58){t=String(t||'');if(!t)return max;lbCtx=lbCtx||document.createElement('canvas').getContext('2d');lbCtx.font=`bold 100px ${LB_FF}`;const w=lbCtx.measureText(t).width/100;return Math.max(min,Math.min(max,wmm/(w||1)))}
+function lbFs(t,max=5.2,min=2.2,wmm=LB.w-6){t=String(t||'');if(!t)return max;lbCtx=lbCtx||document.createElement('canvas').getContext('2d');lbCtx.font=`bold 100px ${LB_FF}`;const w=lbCtx.measureText(t).width/100;return Math.max(min,Math.min(max,wmm/(w||1)))}
 function lbLabels(){const out=[];lbRows.forEach(r=>{const n=Math.max(0,Math.min(999,parseInt(r.qty)||0));if(!(r.name||r.color||r.spec))return;for(let i=0;i<n;i++)out.push(r)});return out}
 function lbCellHTML(r){const ln=[r.name,r.color,r.spec].map(s=>String(s||'').trim());
- return ln.map(s=>{if(!s)return '';const f=lbFs(s);return f>=3?`<div style="font-size:${f.toFixed(2)}mm;line-height:1.25;white-space:nowrap">${esc(s)}</div>`:`<div style="font-size:${Math.max(2.4,lbFs(s,5.2,2.4,92)).toFixed(2)}mm;line-height:1.2;word-break:keep-all;overflow-wrap:anywhere">${esc(s)}</div>`}).join('')}
+ return ln.map(s=>{if(!s)return '';const f=lbFs(s);return f>=3?`<div style="font-size:${f.toFixed(2)}mm;line-height:1.25;white-space:nowrap">${esc(s)}</div>`:`<div style="font-size:${Math.max(2.4,lbFs(s,5.2,2.4,(LB.w-6)*1.6)).toFixed(2)}mm;line-height:1.2;word-break:keep-all;overflow-wrap:anywhere">${esc(s)}</div>`}).join('')}
 // 아주 긴 글자는 두 줄까지 줄바꿈
 // 페이지 HTML (인쇄·PDF·미리보기 공통). guide=칸 윤곽선 (미리보기 전용)
 function lbPagesHTML(guide){const L=lbLabels(),o=lbOff();let slot;
@@ -24,10 +30,10 @@ function lbOpen(fromOrders){lbRows=[];lbStart=1;
  if(fromOrders){const ids=[...document.querySelectorAll('#ptb input.lbck:checked')].map(x=>x.value);
   orders.filter(o=>ids.includes(o.id)).forEach(o=>(o.lines.length?o.lines:[{color:''}]).forEach(l=>lbRows.push({name:o.item||'',color:l.color||'',spec:o.fabric||'',qty:1})))}
  if(!lbRows.length)lbRows.push({name:'',color:'',spec:'',qty:1});
- $('dt').textContent='라벨 인쇄 (폼텍 3106)';
+ $('dt').textContent='라벨 인쇄';
  $('dbody').innerHTML=`<div class="lbw"><div class="lbl"><table class="lbt"><thead><tr><th>품명</th><th>색상</th><th>규격</th><th style="width:52px">수량</th><th style="width:28px"></th></tr></thead><tbody id="lb_tb"></tbody></table>
  <button onclick="lbRows.push({name:'',color:'',spec:'',qty:1});lbRender(true)">＋ 행</button>
- <div class="lbsh"><div style="font-size:12px;margin:10px 0 4px">시작 칸 <b id="lb_sn"></b></div><div class="lbgrid" id="lb_grid"></div></div></div>
+ <div class="lbsh"><label style="font-size:12px;display:block;margin:10px 0 0">용지 <select id="lb_sheet" onchange="lbUse(this.value);lbRender(false)">${LBK.map(k=>`<option value="${k}"${k===lbSheet?' selected':''}>폼텍 ${k} (${LBS[k].cols*LBS[k].rows}칸 ${LBS[k].w}×${LBS[k].h}mm)</option>`).join('')}</select></label><div style="font-size:12px;margin:8px 0 4px">시작 칸 <b id="lb_sn"></b></div><div class="lbgrid" id="lb_grid"></div></div></div>
  <div class="lbr"><div id="lb_info" class="muted" style="font-size:12px;margin-bottom:4px"></div><div id="lb_pv" class="lbpv"></div></div></div>`;
  $('dfoot').innerHTML=`<button class="p" onclick="lbPrint()">인쇄</button><button onclick="lbPDF()">PDF 저장</button><span style="flex:1"></span><button onclick="dlg.close()">취소</button>`;
  dlg.classList.add('lbdlg');dlg.addEventListener('close',()=>dlg.classList.remove('lbdlg'),{once:true});
@@ -43,7 +49,7 @@ async function lbPDF(){if(!lbLabels().length)return toast('내용을 입력해 �
 function lbSelCount(){const n=document.querySelectorAll('#ptb input.lbck:checked').length,b=$('lb_btn');if(b)b.textContent=n?`라벨 인쇄 (${n})`:'라벨 인쇄'}
 function lbCk(id){return `<td class="lbcc" onclick="event.stopPropagation()"><input type="checkbox" class="lbck" value="${id}" aria-label="라벨 선택" onchange="lbSelCount()"></td>`}
 // ---- 설정: 인쇄 위치 보정 ----
-function lbSetCard(){const el=$('lb_card');if(!el)return;const o=lbOff();
- el.innerHTML=`<h2>라벨 인쇄 위치 보정 <span class="muted" style="font-weight:normal">— 폼텍 3106 (이 PC에만 저장)</span></h2><label style="display:inline-block;margin-right:12px">위 (mm) <input id="lb_oy" type="number" step="0.5" value="${o.y}" style="width:80px" onchange="lbSaveOff()"></label><label style="display:inline-block">왼쪽 (mm) <input id="lb_ox" type="number" step="0.5" value="${o.x}" style="width:80px" onchange="lbSaveOff()"></label>`}
-function lbSaveOff(){localStorage.setItem('ijo_lbl_off',JSON.stringify({x:+$('lb_ox').value||0,y:+$('lb_oy').value||0}));toast('저장했어요')}
+function lbSetCard(){const el=$('lb_card');if(!el)return;
+ el.innerHTML=`<h2>라벨 인쇄 위치 보정 <span class="muted" style="font-weight:normal">(이 PC에만 저장)</span></h2>${LBK.map(k=>{const o=lbOff(k);return `<div style="margin:4px 0"><b style="display:inline-block;width:90px">폼텍 ${k}</b><label style="display:inline-block;margin-right:12px">위 (mm) <input id="lb_oy_${k}" type="number" step="0.5" value="${o.y}" style="width:80px" onchange="lbSaveOff()"></label><label style="display:inline-block">왼쪽 (mm) <input id="lb_ox_${k}" type="number" step="0.5" value="${o.x}" style="width:80px" onchange="lbSaveOff()"></label></div>`}).join('')}`}
+function lbSaveOff(){const o={};LBK.forEach(k=>o[k]={x:+$('lb_ox_'+k).value||0,y:+$('lb_oy_'+k).value||0});localStorage.setItem('ijo_lbl_off',JSON.stringify(o));toast('저장했어요')}
 window.addEventListener("load",()=>lbSetCard());
