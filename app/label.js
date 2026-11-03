@@ -27,7 +27,7 @@ function lbPagesHTML(guide){const L=lbLabels(),o=lbOff();let slot;
 function lbDoc(){return `<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:0}html,body{margin:0;padding:0}.lbpg:last-child{page-break-after:auto;break-after:auto}</style></head><body>${lbPagesHTML(false)}</body></html>`}
 // ---- 창 ----
 function lbOpen(fromOrders){lbRows=[];lbStart=1;
- if(fromOrders){const ids=[...document.querySelectorAll('#ptb input.lbck:checked')].map(x=>x.value);
+ if(fromOrders){const ids=[...lbSel];
   orders.filter(o=>ids.includes(o.id)).forEach(o=>(o.lines.length?o.lines:[{color:''}]).forEach(l=>lbRows.push({name:o.item||'',color:l.color||'',spec:o.fabric||'',qty:1})))}
  if(!lbRows.length)lbRows.push({name:'',color:'',spec:'',qty:1});
  $('dt').textContent='라벨 인쇄';
@@ -46,10 +46,16 @@ function lbRender(rows){if(rows){$('lb_tb').innerHTML=lbRows.map((r,i)=>`<tr>${[
 async function lbPrint(){if(!lbLabels().length)return toast('내용을 입력해 주세요');if(!A.labelPrint)return uiAlert('데스크톱 앱에서만 사용할 수 있어요.');const r=await A.labelPrint(lbDoc());if(r&&r!==true&&r!=='cancelled')uiAlert('인쇄 실패: '+r)}
 async function lbPDF(){if(!lbLabels().length)return toast('내용을 입력해 주세요');if(!A.labelPDF)return uiAlert('데스크톱 앱에서만 사용할 수 있어요.');const p=await A.labelPDF(lbDoc(),`라벨_${stamp()}.pdf`);if(p)toast('PDF로 저장했어요')}
 // ---- 생산 관리 목록: 선택 칸 ----
-function lbSelCount(){const n=document.querySelectorAll('#ptb input.lbck:checked').length,b=$('lb_btn');if(b)b.textContent=n?`라벨 인쇄 (${n})`:'라벨 인쇄'}
-function lbCk(id){return `<td class="lbcc" onclick="event.stopPropagation()"><input type="checkbox" class="lbck" value="${id}" aria-label="라벨 선택" onchange="lbSelCount()"></td>`}
+// 선택은 오더 id로 보관 (상세 보기·검색·저장 후에도 유지, 직접 해제할 때만 지움)
+const lbSel=new Set();
+function lbSelCount(){[...lbSel].forEach(id=>{if(!orders.some(o=>o.id===id))lbSel.delete(id)});const n=lbSel.size,b=$('lb_btn');if(b)b.textContent=n?`라벨 인쇄 (${n})`:'라벨 인쇄';
+ const all=document.querySelector('#lb_all'),v=[...document.querySelectorAll('#ptb input.lbck')];if(all){const k=v.filter(c=>c.checked).length;all.checked=!!v.length&&k===v.length;all.indeterminate=k>0&&k<v.length}}
+function lbTick(id,on){on?lbSel.add(id):lbSel.delete(id);lbSelCount()}
+function lbAll(on){document.querySelectorAll('#ptb input.lbck').forEach(c=>{c.checked=on;on?lbSel.add(c.value):lbSel.delete(c.value)});lbSelCount()}
+function lbCk(id){return `<td class="lbcc" onclick="event.stopPropagation()"><input type="checkbox" class="lbck" value="${id}"${lbSel.has(id)?' checked':''} aria-label="라벨 선택" onchange="lbTick(this.value,this.checked)"></td>`}
 // ---- 설정: 인쇄 위치 보정 ----
 function lbSetCard(){const el=$('lb_card');if(!el)return;
  el.innerHTML=`<h2>라벨 인쇄 위치 보정 <span class="muted" style="font-weight:normal">(이 PC에만 저장)</span></h2>${LBK.map(k=>{const o=lbOff(k);return `<div style="margin:4px 0"><b style="display:inline-block;width:90px">폼텍 ${k}</b><label style="display:inline-block;margin-right:12px">위 (mm) <input id="lb_oy_${k}" type="number" step="0.5" value="${o.y}" style="width:80px" onchange="lbSaveOff()"></label><label style="display:inline-block">왼쪽 (mm) <input id="lb_ox_${k}" type="number" step="0.5" value="${o.x}" style="width:80px" onchange="lbSaveOff()"></label></div>`}).join('')}`}
 function lbSaveOff(){const o={};LBK.forEach(k=>o[k]={x:+$('lb_ox_'+k).value||0,y:+$('lb_oy_'+k).value||0});localStorage.setItem('ijo_lbl_off',JSON.stringify(o));toast('저장했어요')}
 window.addEventListener("load",()=>lbSetCard());
+window.addEventListener('load',()=>{const f=window.renderProd;if(typeof f==='function')window.renderProd=function(){const r=f.apply(this,arguments);lbSelCount();return r}});
