@@ -50,6 +50,12 @@ ipcMain.handle('stmtPreview',async(e,html,name)=>{const {w,f}=await renderPDF(ht
   const v=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   v.setMenu(null);v.webContents.setWindowOpenHandler(()=>({action:'deny'}));v.on('page-title-updated',ev=>ev.preventDefault());v.on('closed',()=>fs.rmSync(pf,{force:true}));await v.loadFile(pf);return true});
 ipcMain.handle('stmtPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4'},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});
+// 라벨: 여백 없음 · 100%
+ipcMain.handle('labelPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4',margins:{marginType:'none'},scaleFactor:100},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});
+ipcMain.handle('labelPDF',async(e,html,name)=>{const {w,f}=await renderPDF(html);try{
+  const buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,preferCSSPageSize:true,margins:{top:0,bottom:0,left:0,right:0}});
+  let p=process.env.IJO_PDF;if(!p){const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return null;p=r.filePath}
+  fs.writeFileSync(p,buf);if(!process.env.IJO_PDF)shell.openPath(p);return p}finally{w.destroy();fs.rmSync(f,{force:true})}});
 ipcMain.handle('htmlPDF',async(e,html,name)=>{const {w,f}=await renderPDF(html);try{
   const buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,preferCSSPageSize:true});
   let p=process.env.IJO_PDF;if(!p){const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return null;p=r.filePath}

@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('api',{
   stmtPreview:(h,n)=>ipcRenderer.invoke('stmtPreview',h,n),
   stmtPrint:h=>ipcRenderer.invoke('stmtPrint',h),
   htmlPDF:(h,n)=>ipcRenderer.invoke('htmlPDF',h,n),
+  labelPrint:h=>ipcRenderer.invoke('labelPrint',h),
+  labelPDF:(h,n)=>ipcRenderer.invoke('labelPDF',h,n),
   tableXlsx:(t,h,r,n)=>ipcRenderer.invoke('tableXlsx',t,h,r,n),
   billXlsx:(d,n)=>ipcRenderer.invoke('billXlsx',d,n),
   stmtXlsx:(s,sup,n)=>ipcRenderer.invoke('stmtXlsx',s,sup,n),
