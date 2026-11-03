@@ -14,8 +14,8 @@ const XL_K={
   mk:(x,id)=>({...x,id,src:'xl'})},
  sales:{t:'매출',unit:'매출',keyDesc:'오더번호+매출일+거래처+품목+색상 등',nosheet:'거래처·단가 머리글이 있는 시트를 찾지 못함 — 데이터는 그대로',
   arr:()=>sales,set:a=>{sales=a},isL:x=>x.source==='xl',tag:x=>{x.source='xl'},untag:x=>{x.source='import'},
-  key:x=>[x.orderNo,x.date||x.year,x.client,x.item,x.fabric,x.color,x.process].map(xlU).join('|'),fields:({id,source,...o})=>JSON.stringify(o),
-  mk:(x,id)=>({...x,id,source:'xl'})}};
+  key:x=>[x.orderNo,x.date||x.year,x.client,x.item,x.fabric,x.color,x.process].map(xlU).join('|'),fields:({id,source,qtyMan,...o})=>{if(slLinked(o)){delete o.qty;delete o.supply;delete o.total}return JSON.stringify(o)}, // 생산 연동 행은 수량·금액 차이 무시
+  mk:(x,id,old)=>({...x,id,source:'xl',...(old&&old.qtyMan?{qtyMan:true}:{})})}};
 function xlLoad(r){const o=r&&!Array.isArray(r)&&r.xlinks&&typeof r.xlinks==='object'?r.xlinks:{};xl={};
  for(const k in XL_K){const v=o[k];if(v&&typeof v==='object'&&typeof v.path==='string'&&v.path)xl[k]={path:v.path,name:String(v.name||''),sheet:String(v.sheet||''),mtime:+v.mtime||0,size:+v.size||0,hash:String(v.hash||''),at:String(v.at||''),status:XL_ST[v.status]?v.status:'',msg:String(v.msg||''),fx:!!v.fx,...(v.src==='g'&&v.gid?{src:'g',gid:String(v.gid),gmime:String(v.gmime||''),sig:String(v.sig||'')}:{}),last:v.last&&typeof v.last==='object'?{a:+v.last.a||0,u:+v.last.u||0,d:+v.last.d||0,s:+v.last.s||0}:null}}}
 const xlPayload=()=>({xlinks:xl});
@@ -38,7 +38,7 @@ function xlPlan(kind,L){const K=XL_K[kind],arr=K.arr(),linked=arr.filter(K.isL),
  return {add,upd,skip,del:linked.filter(x=>!keep.has(x))}}
 async function xlApply(kind,P){const K=XL_K[kind];if((P.del.length||P.upd.length)&&A.preImportBackup)await A.preImportBackup();
  const D=new Set(P.del),U=new Map(P.upd),base=uid();let n=0;
- K.set(K.arr().filter(x=>!D.has(x)).map(x=>U.has(x)?K.mk(U.get(x),x.id):x).concat(P.add.map(x=>K.mk(x,base+'x'+(n++)))));
+ K.set(K.arr().filter(x=>!D.has(x)).map(x=>U.has(x)?K.mk(U.get(x),x.id,x):x).concat(P.add.map(x=>K.mk(x,base+'x'+(n++)))));
  return {a:P.add.length,u:P.upd.length,d:P.del.length,s:P.skip.length}}
 const xlMsg=(kind,c)=>`${XL_K[kind].t} 엑셀에서 새 내용을 불러왔습니다 (추가 ${c.a} · 변경 ${c.u} · 삭제 ${c.d}${c.s?` · 건너뜀 ${c.s}`:''})`;
 // ---- 확인 ----

@@ -37,7 +37,7 @@ function load(r0){const r=r0!==undefined?r0:A.load();stLoad(r);ctLoad(r);pcLoad(
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
 function payload(){return {app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...qsPayload(),...blPayload(),...snapPayload()}}
-function save(){const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
+function save(){if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender)gsRender();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
@@ -129,7 +129,7 @@ async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
 if(A.onFindBar)A.onFindBar(on=>document.body.classList.toggle('fbon',on));
-const dlg=$('dlg');load();undoInit();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();rqInit();snapInit();
+const dlg=$('dlg');load();if(slSync())save();undoInit();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();rqInit();snapInit();
 
 const UPD={checking:'새 버전 확인 중…',none:'최신 버전입니다',available:'새 버전 내려받는 중…',error:'업데이트 확인 실패(오프라인?)'};
 if(A.onUpdate)A.onUpdate(d=>{$('updst').textContent=d.s==='progress'?`새 버전 내려받는 중… ${d.pct}%`:d.s==='ready'?`v${d.v} 준비 완료 — 재시작하면 적용돼요`:d.s==='available'?`v${d.v} 내려받는 중…`:(UPD[d.s]||'')});

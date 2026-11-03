@@ -7,9 +7,9 @@ function slFix(x){if(!x.supply&&x.unitPrice&&x.qty)x.supply=Math.round(x.unitPri
  if(x.supply&&!x.total)x.total=Math.round(x.supply*1.1);else if(x.total&&!x.supply)x.supply=Math.round(x.total/1.1);return x}
 function slNorm(x){const d=/^\d{4}-\d{2}-\d{2}$/.test(x&&x.date||'')?x.date:'',n=k=>{const v=+x[k];return isFinite(v)?v:0};
  return slFix({id:String(x.id||uid()),date:d,year:d?+d.slice(0,4):(Math.round(+x.year)||0),client:String(x.client||'').trim(),orderNo:String(x.orderNo||'').trim(),item:String(x.item||''),fabric:String(x.fabric||''),process:String(x.process||''),color:String(x.color||''),
-  unitPrice:n('unitPrice'),qty:n('qty'),supply:n('supply'),total:n('total'),memo:String(x.memo||''),source:x.source==='import'||x.source==='xl'?x.source:''})}
-function slLoad(r){sales=(r&&!Array.isArray(r)&&Array.isArray(r.sales)?r.sales:[]).filter(x=>x&&typeof x==='object').map(slNorm)}
-const slPayload=()=>({sales});
+  unitPrice:n('unitPrice'),qty:n('qty'),supply:n('supply'),total:n('total'),memo:String(x.memo||''),source:['import','xl','auto'].includes(x.source)?x.source:'',...(x.qtyMan?{qtyMan:true}:{})})}
+function slLoad(r){slNoAuto=r&&!Array.isArray(r)&&Array.isArray(r.salesNoAuto)?r.salesNoAuto.map(String):[];sales=(r&&!Array.isArray(r)&&Array.isArray(r.sales)?r.sales:[]).filter(x=>x&&typeof x==='object').map(slNorm)}
+const slPayload=()=>({sales,salesNoAuto:slNoAuto});
 function slImport(r){if(r&&!Array.isArray(r)&&Array.isArray(r.sales))slLoad(r)}
 // ---- 집계 ----
 const slAmt=(x,b)=>b==='supply'?x.supply:x.total;
@@ -49,7 +49,7 @@ function slDash(){const a=slAgg(sales,slF),bl=slF.basis==='supply'?'공급가액
 function slRows(){const q=$('sl_k').value.trim().toLowerCase(),y=$('sl_y').value,c=$('sl_c').value;
  return lsSort('sales',sales.filter(x=>(!y||x.year===+y)&&(!c||x.client===c)&&(!q||[x.orderNo,x.client,x.item,x.fabric,x.color,x.process,x.memo,x.date,x.year].join(' ').toLowerCase().includes(q))),x=>({no:x.orderNo,client:x.client,date:x.date||(x.year?String(x.year):'')}))}
 function slList(){lsBar('sales','매출일');$('sl_xl').innerHTML=xlCard('sales',true);const L=slRows();
- $('sltb').innerHTML=L.map(x=>`<tr class="r" onclick="slOpen('${x.id}')"${slOk(x,'total')?'':' style="color:#999"'}><td><b>${esc(x.orderNo)||'-'}</b>${x.source==='xl'?'<span class="xlt" title="연결된 엑셀 파일에서 온 행">엑셀</span>':''}</td><td class="dt">${x.date||(x.year?x.year+'년':'-')}</td><td>${esc(x.client)}</td><td>${esc(x.item)}${x.fabric?`<br><small class="muted">${esc(x.fabric)}</small>`:''}</td><td>${esc(x.color)}</td><td>${esc(x.process)}</td><td class="n">${x.qty?slWon(x.qty):''}</td><td class="n">${x.unitPrice?slWon(x.unitPrice):''}</td><td class="n">${slWon(x.supply)}</td><td class="n"><b>${slWon(x.total)}</b></td></tr>`).join('')||'<tr><td colspan="10" class="muted">매출이 없어요. [+ 추가] 또는 [엑셀 가져오기]로 넣으세요.</td></tr>';
+ $('sltb').innerHTML=L.map(x=>`<tr class="r" onclick="slOpen('${x.id}')"${slOk(x,'total')?'':' style="color:#999"'}><td><b>${esc(x.orderNo)||'-'}</b>${x.source==='xl'?'<span class="xlt" title="연결된 엑셀 파일에서 온 행">엑셀</span>':''}${x.source==='auto'?'<span class="xlt" style="background:#e8f0fb;color:#2271b1" title="생산 관리 출고로 자동 생성">자동</span>':''}</td><td class="dt">${x.date||(x.year?x.year+'년':'-')}</td><td>${esc(x.client)}</td><td>${esc(x.item)}${x.fabric?`<br><small class="muted">${esc(x.fabric)}</small>`:''}</td><td>${esc(x.color)}</td><td>${esc(x.process)}</td><td class="n">${slQtyCell(x)}</td><td class="n"${!x.unitPrice&&slLk.has(x.id)?' style="background:#fff4e5"':''}>${x.unitPrice?slWon(x.unitPrice):''}</td><td class="n">${slWon(x.supply)}</td><td class="n"><b>${slWon(x.total)}</b></td></tr>`).join('')||'<tr><td colspan="10" class="muted">매출이 없어요. [+ 추가] 또는 [엑셀 가져오기]로 넣으세요.</td></tr>';
  const s=k=>L.reduce((a,x)=>a+(+x[k]||0),0);$('sltf').innerHTML=`<tr><td colspan="6">합계 ${slWon(L.length)}건</td><td class="n">${slWon(s('qty'))}</td><td></td><td class="n">${slWon(s('supply'))}</td><td class="n">${slWon(s('total'))}</td></tr>`}
 // ---- 편집 ----
 let slMan={};
@@ -60,12 +60,14 @@ function slOpen(id){const x=id?sales.find(s=>s.id===id):{date:ymd(new Date()),ye
  <label>오더번호<input id="sa_orderNo" list="sa_ol" value="${esc(x.orderNo)}" onchange="slOrdCh()" placeholder="생산 관리 오더에서 고르면 자동 입력"></label><datalist id="sa_ol">${orders.map(o=>`<option value="${esc(o.no)}">${esc(o.client)} · ${esc(o.item)}</option>`).join('')}</datalist>
  ${f('client','거래처',x.client,'list="sa_cl"')}<datalist id="sa_cl">${[...new Set([...sales,...orders].map(o=>o.client).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>${f('item','품목',x.item)}${f('fabric','아이템명',x.fabric)}
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>색상<input id="sa_color" value="${esc(x.color)}"><select id="sa_cp" style="display:none;margin-top:4px" onchange="if(this.value)$('sa_color').value=this.value"></select></label>${f('process','가공구분',x.process)}</div>
- <div class="w" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${f('unitPrice','단가',n(x.unitPrice),'class="num" inputmode="numeric" oninput="slCalc(this)"')}${f('qty','수량',n(x.qty),'class="num" inputmode="numeric" oninput="slCalc(this)"')}${f('supply','공급가액',n(x.supply),'class="num" inputmode="numeric" oninput="slCalc(this)"')}${f('total','총액(VAT포함)',n(x.total),'class="num" inputmode="numeric" oninput="slCalc(this)"')}</div>
+ <div class="w" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${f('unitPrice','단가',n(x.unitPrice),'class="num" inputmode="numeric" oninput="slCalc(this)"')}<label>수량<span id="sa_lkw" style="float:right;font-weight:400"></span><input id="sa_qty" value="${esc(n(x.qty))}" class="num" inputmode="numeric" oninput="slCalc(this)"></label>${f('supply','공급가액',n(x.supply),'class="num" inputmode="numeric" oninput="slCalc(this)"')}${f('total','총액(VAT포함)',n(x.total),'class="num" inputmode="numeric" oninput="slCalc(this)"')}</div>
  <p class="muted w" style="font-size:12px;margin:0">단가×수량으로 공급가액, 공급가액×1.1로 총액이 자동 계산돼요. 직접 고쳐 쓰면 그 값이 유지돼요.</p>
  <label class="w">메모<input id="sa_memo" value="${esc(x.memo)}"></label></div>`;
- $('dfoot').innerHTML=`${id?`<button class="d" onclick="slDel('${id}')">삭제</button><span style="flex:1"></span>`:''}<button class="p" onclick="slSave('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal();slOrdCh(true)}
+ $('dfoot').innerHTML=`${id?`<button class="d" onclick="slDel('${id}')">삭제</button><span style="flex:1"></span>`:''}<button class="p" onclick="slSave('${id||''}')">저장</button><button onclick="dlg.close()">취소</button>`;if(!dlg.open)dlg.showModal();slLkMan=!!x.qtyMan;slOrdCh(true)}
 function slDateCh(){const d=$('sa_date').value,y=$('sa_year');if(d){y.value=d.slice(0,4);y.disabled=true}else y.disabled=false}
-function slOrdCh(init){const o=orders.find(x=>x.no===$('sa_orderNo').value.trim()),cp=$('sa_cp');if(!o){cp.style.display='none';return}
+function slOrdCh(init){const o=orders.find(x=>slONk(x.no)===slONk($('sa_orderNo').value)),cp=$('sa_cp'),S=o&&!o.example&&slShip(o);
+ $('sa_lkw').innerHTML=S?`<label style="display:inline;font-size:12px" title="생산 관리 최종 공정 출고 ${slWon(S.fin)}"><input type="checkbox" id="sa_lk"${slLkMan?'':' checked'} onchange="slLkMan=!this.checked;$('sa_qty').disabled=this.checked"> 생산 연동</label>`:'';$('sa_qty').disabled=!!S&&!slLkMan;
+ if(!o){cp.style.display='none';return}
  if(!init)[['client','client'],['item','item'],['fabric','fabric']].forEach(([k,ok])=>{if(o[ok])$('sa_'+k).value=o[ok]});
  const cols=[...new Set(o.lines.map(l=>l.color).filter(Boolean))];if(cols.length>1){cp.innerHTML='<option value="">색상 선택…</option>'+cols.map(c=>`<option>${esc(c)}</option>`).join('');cp.style.display=''}else{cp.style.display='none';if(!init&&cols[0])$('sa_color').value=cols[0]}}
 function slCalc(el){el.value=fmtN(el.value);const g=k=>+$('sa_'+k).value.replace(/,/g,'')||0,k=el.id.slice(3);
@@ -74,9 +76,9 @@ function slCalc(el){el.value=fmtN(el.value);const g=k=>+$('sa_'+k).value.replace
  if(k!=='total'&&!slMan.t){const s=g('supply');$('sa_total').value=s?slWon(Math.round(s*1.1)):''}}
 function slSave(id){const g=k=>$('sa_'+k).value.trim(),nn=k=>+g(k).replace(/,/g,'')||0,d=g('date'),y=d?+d.slice(0,4):Math.round(+g('year'))||0;
  if(!y)return uiAlert('매출일이나 연도를 입력하세요.');if(!g('client'))return uiAlert('거래처를 입력하세요.');
- const o=slNorm({id:id||uid(),date:d,year:y,client:g('client'),orderNo:g('orderNo'),item:g('item'),fabric:g('fabric'),process:g('process'),color:g('color'),unitPrice:nn('unitPrice'),qty:nn('qty'),supply:nn('supply'),total:nn('total'),memo:g('memo')});
+ const o=slNorm({id:id||uid(),date:d,year:y,client:g('client'),orderNo:g('orderNo'),item:g('item'),fabric:g('fabric'),process:g('process'),color:g('color'),unitPrice:nn('unitPrice'),qty:nn('qty'),supply:nn('supply'),total:nn('total'),memo:g('memo'),qtyMan:!!$('sa_lk')&&slLkMan});
  const i=id?sales.findIndex(s=>s.id===id):-1;if(i>=0){o.source=sales[i].source;sales[i]=o}else sales.push(o);save();dlg.close();render();toast('저장했습니다')}
-async function slDel(id){if(!await uiConfirm('이 매출을 삭제할까요?'))return;sales=sales.filter(s=>s.id!==id);save();dlg.close();render();toast('삭제했습니다')}
+async function slDel(id){if(!await uiConfirm('이 매출을 삭제할까요?'))return;const x=sales.find(s=>s.id===id),k=x&&slONk(x.orderNo);sales=sales.filter(s=>s.id!==id);if(k&&slLk.has(id)&&!sales.some(s=>slONk(s.orderNo)===k)&&!slNoAuto.includes(k))slNoAuto.push(k);save();dlg.close();render();toast('삭제했습니다')}
 async function slCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['오더번호','매출일','연도','거래처','품목','아이템명','색상','가공구분','수량','단가','공급가액','총액(VAT포함)','메모'];
  const rows=slRows().map(x=>[x.orderNo,x.date,x.year||'',x.client,x.item,x.fabric,x.color,x.process,x.qty,x.unitPrice,x.supply,x.total,x.memo]);
  const p=await A.saveFile(`매출관리_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows.map(r=>r.map(q).join(','))].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
@@ -116,3 +118,30 @@ function siRender(){const sh=siBook[siSh],h=sh.rows[siHdr]||[],a=siAnalyze(),mod
 async function siRun(){const a=siAnalyze(),re=(document.querySelector('input[name=simode]:checked')||{}).value==='re';if(A.preImportBackup)await A.preImportBackup();
  let del=0;if(re){del=sales.filter(x=>x.source==='import').length;sales=sales.filter(x=>x.source!=='import')}
  a.L.forEach((x,i)=>{const {rn,ok,...o}=x;o.id=uid()+i;sales.push(o)});save();dlg.close();slTab='list';render();toast(`가져오기 완료: ${a.L.length}건${del?` (기존 ${del}건 교체)`:''}${a.ex?` · 집계 제외 ${a.ex}건`:''}`)}
+
+// ===== 생산 관리 연동: 수량 = 최종 공정 출고 합계 (단가는 직접) =====
+// 규칙: 오더번호로 연결. 여러 색상 오더는 출고 메모에 색상명이 있으면 색상별로 나눔.
+// 최종 공정 출고가 있는 오더에 매출 행이 없으면 자동 생성(단가 비움). 수량을 직접 정하면(생산 연동 해제) 동기화 안 함.
+let slNoAuto=[],slLk=new Map(),slLkMan=false;
+const slONk=s=>String(s||'').replace(/\s+/g,'').toLowerCase().replace(/^m(?=\d)/,'');
+function slShip(o){const last=o.procs[o.procs.length-1],sh=last?last.ships.filter(s=>+s.qty):[];if(!sh.length)return null;
+ const cols=[...new Set(o.lines.map(l=>l.color).filter(Boolean))],by={};let un=0;
+ sh.forEach(s=>{const m=blNk(s.memo),c=cols.length>1?cols.filter(c=>m.includes(blNk(c))):[];if(c.length===1)by[c[0]]=(by[c[0]]||0)+(+s.qty);else un+=+s.qty});
+ return {fin:sh.reduce((a,s)=>a+(+s.qty||0),0),cols,by,un,date:sh.map(s=>s.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop()||''}}
+function slAmt10(x){if(x.unitPrice>0){x.supply=f10(x.qty*x.unitPrice);x.total=x.supply+f10(x.supply/10)}}
+function slSync(){const M=new Map();orders.forEach(o=>{if(!o.example&&o.no)M.set(slONk(o.no),o)});const before=JSON.stringify(sales),G=new Map();slLk=new Map();
+ sales.forEach(x=>{const k=slONk(x.orderNo);if(k&&M.has(k)){if(!G.has(k))G.set(k,[]);G.get(k).push(x)}});
+ G.forEach((a,k)=>{const au=a.filter(x=>x.source==='auto'),ot=a.filter(x=>x.source!=='auto');if(!au.length||!ot.length)return; // 엑셀·직접 입력 행이 생기면 자동 행은 물러남(입력한 단가는 넘겨줌)
+  au.forEach(x=>{const t=ot.find(y=>!y.unitPrice&&(ot.length===1||blNk(y.color)===blNk(x.color)));if(t&&x.unitPrice)t.unitPrice=x.unitPrice});sales=sales.filter(x=>!au.includes(x));G.set(k,ot)});
+ M.forEach((o,k)=>{const S=slShip(o);if(!S)return;let a=G.get(k);
+  if(!a){if(slNoAuto.includes(k))return;const per=S.cols.length>1&&!S.un,mk=(c,i)=>slNorm({id:uid()+'a'+i,date:S.date,client:o.client,orderNo:o.no,item:o.item,fabric:o.fabric,color:c,source:'auto'});
+   a=per?S.cols.filter(c=>S.by[c]).map(mk):[mk(o.color,0)];sales.push(...a)}
+  const cnt={};a.forEach(x=>{const c=S.cols.filter(c=>blNk(c)===blNk(x.color));x._c=c.length===1?c[0]:'';cnt[x._c]=(cnt[x._c]||0)+1});
+  a.forEach(x=>{const c=x._c;delete x._c;let q=null;
+   if(a.length===1)q=c&&S.cols.length>1&&!S.un?(S.by[c]||0):S.fin;else if(c&&cnt[c]===1&&!S.un)q=S.by[c]||0;
+   if(q==null)return;slLk.set(x.id,{q,done:o.delivered,man:!!x.qtyMan});if(x.qtyMan)return;
+   x.qty=q;slAmt10(x);if(x.source==='auto'&&S.date){x.date=S.date;x.year=+S.date.slice(0,4)}})});
+ return JSON.stringify(sales)!==before}
+function slQtyCell(x){const L=slLk.get(x.id),v=x.qty?slWon(x.qty):'';if(!L)return v;
+ return L.man?`<span title="직접 입력 (생산 연동 해제됨 · 출고 ${slWon(L.q)})">${v}<i class="slq m">✎</i></span>`:`<span title="생산 관리 최종 공정 출고${L.done?' · 오더 완료':' · 진행 중'}">${v}<i class="slq${L.done?'':' p'}">●</i></span>`}
+function slLinked(x){const o=orders.find(o=>!o.example&&slONk(o.no)===slONk(x.orderNo));return !!(o&&slShip(o))}
