@@ -188,10 +188,10 @@ function dlvBlock(o,g){const D=o.dlv||[];return `<div class="pc pcdl"><div class
   <table class="st" style="min-width:0;width:100%;table-layout:fixed"><colgroup><col style="width:196px"><col style="width:170px"><col style="width:170px"><col><col style="width:44px"></colgroup><thead><tr><th style="text-align:center">납품일</th><th style="text-align:center">납품량 (${esc(o.unit)})</th><th style="text-align:center">거래명세서</th><th>메모</th><th></th></tr></thead><tbody>
   ${D.map((x,j,a)=>`<tr><td><div class="shmv"><button type="button" tabindex="-1" data-mv="${x.id}:-1" onclick="moveDlv('${o.id}','${x.id}',-1)" title="위로"${j?'':' disabled'}>▲</button><button type="button" tabindex="-1" data-mv="${x.id}:1" onclick="moveDlv('${o.id}','${x.id}',1)" title="아래로"${j<a.length-1?'':' disabled'}>▼</button><input type="date" value="${esc(x.date)}" onchange="editDlv('${o.id}','${x.id}','date',this.value)"></div></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editDlv('${o.id}','${x.id}','qty',this.value)" onkeydown="dlQtyKey(event,'${o.id}','${x.id}',this)"></td>${ssCell(o.id,'dlv',x.id)}<td><input data-shm="${x.id}" value="${esc(x.memo)}" onchange="editDlv('${o.id}','${x.id}','memo',this.value)"></td><td><button onclick="delDlv('${o.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">납품 내역이 없습니다.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${D.length?num(g.dl):'-'}</td><td colspan="3"></td></tr></tfoot></table></div>`}
-// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 같은 줄 오른쪽에 유지. 칸 간격·짧은 값(16px)은 어떤 창 폭에서도 그대로.
-// 넘치면 ① 긴 값(200px 넘는 칸)만 글자 13px + 최대 폭 240px 안에서 줄바꿈 ② 최대 폭을 10px씩 줄여 더 여러 줄로(140px까지)
+// 오더 상세 머리줄: 줄바꿈 없이 '최종 공정 출고'를 같은 줄 오른쪽에 유지. 칸 간격·값 글자(12px, 머리글과 같은 크기)는 어떤 창 폭에서도 그대로.
+// 넘치면 ① 긴 값(200px 넘는 칸)만 최대 폭 240px 안에서 줄바꿈 ② 최대 폭을 10px씩 줄여 더 여러 줄로(140px까지)
 // ③ 막대 최소 폭 220→160px ④ 최대 폭 140→100px ⑤ 그래도 모자라면 최대 폭 140px·막대 200px로 두고 카드를 넓혀 화면 가로 스크롤
-const OH_LFS=13,OH_LMAX=240,OH_LMID=140,OH_LMIN=100,OH_LONG=200,OH_PGMIN=160;let ohRO=null;
+const OH_LFS=12,OH_LMAX=240,OH_LMID=140,OH_LMIN=100,OH_LONG=200,OH_PGMIN=160;let ohRO=null;
 function ohFit(){const oh=document.querySelector('#pd_wrap .oh');if(!oh)return;const card=oh.parentElement,pg=oh.querySelector('.pg');
  const F=[...oh.children].filter(d=>d!==pg&&d.querySelector('.v')&&!d.querySelector('.dlvc'));
  card.style.minWidth='';if(pg)pg.style.minWidth='';F.forEach(d=>{d.classList.remove('ohl');d.style.maxWidth='';d.querySelector('.v').style.fontSize=''});
