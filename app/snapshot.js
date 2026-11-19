@@ -20,6 +20,7 @@ function snapBuild(){
   qty:o.qty,unit:o.unit,lines:o.lines.map(l=>({color:l.color,qty:l.qty,unit:l.unit})),
   processes:o.procs.map((p,i)=>({step:i+1,name:p.name,vendor:p.vendor,shrink:p.shrink,shippedQty:p.ships.reduce((s,x)=>s+(+x.qty||0),0),
    shipments:p.ships.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:fnames(shipFiles,f=>f.shipId===x.id)}))})),
+  finalDelivery:(o.dlv||[]).length?{totalQty:dlvSum(o),stock:progress(o).stock,rows:o.dlv.map(x=>({date:x.date,qty:x.qty,memo:x.memo}))}:null,completedQty:(o.dlv||[]).length?dlvSum(o):(o.procs.length?sum(o.procs[o.procs.length-1]):0),
   workOrderFiles:fnames(wf,f=>f.kind==='wo'),purchaseOrderFiles:fnames(wf,f=>f.kind==='po'),example:!!o.example,
   search:snapS([o.no,o.item,o.fabric,o.client,...o.lines.map(l=>l.color),...o.procs.flatMap(p=>[p.name,p.vendor])])}});
  const ST=stmts.map(s=>{const lots=s.lots.map(l=>{const rolls=l.rolls.filter(v=>v!=='');return {lotNo:l.lotNo,color:l.color,rolls,qty:r2(rolls.reduce((a,b)=>a+(+b||0),0))}});

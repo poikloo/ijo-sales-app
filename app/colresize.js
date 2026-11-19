@@ -3,7 +3,9 @@
 let colWidths={};
 function crLoad(r){colWidths=(r&&r.colWidths&&typeof r.colWidths==='object')?r.colWidths:{};
  // v1.7.0 이전 생산 관리 넓이(10칸) → 선택 칸(30px) 앞에 붙여 'prod2'로 옮김
- const o=colWidths.prod;if(Array.isArray(o)){if(o.length===10&&!colWidths.prod2)colWidths.prod2=[30,...o];delete colWidths.prod}}
+ const o=colWidths.prod;if(Array.isArray(o)){if(o.length===10&&!colWidths.prod2)colWidths.prod2=[30,...o];delete colWidths.prod}
+ // v1.7.5: 생산 관리 '오더 완료' 뒤에 '재고' 칸(76px) 추가 → 저장된 11칸 넓이에 끼워 넣음
+ if(Array.isArray(colWidths.prod2)&&colWidths.prod2.length===11)colWidths.prod2.splice(10,0,76)}
 function crPayload(){return {colWidths}}
 function crImport(r){crLoad(r);if(r&&r.listSort)lsLoad(r);document.querySelectorAll('table[data-rz]').forEach(crApply)}
 function crCols(t){return [...t.querySelectorAll('colgroup col')]}

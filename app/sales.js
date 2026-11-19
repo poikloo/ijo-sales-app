@@ -66,7 +66,7 @@ function slOpen(id){const x=id?sales.find(s=>s.id===id):{date:ymd(new Date()),ye
 function slSmp(){const c=$('sa_smp').checked,u=$('sa_unitPrice');u.disabled=c;if(c&&u.value){u.value='';slCalc(u)}}
 function slDateCh(){const d=$('sa_date').value,y=$('sa_year');if(d){y.value=d.slice(0,4);y.disabled=true}else y.disabled=false}
 function slOrdCh(init){const o=orders.find(x=>slONk(x.no)===slONk($('sa_orderNo').value)),cp=$('sa_cp'),S=o&&!o.example&&slShip(o);
- $('sa_lkw').innerHTML=S?`<label style="display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:12px;margin:0;line-height:1;white-space:nowrap" title="생산 관리 최종 공정 출고 ${slWon(S.fin)}"><input type="checkbox" id="sa_lk" style="display:inline-block;flex:none;margin:0;padding:0;width:12px;height:12px"${slLkMan?'':' checked'} onchange="slLkMan=!this.checked;$('sa_qty').disabled=this.checked"> 생산 연동</label>`:'';$('sa_qty').disabled=!!S&&!slLkMan;
+ $('sa_lkw').innerHTML=S?`<label style="display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:12px;margin:0;line-height:1;white-space:nowrap" title="생산 관리 ${S.src} ${slWon(S.fin)}"><input type="checkbox" id="sa_lk" style="display:inline-block;flex:none;margin:0;padding:0;width:12px;height:12px"${slLkMan?'':' checked'} onchange="slLkMan=!this.checked;$('sa_qty').disabled=this.checked"> 생산 연동</label>`:'';$('sa_qty').disabled=!!S&&!slLkMan;
  if(!o){cp.style.display='none';return}
  if(!init)[['client','client'],['item','item'],['fabric','fabric']].forEach(([k,ok])=>{if(o[ok])$('sa_'+k).value=o[ok]});
  const cols=[...new Set(o.lines.map(l=>l.color).filter(Boolean))];if(cols.length>1){cp.innerHTML='<option value="">색상 선택…</option>'+cols.map(c=>`<option>${esc(c)}</option>`).join('');cp.style.display=''}else{cp.style.display='none';if(!init&&cols[0])$('sa_color').value=cols[0]}}
@@ -119,15 +119,15 @@ async function siRun(){const a=siAnalyze(),re=(document.querySelector('input[nam
  let del=0;if(re){del=sales.filter(x=>x.source==='import').length;sales=sales.filter(x=>x.source!=='import')}
  a.L.forEach((x,i)=>{const {rn,ok,...o}=x;o.id=uid()+i;sales.push(o)});save();dlg.close();slTab='list';render();toast(`가져오기 완료: ${a.L.length}건${del?` (기존 ${del}건 교체)`:''}${a.ex?` · 집계 제외 ${a.ex}건`:''}`)}
 
-// ===== 생산 관리 연동: 수량 = 최종 공정 출고 합계 (단가는 직접) =====
+// ===== 생산 관리 연동: 수량 = 최종 납품 합계 (없으면 최종 공정 출고 합계) (단가는 직접) =====
 // 규칙: 오더번호로 연결. 여러 색상 오더는 출고 메모에 색상명이 있으면 색상별로 나눔.
 // 최종 공정 출고가 있는 오더에 매출 행이 없으면 자동 생성(단가 비움). 수량을 직접 정하면(생산 연동 해제) 동기화 안 함.
 let slNoAuto=[],slLk=new Map(),slLkMan=false;
 const slONk=s=>String(s||'').replace(/\s+/g,'').toLowerCase().replace(/^m(?=\d)/,'');
-function slShip(o){const last=o.procs[o.procs.length-1],sh=last?last.ships.filter(s=>+s.qty):[];if(!sh.length)return null;
+function slShip(o){const sh=finalShips(o).filter(s=>+s.qty);if(!sh.length)return null; // 최종 납품이 있으면 그 줄, 없으면 최종 공정 출고
  const cols=[...new Set(o.lines.map(l=>l.color).filter(Boolean))],by={};let un=0;
  sh.forEach(s=>{const m=blNk(s.memo),c=cols.length>1?cols.filter(c=>m.includes(blNk(c))):[];if(c.length===1)by[c[0]]=(by[c[0]]||0)+(+s.qty);else un+=+s.qty});
- return {fin:sh.reduce((a,s)=>a+(+s.qty||0),0),cols,by,un,date:sh.map(s=>s.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop()||''}}
+ return {src:dlvOn(o)?'최종 납품':'최종 공정 출고',fin:sh.reduce((a,s)=>a+(+s.qty||0),0),cols,by,un,date:sh.map(s=>s.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop()||''}}
 function slAmt10(x){if(x.unitPrice>0){x.supply=f10(x.qty*x.unitPrice);x.total=x.supply+f10(x.supply/10)}}
 function slSync(){const M=new Map();orders.forEach(o=>{if(!o.example&&o.no)M.set(slONk(o.no),o)});const before=JSON.stringify(sales),G=new Map();slLk=new Map();
  sales.forEach(x=>{const k=slONk(x.orderNo);if(k&&M.has(k)){if(!G.has(k))G.set(k,[]);G.get(k).push(x)}});
@@ -139,9 +139,9 @@ function slSync(){const M=new Map();orders.forEach(o=>{if(!o.example&&o.no)M.set
   const cnt={};a.forEach(x=>{const c=S.cols.filter(c=>blNk(c)===blNk(x.color));x._c=c.length===1?c[0]:'';cnt[x._c]=(cnt[x._c]||0)+1});
   a.forEach(x=>{const c=x._c;delete x._c;let q=null;
    if(a.length===1)q=c&&S.cols.length>1&&!S.un?(S.by[c]||0):S.fin;else if(c&&cnt[c]===1&&!S.un)q=S.by[c]||0;
-   if(q==null)return;slLk.set(x.id,{q,done:o.delivered,man:!!x.qtyMan});if(x.qtyMan)return;
+   if(q==null)return;slLk.set(x.id,{q,done:o.delivered,man:!!x.qtyMan,src:S.src});if(x.qtyMan)return;
    x.qty=q;slAmt10(x);if(x.source==='auto'&&S.date){x.date=S.date;x.year=+S.date.slice(0,4)}})});
  return JSON.stringify(sales)!==before}
 function slQtyCell(x){const L=slLk.get(x.id),v=x.qty?slWon(x.qty):'';if(!L)return v;
- return L.man?`<span title="직접 입력 (생산 연동 해제됨 · 출고 ${slWon(L.q)})">${v}<i class="slq m">✎</i></span>`:`<span title="생산 관리 최종 공정 출고${L.done?' · 오더 완료':' · 진행 중'}">${v}<i class="slq${L.done?'':' p'}">●</i></span>`}
+ return L.man?`<span title="직접 입력 (생산 연동 해제됨 · 출고 ${slWon(L.q)})">${v}<i class="slq m">✎</i></span>`:`<span title="생산 관리 ${L.src||'최종 공정 출고'}${L.done?' · 오더 완료':' · 진행 중'}">${v}<i class="slq${L.done?'':' p'}">●</i></span>`}
 function slLinked(x){const o=orders.find(o=>!o.example&&slONk(o.no)===slONk(x.orderNo));return !!(o&&slShip(o))}

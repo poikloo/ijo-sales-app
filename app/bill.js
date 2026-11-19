@@ -1,5 +1,5 @@
 // ===== 청구서 (월말 결산: 같은 달 · 같은 거래처 = 한 장) =====
-// 자동 줄: 매출 관리 행(오더번호) 수량·단가 그대로. 매출 행 없는 오더는 최종 공정 출고(그 달) × 최근 단가
+// 자동 줄: 매출 관리 행(오더번호) 수량·단가 그대로. 매출 행 없는 오더는 최종 납품(없으면 최종 공정 출고, 그 달) × 최근 단가
 let bills={},billInfo={},blYm='',blSel=null,blF={k:'',st:''},blDraft=null;
 const BL_INFO=[['name','청구인 (상호)'],['ceo','대표'],['addr','주소'],['bank','은행'],['holder','예금주'],['account','계좌번호']];
 const blKey=(ym,c)=>ym+'|'+c;
@@ -26,9 +26,9 @@ function blPrice(o){const pick=l=>l.filter(x=>+x.unitPrice>0).sort((a,b)=>(b.dat
 function blSpec(o){return [...new Set((o.lines||[]).map(l=>l.color).filter(Boolean))].join(', ')}
 // 그 달 자동 줄 (거래처별)
 // 매출 관리 행이 있는 오더: 그 행의 수량·단가 그대로 (매출일 달, 없으면 최근 출고 달 — 한 달에만). 없으면 출고 합계 × 단가
-function blSlYm(x,o){if(blDate(x.date))return x.date.slice(0,7);const last=o&&o.procs[o.procs.length-1],d=last?last.ships.map(s=>blDate(s.date)).filter(Boolean).sort().pop():'';return d?d.slice(0,7):''}
+function blSlYm(x,o){if(blDate(x.date))return x.date.slice(0,7);const d=o?finalShips(o).map(s=>blDate(s.date)).filter(Boolean).sort().pop():'';return d?d.slice(0,7):''}
 function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
- orders.forEach(o=>{if(!o.client)return;const last=o.procs[o.procs.length-1],sh=last?last.ships.filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty):[],k=blNk(o.no);if(k)ON.add(k);
+ orders.forEach(o=>{if(!o.client)return;const sh=finalShips(o).filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty),k=blNk(o.no);if(k)ON.add(k);
   const SH=sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||''})).sort((a,b)=>a.date.localeCompare(b.date));
   const S=k?sales.filter(x=>blNk(x.orderNo)===k):[];
   if(S.length){const M=S.filter(x=>blSlYm(x,o)===ym);M.forEach((x,i)=>add(o.client,{ref:S.length===1?o.id:o.id+'|'+x.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:i?[]:SH}));
@@ -54,7 +54,7 @@ function blView(key,A0){const [ym,client]=[key.slice(0,7),key.slice(8)],b=bills[
  const T=lines.reduce((a,l)=>({qty:a.qty+(+l.qty||0),sup:a.sup+l.c.sup,vat:a.vat+l.c.vat,tot:a.tot+l.c.tot}),{qty:0,sup:0,vat:0,tot:0});
  return {key,ym,client,b,lines,ships,warn,T,status:b.locked?'done':'todo',empty:!lines.length}}
 function blMonth(ym){const A0=blAuto(ym),ks=new Set([...Object.keys(A0).map(c=>blKey(ym,c)),...Object.keys(bills).filter(k=>k.startsWith(ym+'|'))]);return [...ks].map(k=>blView(k,A0)).sort((a,b)=>a.client.localeCompare(b.client,'ko'))}
-function blAllMonths(){const s=new Set(Object.values(bills).map(b=>b.ym));orders.forEach(o=>{if(o.date)s.add(o.date.slice(0,7));o.procs.forEach(p=>p.ships.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7))))});sales.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7)));return [...s].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort()}
+function blAllMonths(){const s=new Set(Object.values(bills).map(b=>b.ym));orders.forEach(o=>{if(o.date)s.add(o.date.slice(0,7));o.procs.forEach(p=>p.ships.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7))));(o.dlv||[]).forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7)))});sales.forEach(x=>blDate(x.date)&&s.add(x.date.slice(0,7)));return [...s].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort()}
 function blPending(){const cur=blCurYm();return blAllMonths().filter(m=>m<cur).flatMap(m=>blMonth(m)).filter(v=>v.status==='todo'&&v.T.tot>0)}
 const blYmTxt=ym=>ym?`${ym.slice(0,4)}년 ${+ym.slice(5)}월`:'';
 function blShift(d){const [y,m]=blYm.split('-').map(Number),t=new Date(y,m-1+d,1);blYm=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');blSel=null;render()}

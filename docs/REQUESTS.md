@@ -455,7 +455,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `orders[]` — 생산 관리
 
 `no`(오더번호) `item`(품목) `fabric`(아이템명) `client` `date`(발주일) `due`(납기일) `delivered`(오더 완료) `qty` `unit` `lines[]{color,qty,unit}`,
-`processes[]{step,name,vendor,shrink(가공축 %),shippedQty,shipments[]{date,qty,memo,statementFiles[]}}`, `workOrderFiles[]` `purchaseOrderFiles[]` (첨부 파일 이름)
+`processes[]{step,name,vendor,shrink(가공축 %),shippedQty,shipments[]{date,qty,memo,statementFiles[]}}`, `finalDelivery`(최종 납품 — 없으면 null){totalQty,stock(재고 = 최종 공정 출고 − 최종 납품),rows[]{date,qty,memo}}, `completedQty`(오더 완료 수량: 최종 납품 합계, 없으면 최종 공정 출고 합계), `workOrderFiles[]` `purchaseOrderFiles[]` (첨부 파일 이름)
 
 ### `statements[]` — 거래명세서
 
