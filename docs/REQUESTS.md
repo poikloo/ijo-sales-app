@@ -170,7 +170,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `note` | 비고 | |
 | `dest` | 납품처 | |
 | `contact` | 담당자 | |
-| `linkShip` | 생산 관리 출고에 반영 | 기본 `true` — 오더의 **마지막 공정**에 출고일·총 수량 출고 행을 연결해 만듦 (화면의 체크박스와 같음) |
+| `linkShip` | 생산 관리 최종 납품에 반영 | 기본 `true` — 오더의 **최종 납품**에 명세서 날짜·총 수량 납품 줄을 연결해 만듦 (화면의 체크박스와 같음). v1.8.0부터 — 그 전에는 마지막 공정 출고 행이었음 |
 | `open` | | 기본 `true` — 적용 후 이 거래명세서를 바로 엽니다 |
 
 요청으로 만든 거래명세서는 목록에 **요청** 표시가 붙고, 일반 거래명세서처럼 고치고 인쇄·PDF 저장할 수 있습니다.
@@ -223,7 +223,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `replace` | (statement) 이미 거래명세서가 붙은 출고 줄이면 `true`일 때만 바꿈 (아니면 오류) |
 
 `statement`에서 어느 출고 줄인지:
-1. `process`·`processNo`·`shipDate`·`shipQty`를 모두 생략하면, **같은 요청 앞쪽에서 이 오더에 마지막으로 추가된 출고 줄**(`production.addShipment`의 마지막 행, 또는 `statement.createFromOrder`의 `linkShip` 행)에 붙입니다. 없으면 오류.
+1. `process`·`processNo`·`shipDate`·`shipQty`를 모두 생략하면, **같은 요청 앞쪽에서 이 오더에 마지막으로 추가된 출고 줄**(`production.addShipment`의 마지막 행, 또는 `statement.createFromOrder`의 `linkShip` 최종 납품 줄)에 붙입니다. 없으면 오류.
 2. 지정하면 그 조건으로 찾습니다. `shipDate`로 여러 줄이 걸리면 오류(→ `shipQty`·`processNo`로 좁힘), `shipDate` 없이 공정만 주면 그 공정의 마지막 출고 줄(⚠ 표시).
 
 카드에는 파일 이름·크기·붙일 곳과 **📎 파일 열어 보기** 버튼이 나옵니다.
@@ -388,7 +388,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ```
 
 적용하면: 오더 2610-0101 생성 → 생지 공정에 출고 2건 → 거래명세서 1건(총 426 YD, 금액 1,491,000원) 저장,
-`linkShip` 기본값 때문에 염색(마지막) 공정에 2026-10-28 / 426 YD 출고 행이 연결되어 생기고, 거래명세서 편집 화면이 열립니다.
+`linkShip` 기본값 때문에 오더의 최종 납품에 2026-10-28 / 426 YD 줄이 연결되어 생기고(오더 완료·매출·청구서 수량이 이 줄 기준이 됨), 거래명세서 편집 화면이 열립니다.
 
 ## 5. 저장 위치 (데이터 파일)
 
@@ -398,7 +398,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ## 6. 한계
 
 - 거래명세서는 "임시" 상태가 따로 없고 바로 일반 거래명세서로 저장됩니다 (목록에 **요청** 표시).
-- `linkShip`(기본 true)은 마지막 공정에 출고 행을 만듭니다. 같은 요청에서 마지막 공정에 같은 출고를 `addShipment`로 또 넣으면 두 번 잡히니, 둘 중 하나만 쓰세요 (`linkShip: false`).
+- `linkShip`(기본 true)은 최종 납품에 납품 줄을 만듭니다(마지막 공정 출고는 그대로). 최종 납품 줄이 하나라도 있으면 오더 완료 수량·매출 관리·청구서 수량은 최종 납품 합계를 따릅니다.
 - 거래처 정보(등록번호·주소)는 요청으로 만들지 않습니다 — 상호만 넣고 ⚠로 알려 줍니다.
 - 오더 삭제·공정 삭제·출고 수정/삭제, 거래명세서 수정은 아직 요청으로 할 수 없습니다.
 - 첨부(`production.attachFile`)는 파일을 추가만 합니다. 첨부 삭제는 요청으로 할 수 없고, `replace: true`일 때만 기존 거래명세서 파일을 바꿉니다.
@@ -455,7 +455,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `orders[]` — 생산 관리
 
 `no`(오더번호) `item`(품목) `fabric`(아이템명) `client` `date`(발주일) `due`(납기일) `delivered`(오더 완료) `qty` `unit` `lines[]{color,qty,unit}`,
-`processes[]{step,name,vendor,shrink(가공축 %),shippedQty,shipments[]{date,qty,memo,statementFiles[]}}`, `finalDelivery`(최종 납품 — 없으면 null){totalQty,stock(재고 = 최종 공정 출고 − 최종 납품),rows[]{date,qty,memo}}, `completedQty`(오더 완료 수량: 최종 납품 합계, 없으면 최종 공정 출고 합계), `workOrderFiles[]` `purchaseOrderFiles[]` (첨부 파일 이름)
+`processes[]{step,name,vendor,shrink(가공축 %),shippedQty,shipments[]{date,qty,memo,statementFiles[]}}`, `finalDelivery`(최종 납품 — 없으면 null){totalQty,stock(재고 = 최종 공정 출고 − 최종 납품),rows[]{date,qty,memo,statementFiles[]}}, `completedQty`(오더 완료 수량: 최종 납품 합계, 없으면 최종 공정 출고 합계), `workOrderFiles[]` `purchaseOrderFiles[]` (첨부 파일 이름)
 
 ### `statements[]` — 거래명세서
 

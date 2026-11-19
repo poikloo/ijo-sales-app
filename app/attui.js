@@ -50,6 +50,6 @@ attWf('po','발주서',id=>(orders.find(o=>o.id===id)||{}).no);
 attWf('tr','시험성적서',id=>(t=>t&&(t.no||t.name))(trs.find(x=>x.id===id)));
 attWf('qs','규격서',id=>(q=>q&&(q.spec||q.name))(typeof qsGet==='function'&&qsGet(id)));
 // 출고별 거래명세서: key = 오더id~공정id~출고id (출고 1건에 1파일 — 새로 넣으면 바꿈)
-attReg('ss',{label:'거래명세서',title:k=>{const [o,p,s]=k.split('~'),O=orders.find(x=>x.id===o),P=O&&O.procs.find(x=>x.id===p),S=P&&P.ships.find(x=>x.id===s);return [O&&O.no,S&&S.date].filter(Boolean).join(' ')},
+attReg('ss',{label:'거래명세서',title:k=>{const [o,p,s]=k.split('~'),O=orders.find(x=>x.id===o),P=O&&O.procs.find(x=>x.id===p),S=P?P.ships.find(x=>x.id===s):O&&(O.dlv||[]).find(x=>x.id===s);return [O&&O.no,S&&S.date].filter(Boolean).join(' ')},
  files:k=>{const f=ssOf(k.split('~')[2]);return f?[f]:[]},add:async(k,l)=>{const [o,p,s]=k.split('~');await ssAdd(o,p,s,l[0])},
  preview:f=>A.ssPreview(f.path,f.name),save:f=>A.ssSaveAs(f.path,f.name),del:async f=>{await ssRemoveFile(f);save()}});

@@ -90,11 +90,11 @@ const RQ_H={
    else if(!custs.some(x=>x.name===stEd.cust.name)&&stEd.cust.name)it.warns.push(`'${stEd.cust.name}'은(는) 거래처 정보에 없어서 상호만 들어갑니다 (등록번호·주소 비어 있음)`);
    for(const k of ['item','spec','note','dest','contact'])if(a[k]!=null)stEd[k]=rqS(a[k]);if(a.price!=null&&a.price!=='')stEd.price=rqN(a.price);
    stEd.linkShip=a.linkShip!==false;stEd.reqId=req.id;
-   const s=stClean(stEd);linkShip(s);stmts.push(s);ctx.stmtIds.push(s.id);{const lp0=o.procs[o.procs.length-1];if(s.shipId&&lp0)ctx.lastShip[o.id]={pid:lp0.id,sid:s.shipId}}
+   const s=stClean(stEd);linkShip(s);stmts.push(s);ctx.stmtIds.push(s.id);{const f=s.shipId&&findShip(s.shipId);if(f)ctx.lastShip[o.id]={pid:f.p?f.p.id:'dlv',sid:s.shipId}}
    if(!supOf(s).name)it.warns.push('공급자 정보가 비어 있습니다 (설정 › 공급자 정보)');
-   const t=stTot(s),lp=o.procs[o.procs.length-1];
+   const t=stTot(s);
    it.diff=[['명세서 날짜','',s.date],['오더번호','',s.orderNo],['공급자','',supOf(s).name||'-'],['공급받는자','',s.cust.name||'-'],['품명 / 규격','',[s.item,s.spec].filter(Boolean).join(' / ')],['단가','',s.price?fnum(s.price)+'원':''],['금액','',stAmt(s)?stAmt(s).toLocaleString('ko-KR')+'원':''],['비고','',s.note],['납품처','',s.dest],['담당자','',s.contact],
-    ['생산 관리 출고 반영','',s.linkShip?(s.shipId&&lp?`'${lp.name}' 공정에 ${s.date} · ${fnum(t.q)} YD 출고 1줄 추가`:'반영 안 됨 (공정 없음)'):'아니오']].filter(r=>r[2]!=='');
+    ['생산 관리 최종 납품 반영','',s.linkShip?(s.shipId?`최종 납품에 ${s.date} · ${fnum(t.q)} YD 1줄 추가`:'반영 안 됨'):'아니오']].filter(r=>r[2]!=='');
    it.table={head:['LOT NO.','COLOR','절','수량(YD)'],rows:s.lots.map(l=>[l.lotNo,l.color,lotCnt(l),fnum(lotSum(l))]).concat([['합계','',t.c,fnum(t.q)]])};
    it.stmt=true;it.open=a.open}
   finally{stEd=prev}},
@@ -112,7 +112,7 @@ const RQ_H={
   if(a.replace!=null&&typeof a.replace!=='boolean')it.errors.push('replace는 true/false여야 합니다');
   let p=null,s=null,old=null;
   if(o&&K==='거래명세서'){const hasT=a.process!=null||a.processNo!=null||a.shipDate!=null||a.shipQty!=null;
-   if(!hasT){const L=ctx.lastShip[o.id];if(L){p=o.procs.find(x=>x.id===L.pid);s=p&&p.ships.find(x=>x.id===L.sid)}
+   if(!hasT){const L=ctx.lastShip[o.id];if(L){if(L.pid==='dlv'){p=null;s=(o.dlv||[]).find(x=>x.id===L.sid)}else{p=o.procs.find(x=>x.id===L.pid);s=p&&p.ships.find(x=>x.id===L.sid)}}
     if(!s)it.errors.push('어느 출고 줄에 붙일지 알 수 없습니다 — 같은 요청 앞쪽에서 출고를 추가(production.addShipment·statement.createFromOrder)하거나 process/processNo와 shipDate를 지정하세요')}
    else{let ok=true;if(a.processNo!=null){const k=rqN(a.processNo);if(!Number.isInteger(k)||k<1||k>o.procs.length){it.errors.push(`processNo ${a.processNo}: 이 오더의 공정은 1~${o.procs.length}번입니다`);ok=false}else p=o.procs[k-1]}
     else if(rqS(a.process)){const l=o.procs.filter(x=>x.name===rqS(a.process));if(!l.length){it.errors.push(`오더 ${o.no}에 '${rqS(a.process)}' 공정이 없습니다`);ok=false}else if(l.length>1){it.errors.push(`'${rqS(a.process)}' 공정이 ${l.length}개입니다 — processNo로 지정하세요`);ok=false}else p=l[0]}
@@ -126,8 +126,8 @@ const RQ_H={
    if(s){if(ctx.ssTaken.has(s.id))it.errors.push('같은 요청에서 이 출고 줄에 거래명세서를 두 번 붙입니다');ctx.ssTaken.add(s.id);
     old=shipFiles.find(x=>x.shipId===s.id)||null;if(old){if(a.replace===true)it.warns.push(`이미 붙어 있는 '${old.name}'을(를) 새 파일로 바꿉니다`);else it.errors.push(`이 출고 줄에는 이미 거래명세서 '${old.name}'이(가) 붙어 있습니다 — 바꾸려면 replace: true`)}}}
   it.summary=`오더 ${rqS(a.orderNo)}에 ${K||'파일'}${fi?` '${fi.name}'`:''}을(를) 첨부합니다`;if(it.errors.length||!o||!fi||!K)return;
-  ctx.attach.push({kind,oid:o.id,pid:p?p.id:'',sid:s?s.id:'',abs:fi.abs,name:fi.name,old:old?old.id:''});
-  it.diff=[['파일','',`${fi.name} (${rqSize(fi.size)})`],['붙일 곳','',K==='거래명세서'?`생산 관리 › 오더 ${o.no} › '${p.name}' 공정 · ${s.date||'-'} 출고 ${num(s.qty)} ${o.unit} › 거래명세서 칸`:`작업의뢰서 메뉴 › 오더 ${o.no} › ${K} 칸`]];
+  ctx.attach.push({kind,oid:o.id,pid:p?p.id:(s&&K==='거래명세서'?'dlv':''),sid:s?s.id:'',abs:fi.abs,name:fi.name,old:old?old.id:''});
+  it.diff=[['파일','',`${fi.name} (${rqSize(fi.size)})`],['붙일 곳','',K==='거래명세서'?`생산 관리 › 오더 ${o.no} › ${p?`'${p.name}' 공정 · ${s.date||'-'} 출고`:`최종 납품 · ${s.date||'-'}`} ${num(s.qty)} ${o.unit} › 거래명세서 칸`:`작업의뢰서 메뉴 › 오더 ${o.no} › ${K} 칸`]];
   if(old)it.diff.push(['기존 파일',old.name,fi.name]);it.file=fi.rel},
  'testReport.attachFile'(a,it,ctx,req,P){const no=rqS(a.reportNo),k=trNoKey(no);let t=null,fi=null;
   if(!no)it.errors.push('reportNo(접수번호)가 없습니다');else{const l=trs.filter(x=>trNoKey(x.no)===k);if(!l.length)it.errors.push('일치하는 성적서 없음');else if(l.length>1)it.errors.push(`접수번호 '${no}'인 성적서가 ${l.length}건입니다`);else t=l[0]}

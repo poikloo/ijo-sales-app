@@ -37,15 +37,16 @@ function stLoad(r){const o=r&&!Array.isArray(r)?r:{};
  if(stAssignSup()||mig)setTimeout(save,0)}
 const stPayload=()=>({statements:stmts,customers:custs,suppliers:sups,supplierDefault:supDef,supplier:normSup(defSup()||{})});
 function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.statements))stmts=raw.statements.map(normStmt);if(Array.isArray(raw.customers))custs=raw.customers.map(normCust);if(Array.isArray(raw.suppliers)||raw.supplier)supMigrate(raw);stAssignSup();stEd=null}
-// ---- 생산 관리 출고 연동 ----
-function findShip(id){for(const o of orders)for(const p of o.procs){const i=p.ships.findIndex(x=>x.id===id);if(i>=0)return {o,p,i}}return null}
-function unlinkShip(s){if(!s.shipId)return;const f=findShip(s.shipId);if(f){f.p.ships.splice(f.i,1);f.o.updated=now()}}
-function linkShip(s){const f0=s.shipId&&findShip(s.shipId);unlinkShip(s);if(!s.linkShip||!s.orderId){s.shipId='';return}const o=orders.find(x=>x.id===s.orderId);if(!o||!o.procs.length){s.shipId='';return}
- const p=o.procs[o.procs.length-1];s.shipId=s.shipId||sid();const rec={id:s.shipId,date:s.date,qty:stTot(s).q,memo:`거래명세서 ${s.date||''}`.trim(),stmtId:s.id};
- // 이미 있던 출고 줄은 사용자가 정한 자리 그대로, 새 줄만 날짜 순 자리에 끼워 넣음 (전체 자동 정렬 안 함)
- let at=f0&&f0.p===p?Math.min(f0.i,p.ships.length):-1;if(at<0){at=p.ships.findIndex(x=>(x.date||'')>(s.date||''));if(at<0)at=p.ships.length}p.ships.splice(at,0,rec);o.updated=now()}
+// ---- 생산 관리 최종 납품 연동 (v1.8.0부터: 오더의 '최종 납품' 줄. 예전에 마지막 공정 출고로 반영된 명세서는 그 줄을 그대로 고침) ----
+function findShip(id){for(const o of orders){const d=o.dlv||[],j=d.findIndex(x=>x.id===id);if(j>=0)return {o,p:null,arr:d,i:j};for(const p of o.procs){const i=p.ships.findIndex(x=>x.id===id);if(i>=0)return {o,p,arr:p.ships,i}}}return null}
+function unlinkShip(s){if(!s.shipId)return;const f=findShip(s.shipId);if(f){f.arr.splice(f.i,1);f.o.updated=now()}}
+function linkShip(s){const f0=s.shipId&&findShip(s.shipId);unlinkShip(s);if(!s.linkShip||!s.orderId){s.shipId='';return}const o=orders.find(x=>x.id===s.orderId);if(!o){s.shipId='';return}
+ const arr=f0&&f0.p&&f0.o===o&&o.procs.includes(f0.p)?f0.p.ships:(o.dlv||(o.dlv=[]));s.shipId=s.shipId||sid();const rec={id:s.shipId,date:s.date,qty:stTot(s).q,memo:`거래명세서 ${s.date||''}`.trim(),stmtId:s.id};
+ // 이미 있던 줄은 사용자가 정한 자리 그대로, 새 줄만 날짜 순 자리에 끼워 넣음 (전체 자동 정렬 안 함)
+ let at=f0&&f0.arr===arr?Math.min(f0.i,arr.length):-1;if(at<0){at=arr.findIndex(x=>(x.date||'')>(s.date||''));if(at<0)at=arr.length}arr.splice(at,0,rec);o.updated=now()}
+function stLinkWhere(s){const f=s.shipId&&findShip(s.shipId);return f&&f.p?`'${f.p.name}' 공정 출고`:'최종 납품'}
 function stmtsForOrder(o){const l=stmts.filter(s=>s.orderId===o.id).sort((a,b)=>b.no-a.no);
- return `<div class="card"><h2>발행한 거래명세서 <button style="float:right" onclick="newStmt('${o.id}')">+ 거래명세서 작성</button></h2>${l.length?`<table><thead><tr><th>날짜</th><th>공급받는자</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th>출고 반영</th></tr></thead><tbody>${l.map(s=>{const t=stTot(s);return `<tr class="r" onclick="go('stmt');editStmt('${s.id}')"><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td>${s.linkShip&&s.shipId?'✓':'-'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">아직 발행한 거래명세서가 없습니다.</p>'}</div>`}
+ return `<div class="card"><h2>발행한 거래명세서 <button style="float:right" onclick="newStmt('${o.id}')">+ 거래명세서 작성</button></h2>${l.length?`<table><thead><tr><th>날짜</th><th>공급받는자</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th>납품 반영</th></tr></thead><tbody>${l.map(s=>{const t=stTot(s);return `<tr class="r" onclick="go('stmt');editStmt('${s.id}')"><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td>${s.linkShip&&s.shipId?'✓':'-'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">아직 발행한 거래명세서가 없습니다.</p>'}</div>`}
 // ---- 목록 / 탭 ----
 function stSetTab(t){stTab=t;stEd=null;render()}
 function renderStmt(){document.querySelectorAll('#p_stmt .tab').forEach(e=>e.classList.toggle('on',e.dataset.t===stTab));
@@ -77,7 +78,7 @@ const nextNo=()=>stmts.reduce((a,s)=>Math.max(a,+s.no||0),0)+1;
 function newStmt(orderId){stEd=normStmt({no:nextNo(),date:ymd(new Date()),lots:[{...emptyLot(),lotNo:'1'}]});stEd._new=true;stEd.id=sid();{const d=defSup();if(d){stEd.supplierId=d.id;stEd.sup=supSnap(d)}}if(page!=='stmt'){page='';go('stmt')}if(orderId)stPickOrder(orderId);renderEditor();render()}
 function editStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor();render();$('content').scrollTop=0}
 function dupStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;stEd=normStmt({...JSON.parse(JSON.stringify(s)),id:sid(),no:nextNo(),date:ymd(new Date()),shipId:'',example:false});stEd._new=true;renderEditor();render();toast('복제본을 편집 중입니다 (저장해야 반영돼요)')}
-async function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!await uiConfirm(`거래명세서(${[s.date,s.orderNo,s.cust.name].filter(Boolean).join(' · ')||'제목 없음'})을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 출고 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
+async function delStmt(id){const s=stmts.find(x=>x.id===id);if(!s)return;if(!await uiConfirm(`거래명세서(${[s.date,s.orderNo,s.cust.name].filter(Boolean).join(' · ')||'제목 없음'})을(를) 삭제할까요?${s.shipId?'\n생산 관리에 반영된 납품 내역도 함께 삭제됩니다.':''}`))return;unlinkShip(s);stmts=stmts.filter(x=>x.id!==id);if(stEd&&stEd.id===id)stEd=null;save();render();toast('삭제했습니다')}
 function orderLabel(o){return `${o.no} · ${o.item}${o.client?' · '+o.client:''}`}
 function stPickOrder(id){const o=orders.find(x=>x.id===id);if(!o)return;const e=stEd;e.orderId=o.id;e.orderNo=o.no;e.item=o.item;e.spec=o.fabric||'';e.linkShip=true;
  e.lots.forEach(l=>{if(!l.color)l.color=(o.lines[0]||{}).color||''});const c=custs.find(x=>x.name===o.client);if(c)stPick(c.id);else if(o.client&&!e.cust.name)e.cust.name=o.client}
@@ -96,7 +97,7 @@ function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderI
   ${inp('orderNo','오더번호')}${inp('price','단가 (원, 비워도 됨)','inputmode="decimal"')}
   <label class="w">품명 및 규격<input value="${esc(e.item)}" oninput="stF('item',this.value)" placeholder="품목"></label><label class="w"><input value="${esc(e.spec)}" oninput="stF('spec',this.value)" placeholder="아이템명 / 규격 (둘째 줄)"></label>
   ${inp('note','비고','',1)}${inp('dest','납품처')}${inp('contact','담당자')}
-  ${e.orderId?`<label class="w" style="flex-direction:row;align-items:center;gap:6px;font-size:14px;color:#222"><input type="checkbox" ${e.linkShip?'checked':''} onchange="stEd.linkShip=this.checked"> 생산 관리 출고에 반영 <span class="muted">(${o&&o.procs.length?`'${esc(o.procs[o.procs.length-1].name)}' 공정에 출고일·수량 기록`:'공정이 없어 반영할 수 없음'})</span></label>`:''}
+  ${e.orderId?`<label class="w" style="flex-direction:row;align-items:center;gap:6px;font-size:14px;color:#222"><input type="checkbox" ${e.linkShip?'checked':''} onchange="stEd.linkShip=this.checked"> 생산 관리 ${esc(stLinkWhere(e))}에 반영</label>`:''}
  </div></div>
  <div class="card"><h2>공급받는자</h2><div class="g"><label class="w">거래처 선택<input list="st_custs" value="${esc(e.cust.name)}" onchange="stCustInput(this.value)" placeholder="상호 검색"></label>
   ${P_FIELDS.map(([k,l])=>`<label class="${k==='addr'?'w':''}">${l}<input value="${esc(e.cust[k])}" oninput="stEd.cust['${k}']=this.value"></label>`).join('')}</div>
@@ -129,7 +130,7 @@ async function stCancel(){if(await uiConfirm('저장하지 않은 변경 내용�
 function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.lots.forEach(l=>{while(l.rolls.length>20&&l.rolls.slice(-10).every(v=>v===''))l.rolls=l.rolls.slice(0,-10)});s.updated=now();return s}
 function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);
- const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 출고에 반영됨':''))}return true}
+ const i=stmts.findIndex(x=>x.id===s.id);if(i>=0)stmts[i]=s;else stmts.push(s);save();stEd=JSON.parse(JSON.stringify(s));if(!stEd.lots.length)stEd.lots.push(emptyLot());if(!silent){renderEditor();render();toast('저장했습니다'+(s.shipId?' · 생산 관리 '+stLinkWhere(s)+'에 반영됨':''))}return true}
 // ---- 출력 ----
 // 인쇄용 자동 글자 축소: 넘치는 칸은 최소 6pt까지 글자를 줄여 잘리지 않게 함
 const FIT_JS=`<script>(function(){var MIN=8;/*px≈6pt*/
