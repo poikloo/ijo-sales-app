@@ -216,7 +216,7 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
  rqBusy=true;render();
  try{let bk=null;try{bk=A.preImportBackup?await A.preImportBackup():'-'}catch(e){bk=null}
   if(!bk&&!await uiConfirm('자동 백업을 만들지 못했어요. 그래도 적용할까요?'))return;
-  const snap=rqSnap();let R;
+  const snap=rqSnap(),pid0=new Set(orders.flatMap(o=>o.procs.map(p=>p.id)));let R;
   try{rqWork();R=rqRun(P);if(R.nerr)throw new Error((R.top[0]||R.items.flatMap(x=>x.errors)[0])||'검사 오류')}
   catch(e){rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n'+(e&&e.message||e));return}
   // 첨부 파일 복사 (앱의 원래 첨부 저장소로). 하나라도 실패하면 복사한 파일을 지우고 데이터도 되돌림
@@ -234,7 +234,8 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
   delete rqEdits[file];delete rqEditOn[file];rqPend=rqPend.filter(x=>x.file!==file);rqBadge();
   const open=R.ctx.stmtIds.length&&rqOpenAfter[file]!==false&&(rqOpenAfter[file]===true||R.items.some(it=>it.stmt&&it.open!==false));delete rqOpenAfter[file];
   if(open){go('stmt');editStmt(R.ctx.stmtIds[R.ctx.stmtIds.length-1])}else render();
-  toast('요청을 적용했어요'+(ed?' (고친 내용으로)':'')+(R.ctx.stmtIds.length?` · 거래명세서 ${R.ctx.stmtIds.length}건 저장`:'')+(added.length?` · 파일 ${added.length}개 첨부`:''))}
+  toast('요청을 적용했어요'+(ed?' (고친 내용으로)':'')+(R.ctx.stmtIds.length?` · 거래명세서 ${R.ctx.stmtIds.length}건 저장`:'')+(added.length?` · 파일 ${added.length}개 첨부`:''));
+  plAsk(orders.flatMap(o=>o.procs.filter(p=>!pid0.has(p.id)).map(p=>p.name)))}
  finally{rqBusy=false;rqBadge();if(page==='reqs')render()}}
 async function rqReject(file){const P=rqPend.find(x=>x.file===file);if(!P||rqBusy)return;
  if(!await uiConfirm('이 요청을 거부할까요?\n데이터는 바뀌지 않고, 요청 파일은 rejected 폴더로 옮겨져요.'))return;
