@@ -2,12 +2,12 @@
 // Windows에서 기본 alert/confirm 창이 닫힌 뒤 입력란이 클릭해도 글자 입력이 안 되는 문제(Electron) 때문에 직접 만든 창을 씀
 (function(){
  let q=Promise.resolve();
- function open(msg,isConfirm){
+ function open(msg,isConfirm,okLabel){
   const run=()=>new Promise(res=>{
    const prev=document.activeElement;
    const d=document.createElement('dialog');d.className='uidlg';
-   d.innerHTML=`<div class="db"></div><div class="df"><button class="p" data-v="1">확인</button>${isConfirm?'<button data-v="0">취소</button>':''}</div>`;
-   d.querySelector('.db').textContent=String(msg==null?'':msg);
+   d.innerHTML=`<div class="db"></div><div class="df"><button class="p" data-v="1"></button>${isConfirm?'<button data-v="0">취소</button>':''}</div>`;
+   d.querySelector('.db').textContent=String(msg==null?'':msg);d.querySelector('button.p').textContent=okLabel||'확인';
    let done=false;const fin=v=>{if(done)return;done=true;try{d.close()}catch(e){}d.remove();
     if(prev&&prev.isConnected&&prev!==document.body&&typeof prev.focus==='function')try{prev.focus({preventScroll:true})}catch(e){}
     res(v)};
@@ -17,7 +17,7 @@
    document.body.appendChild(d);d.showModal();d.querySelector('button.p').focus()});
   const p=q.then(run);q=p.catch(()=>{});return p}
  window.uiAlert=m=>open(m,false).then(()=>undefined);
- window.uiConfirm=m=>open(m,true);
+ window.uiConfirm=(m,ok)=>open(m,true,ok);
  // 혹시 남아 있는 기본 alert도 앱 창으로 (confirm은 결과가 바로 필요해서 uiConfirm을 직접 씀)
  window.alert=m=>{window.uiAlert(m)};
 })();
