@@ -48,7 +48,7 @@ async function lbPDF(){if(!lbLabels().length)return toast('내용을 입력해 �
 // ---- 생산 관리 목록: 선택 칸 ----
 // 선택은 오더 id로 보관 (상세 보기·검색·저장 후에도 유지, 직접 해제할 때만 지움)
 const lbSel=new Set();
-function lbSelCount(){[...lbSel].forEach(id=>{if(!orders.some(o=>o.id===id))lbSel.delete(id)});const n=lbSel.size,b=$('lb_btn');if(b)b.textContent=n?`라벨 인쇄 (${n})`:'라벨 인쇄';
+function lbSelCount(){[...lbSel].forEach(id=>{if(!orders.some(o=>o.id===id))lbSel.delete(id)});const n=lbSel.size,b=$('lb_btn');if(b)b.textContent=n?`라벨 인쇄 (${n})`:'라벨 인쇄';{const d=$('bd_btn');if(d){d.style.display=n?'':'none';d.textContent=`삭제 (${n})`}}
  const all=document.querySelector('#lb_all'),v=[...document.querySelectorAll('#ptb input.lbck')];if(all){const k=v.filter(c=>c.checked).length;all.checked=!!v.length&&k===v.length;all.indeterminate=k>0&&k<v.length}}
 function lbTick(id,on){on?lbSel.add(id):lbSel.delete(id);lbSelCount()}
 function lbAll(on){document.querySelectorAll('#ptb input.lbck').forEach(c=>{c.checked=on;on?lbSel.add(c.value):lbSel.delete(c.value)});lbSelCount()}

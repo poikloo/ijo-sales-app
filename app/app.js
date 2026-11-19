@@ -241,6 +241,18 @@ function moveDlv(oid,id,d){const o=findO(oid);if(!o||!o.dlv)return;const i=o.dlv
 async function delDlv(oid,id){const o=findO(oid);if(!o||!await uiConfirm('이 납품 내역을 삭제할까요?'))return;await ssOnShipDelete(id);const r=(o.dlv||[]).find(x=>x.id===id);if(r&&r.src)o.dlvSkip=[...new Set([...(o.dlvSkip||[]),r.src])];o.dlv=(o.dlv||[]).filter(x=>x.id!==id);touch(o)}
 function dlQtyKey(e,oid,id,el){if(e.isComposing||!(e.key==='Enter'||e.key==='Tab'&&!e.shiftKey))return;e.preventDefault();const o=findO(oid),s=o&&(o.dlv||[]).find(x=>x.id===id);
  if(s&&el.value!==(s.qty?num(s.qty):''))editDlv(oid,id,'qty',el.value);const go=()=>{const m=document.querySelector(`#pd_wrap [data-shm="${id}"]`);if(m&&document.activeElement!==m){m.focus();m.select()}};go();setTimeout(go,0);requestAnimationFrame(go)}
+// 선택한 오더 여러 건 삭제 (단건 삭제와 같은 처리: 오더만 지움, 다른 카테고리 데이터는 그대로)
+function ordLinks(l){const ids=new Set(l.map(o=>o.id)),nos=new Set(l.map(o=>blNk(o.no)).filter(Boolean)),c={sl:0,bl:0,st:0,wf:0,ow:0},hit=new Set(),mk=o=>o&&hit.add(o.id);
+ sales.forEach(x=>{const k=blNk(x.orderNo);if(k&&nos.has(k)){c.sl++;mk(l.find(o=>blNk(o.no)===k))}});
+ Object.values(bills).forEach(b=>((b.locked&&b.frozen?b.frozen.lines:b.lines)||[]).forEach(x=>{const r=String(x.ref||'').split('|')[0],o=l.find(o=>o.id===r||(x.orderNo&&blNk(x.orderNo)===blNk(o.no)));if(o){c.bl++;mk(o)}}));
+ stmts.forEach(s=>{if(ids.has(s.orderId)){c.st++;mk(l.find(o=>o.id===s.orderId))}});
+ (typeof wfFiles!=='undefined'?wfFiles:[]).forEach(f=>{if(ids.has(f.orderId)){c.wf++;mk(l.find(o=>o.id===f.orderId))}});
+ (typeof owReqs!=='undefined'?owReqs:[]).forEach(r=>{if(ids.has(r.orderId)){c.ow++;mk(l.find(o=>o.id===r.orderId))}});
+ return {c,n:hit.size}}
+async function bulkDelOrders(){const l=orders.filter(o=>lbSel.has(o.id));if(!l.length)return;const {c,n}=ordLinks(l);
+ const L=[['sl','매출 관리','행'],['bl','청구서','줄'],['st','거래명세서','건'],['wf','작업의뢰서·발주서 파일','개'],['ow','외주작업의뢰서','건']].filter(([k])=>c[k]).map(([k,t,u])=>`· ${t} ${c[k]}${u}`);
+ if(!await uiConfirm(n?`선택한 ${l.length}건 중 ${n}건은 다른 카테고리와 연동되어 있습니다.\n${L.join('\n')}\n정말 삭제할까요?`:`선택한 ${l.length}건을 삭제할까요?`,'삭제'))return;
+ const ids=new Set(l.map(o=>o.id));orders=orders.filter(o=>!ids.has(o.id));ids.forEach(id=>lbSel.delete(id));if(pv&&ids.has(pv))pv=null;save();render();toast(`${l.length}건을 삭제했습니다`)}
 async function delOrder(id){const o=orders.find(x=>x.id===id);if(o&&await uiConfirm(`오더 ${o.no}을(를) 출고 내역과 함께 삭제할까요?`)){orders=orders.filter(x=>x.id!==id);pv=null;save();render();toast('삭제했습니다')}}
 let fprocs=[];
 const isRaw=p=>String(p.name||'').trim()==='생지';
