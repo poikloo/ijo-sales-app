@@ -263,6 +263,12 @@ async function ordDelete(l){if(!l.length)return false;const {R,n}=ordLinks(l),on
   if(typeof stEd!=='undefined'&&stEd&&R.st.some(s=>s.id===stEd.id))stEd=null;owReqs=owReqs.filter(del(R.ow));if(typeof owEd!=='undefined'&&owEd&&R.ow.some(r=>r.id===owEd.id))owEd=null;wfFiles=wfFiles.filter(del(R.wf));shipFiles=shipFiles.filter(del(R.ss))}
  ids.forEach(id=>lbSel.delete(id));if(pv&&ids.has(pv))pv=null;save();render();toast(`${one?'':l.length+'건을 '}삭제했습니다${all?' (연동 데이터 포함)':''}`);return true}
 async function bulkDelOrders(){await ordDelete(orders.filter(o=>lbSel.has(o.id)))}
+function bulkCopyOrders(){const l=orders.filter(o=>lbSel.has(o.id));if(!l.length)return;const used=new Set(orders.map(o=>String(o.no).trim())),t=now();
+ l.forEach(o=>{let no=o.no+'-복사',k=2;while(used.has(no))no=o.no+'-복사'+(k++);used.add(no);
+  const c=JSON.parse(JSON.stringify(o));['dlv','dlvSkip','dlvV'].forEach(f=>delete c[f]);
+  Object.assign(c,{id:uid(),example:false,no,delivered:false,updated:t,dlv:[],procs:(o.procs||[]).map(p=>({...JSON.parse(JSON.stringify(p)),id:uid(),ships:[]}))});
+  const n=normalizeOrders([c])[0];orders.splice(orders.indexOf(o)+1,0,n)});
+ lbSel.clear();save();render();toast(`${l.length}건을 복사했습니다`)}
 async function delOrder(id){const o=orders.find(x=>x.id===id);if(o)await ordDelete([o])}
 let fprocs=[];
 const isRaw=p=>String(p.name||'').trim()==='생지';
