@@ -42,7 +42,7 @@ function save(){if(typeof slSync==='function')slSync();const p=payload();undoTra
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender)gsRender();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
-document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;if(a.dataset.p==='prod')pv=null;go(a.dataset.p)});
+document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;if(a.dataset.p==='prod')pv=null;if(a.dataset.p==='settings')setSec='';go(a.dataset.p)});
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
 function filtered(){const k=$('fk').value.trim().toLowerCase(),o=$('fo').value,s=$('fs').value;
@@ -80,7 +80,7 @@ function _render(){
  if(page==='testrpt')renderTr();
  if(page==='quality')renderQuality();
  if(page==='contacts')renderContacts();
- if(page==='settings'){renderSupplier();plSettings();rqSettings();snapSettings();blSettings()}
+ if(page==='settings'){setNav();renderSupplier();plSettings();rqSettings();snapSettings();blSettings()}
  if(page==='reqs')renderReqs();
  if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
   const cats=[...new Set(['영업','생산','외주','출고','입찰','기타',...cl.map(c=>c.cat).filter(Boolean)])],cc=$('cc'),cv=cc.value;cc.innerHTML='<option value="">전체 분류</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join('');cc.value=cv;

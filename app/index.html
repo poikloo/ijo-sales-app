@@ -35,6 +35,7 @@ dialog{border:none;border-radius:10px;width:min(760px,96vw);padding:0}dialog::ba
 .dh{background:#1d2327;color:#fff;padding:11px 14px;font-weight:bold;cursor:move;user-select:none}dialog.uidlg{cursor:move}dialog.uidlg input,dialog.uidlg textarea{cursor:auto}.db{padding:14px;max-height:72vh;overflow:auto}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.g label{display:flex;flex-direction:column;font-size:12px;color:#555;gap:3px}.g .w{grid-column:1/-1}
 .cr{display:flex;gap:6px;margin:4px 0}.cr input:first-child{flex:1}.cr input.sh{width:100px}.warn{color:#c53030;font-size:12px}.ok{color:#2f855a;font-size:12px}
+#p_settings .card[data-sec]{display:none}.stiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:900px}.set .stile{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;min-height:78px;background:#fff;border:1px solid #dcdcde;border-radius:10px;text-align:left;cursor:pointer;font-size:15px;font-weight:600;color:#1d2327}.set .stile:hover{border-color:#2271b1;background:#f6f9fc}.stile small{font-weight:normal;font-size:12px;color:#777}.sback{display:flex;align-items:center;gap:10px;margin-bottom:12px}.sback b{font-size:15px}
 dialog.pldlg .db{white-space:normal}.plck{display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:40vh;overflow:auto}.plck label{display:flex;align-items:center;gap:6px;cursor:pointer}.pllist{max-width:420px}.plrow{display:grid;grid-template-columns:24px 1fr 30px 30px 30px;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid #eee}.plrow .n{color:#888;font-size:12px;text-align:right;padding-right:4px}.plrow button{padding:2px 0}.pldec{display:flex;flex-wrap:wrap;gap:6px}.pldc{display:inline-flex;align-items:center;gap:4px;background:#f1f2f3;border:1px solid #dcdcde;border-radius:4px;padding:2px 4px 2px 8px;font-size:13px}.pldc button{padding:1px 6px;font-size:12px}
 dialog.uidlg{width:min(440px,92vw)}dialog.uidlg .db{white-space:pre-wrap;line-height:1.55;padding:18px 16px;max-height:60vh}dialog.uidlg .df button{min-width:72px}
 .df{display:flex;gap:6px;justify-content:flex-end;padding:10px 14px;border-top:1px solid #eee}
@@ -202,17 +203,18 @@ dialog.lbdlg{width:min(1180px,96vw);max-width:none}.lbw{display:flex;gap:16px;al
 <section class="page" id="p_docs"><div class="soonbox"><div class="big"><svg class="ic" style="color:#a0a5aa" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></div><h2>서류 보관함 — 준비중</h2><p>거래명세서·청구서·계산서·사업자등록증 PDF/이미지를 거래처·공고별로 정리하는 기능이 추가될 예정입니다.</p></div></section>
 <section class="page" id="p_reqs"><div id="rq_wrap"></div></section>
 <section class="page set" id="p_settings">
- <div class="card" id="sup_form"><h2>공급자 정보 <span class="muted" style="font-weight:normal">— 거래명세서의 공급자 칸에 인쇄됩니다 (이 PC에만 저장)</span><button class="p" style="float:right" onclick="openSup()">+ 공급자 추가</button></h2><div id="suplist"></div></div>
- <div class="card" id="bl_card"></div>
- <div class="card" id="pl_card"></div>
- <div class="card" id="g_card"></div>
- <div class="card" id="rq_card"></div>
- <div class="card" id="snap_card"></div>
- <div class="card" id="lb_card"></div>
- <div class="card"><h2>백업 / 복원</h2><button class="p" onclick="exportJSON()">백업 파일 저장 (JSON)</button><button onclick="importJSON()">백업에서 복원 (JSON)</button>
+ <div id="set_nav"></div>
+ <div class="card" data-sec="sup" id="sup_form"><h2>공급자 정보 <span class="muted" style="font-weight:normal">— 거래명세서의 공급자 칸에 인쇄됩니다 (이 PC에만 저장)</span><button class="p" style="float:right" onclick="openSup()">+ 공급자 추가</button></h2><div id="suplist"></div></div>
+ <div class="card" data-sec="bl" id="bl_card"></div>
+ <div class="card" data-sec="pl" id="pl_card"></div>
+ <div class="card" data-sec="g" id="g_card"></div>
+ <div class="card" data-sec="rq" id="rq_card"></div>
+ <div class="card" data-sec="snap" id="snap_card"></div>
+ <div class="card" data-sec="lb" id="lb_card"></div>
+ <div class="card" data-sec="bk"><h2>백업 / 복원</h2><button class="p" onclick="exportJSON()">백업 파일 저장 (JSON)</button><button onclick="importJSON()">백업에서 복원 (JSON)</button>
  <p class="muted">예전 HTML 버전(공고일정관리.html)에서 받은 JSON 백업 파일도 그대로 복원할 수 있습니다.</p></div>
- <div class="card"><h2>프로그램 정보 / 업데이트</h2><p>현재 버전: <b id="curver">-</b> <span class="muted" id="updst"></span></p><button class="p" onclick="checkUpd()">업데이트 확인</button><p class="muted">인터넷에 연결되어 있으면 프로그램을 열 때 자동으로 새 버전을 확인하고 내려받아요.</p></div>
- <div class="card"><h2>저장 위치</h2><p>데이터 파일: <code id="dfile"></code></p><p>자동 백업 폴더 (저장할 때마다 사본 생성, 최근 50개 보관): <code id="dbk"></code></p><button onclick="api.openFolder()">폴더 열기</button></div>
+ <div class="card" data-sec="upd"><h2>프로그램 정보 / 업데이트</h2><p>현재 버전: <b id="curver">-</b> <span class="muted" id="updst"></span></p><button class="p" onclick="checkUpd()">업데이트 확인</button><p class="muted">인터넷에 연결되어 있으면 프로그램을 열 때 자동으로 새 버전을 확인하고 내려받아요.</p></div>
+ <div class="card" data-sec="loc"><h2>저장 위치</h2><p>데이터 파일: <code id="dfile"></code></p><p>자동 백업 폴더 (저장할 때마다 사본 생성, 최근 50개 보관): <code id="dbk"></code></p><button onclick="api.openFolder()">폴더 열기</button></div>
 </section>
 </div></div>
 <dialog id="dlg"><div class="dh" id="dt">공고</div><div class="db" id="dbody"></div><div class="df" id="dfoot"></div></dialog>
@@ -220,5 +222,5 @@ dialog.lbdlg{width:min(1180px,96vw);max-width:none}.lbw{display:flex;gap:16px;al
 <datalist id="procs"></datalist>
 <datalist id="orgs"><option>육군군수사령부</option><option>해군군수사령부</option><option>공군군수사령부</option><option>해병대</option><option>경찰청</option><option>조달청</option></datalist>
 <div id="toast"></div>
-<script src="uidialog.js"></script><script src="attui.js"></script><script src="vendor/pdfjs/pdf.min.js"></script><script src="lotparse.js"></script><script src="stmt.js"></script><script src="lotimport.js"></script><script src="contacts.js"></script><script src="ctimport.js"></script><script src="prodcal.js"></script><script src="outwork.js"></script><script src="workorder.js"></script><script src="shipfile.js"></script><script src="bizreg.js"></script><script src="colresize.js"></script><script src="checkmemo.js"></script><script src="dashlayout.js"></script><script src="dash.js"></script><script src="datekey.js"></script><script src="ordimport.js"></script><script src="sales.js"></script><script src="bill.js"></script><script src="pdfout.js"></script><script src="price.js"></script><script src="xlink.js"></script><script src="gdrive.js"></script><script src="sticky.js"></script><script src="listreturn.js"></script><script src="proclist.js"></script><script src="reqbox.js"></script><script src="testrpt.js"></script><script src="quality.js"></script><script src="qsedit.js"></script><script src="qsreq.js"></script><script src="trreq.js"></script><script src="gsearch.js"></script><script src="snapshot.js"></script><script src="label.js"></script><script src="undo.js"></script><script src="app.js"></script><script src="dlgmove.js"></script><script src="cellcheck.js"></script>
+<script src="uidialog.js"></script><script src="attui.js"></script><script src="vendor/pdfjs/pdf.min.js"></script><script src="lotparse.js"></script><script src="stmt.js"></script><script src="lotimport.js"></script><script src="contacts.js"></script><script src="ctimport.js"></script><script src="prodcal.js"></script><script src="outwork.js"></script><script src="workorder.js"></script><script src="shipfile.js"></script><script src="bizreg.js"></script><script src="colresize.js"></script><script src="checkmemo.js"></script><script src="dashlayout.js"></script><script src="dash.js"></script><script src="datekey.js"></script><script src="ordimport.js"></script><script src="sales.js"></script><script src="bill.js"></script><script src="pdfout.js"></script><script src="price.js"></script><script src="xlink.js"></script><script src="gdrive.js"></script><script src="sticky.js"></script><script src="listreturn.js"></script><script src="proclist.js"></script><script src="setnav.js"></script><script src="reqbox.js"></script><script src="testrpt.js"></script><script src="quality.js"></script><script src="qsedit.js"></script><script src="qsreq.js"></script><script src="trreq.js"></script><script src="gsearch.js"></script><script src="snapshot.js"></script><script src="label.js"></script><script src="undo.js"></script><script src="app.js"></script><script src="dlgmove.js"></script><script src="cellcheck.js"></script>
 </body></html>

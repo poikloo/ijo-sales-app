@@ -28,7 +28,7 @@ async function gClearGo(){if(!await uiConfirm('저장된 Client ID·Client Secre
 // ---- 구글 드라이브 파일 선택 창 ----
 let gp=null;
 function gPick(kind){return new Promise(async res=>{const s=await A.gStatus();
- if(s.state!=='ok'){await uiAlert(s.state==='relogin'?gErrMsg({code:'AUTH'}):!s.hasClient?'먼저 설정 › 구글 계정 연결에서 Client ID·Secret을 넣고 로그인하세요.':gErrMsg({code:'NOLOGIN'}));go('settings');return res(null)}
+ if(s.state!=='ok'){await uiAlert(s.state==='relogin'?gErrMsg({code:'AUTH'}):!s.hasClient?'먼저 설정 › 구글 계정 연결에서 Client ID·Secret을 넣고 로그인하세요.':gErrMsg({code:'NOLOGIN'}));setSec='g';go('settings');return res(null)}
  const d=document.createElement('dialog');d.id='gpk';
  d.innerHTML=`<div class="dh">구글 드라이브에서 ${XL_K[kind].t} 파일 선택 <span class="muted" style="font-weight:normal;font-size:12px">엑셀(.xlsx)과 구글 시트만 보여요 · ${esc(s.email)}</span></div>
  <div class="db"><div class="gpt"><button data-m="recent">최근 파일</button><button data-m="folder">내 드라이브</button><button data-m="shared">공유 문서함</button><span style="flex:1"></span><input id="gpq" placeholder="검색" style="width:220px"><button id="gpgo">검색</button></div>
