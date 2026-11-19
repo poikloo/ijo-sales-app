@@ -30,7 +30,8 @@ function deriveOrder(o){const L=o.lines.length?o.lines:[{color:'',qty:0,unit:'YD
 const lineTxt=l=>`${l.color||'-'} ${num(l.qty)} ${l.unit}`;
 function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&typeof o==='object'&&o.no).map(o=>deriveOrder({id:String(o.id||uid()),example:!!o.example,no:String(o.no),item:o.item||'',lines:normLines(o),client:o.client||'',date:o.date||'',due:o.due||'',fabric:o.fabric||'',delivered:!!o.delivered,updated:o.updated||'',
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))})),
- dlv:(Array.isArray(o.dlv)?o.dlv:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||''}))}))}
+ dlv:(Array.isArray(o.dlv)?o.dlv:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||'',...(s.src?{src:String(s.src)}:{}),...(s.auto&&s.src?{auto:true}:{})})),
+ ...(Array.isArray(o.dlvSkip)&&o.dlvSkip.length?{dlvSkip:o.dlvSkip.map(String)}:{}),...(o.dlvV?{dlvV:1}:{})}))}
 function load(r0){const r=r0!==undefined?r0:A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);brLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);prLoad(r);sllLoad(r);xlLoad(r);rqLoad(r);trLoad(r);qsLoad(r);blLoad(r);snapLoad(r);plLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
@@ -38,7 +39,7 @@ function load(r0){const r=r0!==undefined?r0:A.load();stLoad(r);ctLoad(r);pcLoad(
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
 function payload(){return {app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...qsPayload(),...blPayload(),...snapPayload(),...plPayload()}}
-function save(){if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
+function save(){if(typeof dlvSyncAll==='function')dlvSyncAll();if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender)gsRender();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
@@ -130,7 +131,7 @@ async function exportCSV(){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h
  const rows=[...data].sort((a,b)=>(a.open||'').localeCompare(b.open||'')).map(x=>[x.name,x.no,x.org,fdt(x.pub),fdt(x.open),x.price||'',x.rep,x.cos.map(c=>`${c.n} ${c.s}%`).join(' / '),x.cos.reduce((a,c)=>a+(+c.s||0),0),x.status,x.result,x.memo,x.example?'예시':''].map(q).join(','));
  const p=await A.saveFile(`공고일정_${stamp()}.csv`,'\uFEFF'+[h.map(q).join(','),...rows].join('\r\n'));if(p)toast('내보내기 완료: '+p)}
 if(A.onFindBar)A.onFindBar(on=>document.body.classList.toggle('fbon',on));
-const dlg=$('dlg');load();if(slSync())save();undoInit();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();rqInit();snapInit();
+const dlg=$('dlg');load();if(dlvSyncAll()|slSync())save();undoInit();crInit();A.info().then(i=>{$('dfile').textContent=i.file;$('dbk').textContent=i.backups;if(i.version){$('ver').textContent='v'+i.version;$('curver').textContent='v'+i.version}});go('dash');xlInit();rqInit();snapInit();
 
 const UPD={checking:'새 버전 확인 중…',none:'최신 버전입니다',available:'새 버전 내려받는 중…',error:'업데이트 확인 실패(오프라인?)'};
 if(A.onUpdate)A.onUpdate(d=>{$('updst').textContent=d.s==='progress'?`새 버전 내려받는 중… ${d.pct}%`:d.s==='ready'?`v${d.v} 준비 완료 — 재시작하면 적용돼요`:d.s==='available'?`v${d.v} 내려받는 중…`:(UPD[d.s]||'')});
@@ -161,6 +162,18 @@ function progress(o){const last=o.procs[o.procs.length-1],cur=[...o.procs].rever
  const fin=last?sum(last):0,dl=dlvOn(o)?dlvSum(o):null;return {cur,fin,rate:o.qty?fin/o.qty*100:0,last,dl,stock:dl==null?null:fin-dl}}
 // 최종 납품: 줄이 있으면 그 합계가 오더 완료 수량(매출·청구서 연동도 이 줄 기준), 재고 = 최종 공정 출고 − 최종 납품
 function dlvOn(o){return !!(o&&o.dlv&&o.dlv.length)}function dlvSum(o){return (o.dlv||[]).reduce((a,s)=>a+(+s.qty||0),0)}
+// 최종 납품 자동 줄: 마지막 공정 출고 줄마다 같은 납품일·납품량 줄(src=출고 줄 id, auto). 사용자가 납품일·납품량을 고치면 auto 해제(다시 안 덮어씀),
+// 지우면 dlvSkip에 넣어 다시 안 만듦. [+ 납품]·거래명세서 줄은 건드리지 않음. 마지막 공정이 바뀌면 auto 줄만 새 마지막 공정 기준으로.
+// 처음 한 번(dlvV 없음): 최종 납품이 비어 있으면 그대로 자동, 이미 줄이 있으면 지금 출고 줄은 자동으로 만들지 않음(기존 줄 = 직접 입력)
+function dlvSync(o){if(!o||!Array.isArray(o.procs))return false;const L=o.procs[o.procs.length-1],sh=L?L.ships:[],b=JSON.stringify([o.dlv,o.dlvSkip,o.dlvV]);if(!o.dlv)o.dlv=[];
+ if(!o.dlvV){if(o.dlv.length)o.dlvSkip=[...new Set([...(o.dlvSkip||[]),...sh.map(x=>x.id)])];o.dlvV=1}
+ const all=new Set(o.procs.flatMap(p=>p.ships.map(x=>x.id)));if(o.dlvSkip){o.dlvSkip=o.dlvSkip.filter(id=>all.has(id));if(!o.dlvSkip.length)delete o.dlvSkip}
+ const byId=new Map(sh.map(x=>[x.id,x]));{const keep=o.dlv.filter(r=>{if(!r.auto||byId.has(r.src))return true;if(typeof ssOf==='function'&&ssOf(r.id)){delete r.auto;return true}return false});o.dlv.splice(0,o.dlv.length,...keep)} // 거래명세서 파일이 붙은 줄은 남김(직접 입력으로)
+ o.dlv.forEach(r=>{if(r.auto){const x=byId.get(r.src);r.date=x.date||'';r.qty=+x.qty||0}});
+ const has=new Set(o.dlv.map(r=>r.src).filter(Boolean)),skip=new Set(o.dlvSkip||[]);
+ sh.forEach(x=>{if(has.has(x.id)||skip.has(x.id))return;const rec={id:uid(),date:x.date||'',qty:+x.qty||0,memo:'',src:x.id,auto:true};let at=o.dlv.findIndex(r=>(r.date||'')>(rec.date||''));if(at<0)at=o.dlv.length;o.dlv.splice(at,0,rec)});
+ return JSON.stringify([o.dlv,o.dlvSkip,o.dlvV])!==b}
+function dlvSyncAll(){let c=false;(typeof orders!=='undefined'?orders:[]).forEach(o=>{if(dlvSync(o))c=true});return c}
 function finalShips(o){return dlvOn(o)?o.dlv:(o.procs.length?o.procs[o.procs.length-1].ships:[])}
 function stockTxt(g,u){return g.stock==null?'-':`<span class="${g.stock<0?'neg':''}">${num(g.stock)}${u?' '+esc(u):''}</span>`}
 function renderProd(){const v=pv&&orders.find(o=>o.id===pv);$('pl_wrap').style.display=v?'none':'';$('pd_wrap').style.display=v?'':'none';
@@ -184,7 +197,7 @@ function renderOrder(o){const g=progress(o);let prev=null;
   ${p.ships.map((x,j,a)=>`<tr><td><div class="shmv"><button type="button" tabindex="-1" data-mv="${x.id}:-1" onclick="moveShip('${o.id}','${p.id}','${x.id}',-1)" title="위로"${j?'':' disabled'}>▲</button><button type="button" tabindex="-1" data-mv="${x.id}:1" onclick="moveShip('${o.id}','${p.id}','${x.id}',1)" title="아래로"${j<a.length-1?'':' disabled'}>▼</button><input type="date" value="${esc(x.date)}" onchange="editShip('${o.id}','${p.id}','${x.id}','date',this.value)"></div></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editShip('${o.id}','${p.id}','${x.id}','qty',this.value)" onkeydown="shQtyKey(event,'${o.id}','${p.id}','${x.id}',this)"></td>${ssCell(o.id,p.id,x.id)}<td><input data-shm="${x.id}" value="${esc(x.memo)}" onchange="editShip('${o.id}','${p.id}','${x.id}','memo',this.value)"></td><td><button onclick="delShip('${o.id}','${p.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">출고 내역이 없습니다. [+ 출고]로 추가하세요.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${num(s)}</td><td colspan="2"></td></tr></tfoot></table></div>`}).join('')||'<p class="muted">가공 공정이 없습니다. [수정]에서 공정을 추가하세요.</p>';
  $('pd_wrap').innerHTML=head+stmtsForOrder(o)+`<div class="card"><h2>가공 공정 / 출고 내역</h2>${body}${dlvBlock(o,g)}</div>`;ohFit()}
-function dlvBlock(o,g){const D=o.dlv||[];return `<div class="pc pcdl"><div class="pch"><span class="no">납품</span><b>최종 납품</b><span class="kv"><span class="k">재고</span><b>${stockTxt(g,o.unit)}</b></span><span class="sp"></span>${g.last&&g.last.ships.some(x=>+x.qty)?`<button onclick="dlvCopy('${o.id}')">위 출고 동일</button>`:''}<button class="p" onclick="addDlv('${o.id}')" title="납품 추가">+ 납품</button></div>
+function dlvBlock(o,g){const D=o.dlv||[];return `<div class="pc pcdl"><div class="pch"><span class="no">납품</span><b>최종 납품</b><span class="kv"><span class="k">재고</span><b>${stockTxt(g,o.unit)}</b></span><span class="sp"></span><button class="p" onclick="addDlv('${o.id}')" title="납품 추가">+ 납품</button></div>
   <table class="st" style="min-width:0;width:100%;table-layout:fixed"><colgroup><col style="width:196px"><col style="width:170px"><col style="width:170px"><col><col style="width:44px"></colgroup><thead><tr><th style="text-align:center">납품일</th><th style="text-align:center">납품량 (${esc(o.unit)})</th><th style="text-align:center">거래명세서</th><th>메모</th><th></th></tr></thead><tbody>
   ${D.map((x,j,a)=>`<tr><td><div class="shmv"><button type="button" tabindex="-1" data-mv="${x.id}:-1" onclick="moveDlv('${o.id}','${x.id}',-1)" title="위로"${j?'':' disabled'}>▲</button><button type="button" tabindex="-1" data-mv="${x.id}:1" onclick="moveDlv('${o.id}','${x.id}',1)" title="아래로"${j<a.length-1?'':' disabled'}>▼</button><input type="date" value="${esc(x.date)}" onchange="editDlv('${o.id}','${x.id}','date',this.value)"></div></td><td><input class="num" inputmode="numeric" value="${x.qty?num(x.qty):''}" onchange="editDlv('${o.id}','${x.id}','qty',this.value)" onkeydown="dlQtyKey(event,'${o.id}','${x.id}',this)"></td>${ssCell(o.id,'dlv',x.id)}<td><input data-shm="${x.id}" value="${esc(x.memo)}" onchange="editDlv('${o.id}','${x.id}','memo',this.value)"></td><td><button onclick="delDlv('${o.id}','${x.id}')" title="삭제">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">납품 내역이 없습니다.</td></tr>'}
   </tbody><tfoot><tr><td style="text-align:center">소계</td><td style="text-align:center">${D.length?num(g.dl):'-'}</td><td colspan="3"></td></tr></tfoot></table></div>`}
@@ -223,15 +236,9 @@ function editShip(oid,pid,sid,k,v){const [o,p]=findP(oid,pid),s=p&&p.ships.find(
 async function delShip(oid,pid,sid){const [o,p]=findP(oid,pid);if(!p||!await uiConfirm('이 출고 내역을 삭제할까요?'))return;await ssOnShipDelete(sid);p.ships=p.ships.filter(x=>x.id!==sid);touch(o)}
 function findO(id){return orders.find(x=>x.id===id)}
 function addDlv(oid){const o=findO(oid);if(!o)return;if(!o.dlv)o.dlv=[];o.dlv.push({id:uid(),date:ymd(new Date()),qty:0,memo:''});touch(o);setTimeout(()=>{const ins=document.querySelector('#pd_wrap .pcdl tbody tr:last-child input');if(ins)ins.focus()},0)}
-function editDlv(oid,id,k,v){const o=findO(oid),s=o&&(o.dlv||[]).find(x=>x.id===id);if(!s)return;s[k]=k==='qty'?(+String(v).replace(/[^0-9.\-]/g,'')||0):v;touch(o)}
+function editDlv(oid,id,k,v){const o=findO(oid),s=o&&(o.dlv||[]).find(x=>x.id===id);if(!s)return;s[k]=k==='qty'?(+String(v).replace(/[^0-9.\-]/g,'')||0):v;if(k!=='memo')delete s.auto;touch(o)}
 function moveDlv(oid,id,d){const o=findO(oid);if(!o||!o.dlv)return;const i=o.dlv.findIndex(x=>x.id===id);if(mvArr(o.dlv,i,d)<0)return;touch(o);mvFocus(id,d)}
-// 최종 납품 ← 마지막 공정 출고 줄 그대로 (출고일·출고량, 메모·첨부 없음). 이미 줄이 있으면 [교체] 확인
-async function dlvCopy(oid){const o=findO(oid),last=o&&o.procs[o.procs.length-1],src=last?last.ships.filter(x=>+x.qty):[];if(!src.length)return;
- const D=o.dlv||[];if(D.length){const ids=new Set(D.map(x=>x.id)),ls=stmts.filter(s=>s.shipId&&ids.has(s.shipId));
-  if(!await uiConfirm(`최종 납품 ${D.length}줄을 '${last.name||'최종 공정'}' 출고 ${src.length}줄로 바꿀까요?${ls.length?`\n거래명세서 연결 ${ls.length}건은 해제돼요.`:''}`,'교체'))return;
-  ls.forEach(s=>{s.linkShip=false;s.shipId=''})}
- o.dlv=src.map(x=>({id:uid(),date:x.date,qty:+x.qty||0,memo:''}));touch(o);toast(`최종 납품 ${o.dlv.length}줄을 채웠어요`)}
-async function delDlv(oid,id){const o=findO(oid);if(!o||!await uiConfirm('이 납품 내역을 삭제할까요?'))return;await ssOnShipDelete(id);o.dlv=(o.dlv||[]).filter(x=>x.id!==id);touch(o)}
+async function delDlv(oid,id){const o=findO(oid);if(!o||!await uiConfirm('이 납품 내역을 삭제할까요?'))return;await ssOnShipDelete(id);const r=(o.dlv||[]).find(x=>x.id===id);if(r&&r.src)o.dlvSkip=[...new Set([...(o.dlvSkip||[]),r.src])];o.dlv=(o.dlv||[]).filter(x=>x.id!==id);touch(o)}
 function dlQtyKey(e,oid,id,el){if(e.isComposing||!(e.key==='Enter'||e.key==='Tab'&&!e.shiftKey))return;e.preventDefault();const o=findO(oid),s=o&&(o.dlv||[]).find(x=>x.id===id);
  if(s&&el.value!==(s.qty?num(s.qty):''))editDlv(oid,id,'qty',el.value);const go=()=>{const m=document.querySelector(`#pd_wrap [data-shm="${id}"]`);if(m&&document.activeElement!==m){m.focus();m.select()}};go();setTimeout(go,0);requestAnimationFrame(go)}
 async function delOrder(id){const o=orders.find(x=>x.id===id);if(o&&await uiConfirm(`오더 ${o.no}을(를) 출고 내역과 함께 삭제할까요?`)){orders=orders.filter(x=>x.id!==id);pv=null;save();render();toast('삭제했습니다')}}

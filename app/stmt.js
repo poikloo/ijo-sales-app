@@ -40,10 +40,15 @@ function stImport(raw){if(!raw||Array.isArray(raw))return;if(Array.isArray(raw.s
 // ---- 생산 관리 최종 납품 연동 (v1.8.0부터: 오더의 '최종 납품' 줄. 예전에 마지막 공정 출고로 반영된 명세서는 그 줄을 그대로 고침) ----
 function findShip(id){for(const o of orders){const d=o.dlv||[],j=d.findIndex(x=>x.id===id);if(j>=0)return {o,p:null,arr:d,i:j};for(const p of o.procs){const i=p.ships.findIndex(x=>x.id===id);if(i>=0)return {o,p,arr:p.ships,i}}}return null}
 function unlinkShip(s){if(!s.shipId)return;const f=findShip(s.shipId);if(f){f.arr.splice(f.i,1);f.o.updated=now()}}
-function linkShip(s){const f0=s.shipId&&findShip(s.shipId);unlinkShip(s);if(!s.linkShip||!s.orderId){s.shipId='';return}const o=orders.find(x=>x.id===s.orderId);if(!o){s.shipId='';return}
+function linkShip(s){const f0=s.shipId&&findShip(s.shipId),src0=f0&&!f0.p?f0.arr[f0.i].src:null;unlinkShip(s);if(!s.linkShip||!s.orderId){s.shipId='';return}const o=orders.find(x=>x.id===s.orderId);if(!o){s.shipId='';return}
  const arr=f0&&f0.p&&f0.o===o&&o.procs.includes(f0.p)?f0.p.ships:(o.dlv||(o.dlv=[]));s.shipId=s.shipId||sid();const rec={id:s.shipId,date:s.date,qty:stTot(s).q,memo:`거래명세서 ${s.date||''}`.trim(),stmtId:s.id};
  // 이미 있던 줄은 사용자가 정한 자리 그대로, 새 줄만 날짜 순 자리에 끼워 넣음 (전체 자동 정렬 안 함)
- let at=f0&&f0.arr===arr?Math.min(f0.i,arr.length):-1;if(at<0){at=arr.findIndex(x=>(x.date||'')>(s.date||''));if(at<0)at=arr.length}arr.splice(at,0,rec);o.updated=now()}
+ let at=f0&&f0.arr===arr?Math.min(f0.i,arr.length):-1;
+ // 최종 납품 자동 줄(최종 공정 출고 그대로)과 겹치지 않게: 처음 반영할 때 같은 날짜(여럿이면 수량이 가장 가까운) → 없으면 같은 수량의 자동 줄을 이 명세서 줄로 바꿈
+ if(arr===o.dlv){if(src0)rec.src=src0;else if(!f0){if(typeof dlvSync==='function')dlvSync(o);const A=arr.filter(r=>r.auto&&r.src),q=rec.qty;
+  let m=A.filter(r=>r.date===rec.date).sort((a,b)=>Math.abs(a.qty-q)-Math.abs(b.qty-q))[0]||A.find(r=>Math.abs(r.qty-q)<1e-9);
+  if(m){rec.src=m.src;at=arr.indexOf(m);arr.splice(at,1)}}}
+ if(at<0){at=arr.findIndex(x=>(x.date||'')>(s.date||''));if(at<0)at=arr.length}arr.splice(at,0,rec);o.updated=now()}
 function stLinkWhere(s){const f=s.shipId&&findShip(s.shipId);return f&&f.p?`'${f.p.name}' 공정 출고`:'최종 납품'}
 function stmtsForOrder(o){const l=stmts.filter(s=>s.orderId===o.id).sort((a,b)=>b.no-a.no);
  return `<div class="card"><h2>발행한 거래명세서 <button style="float:right" onclick="newStmt('${o.id}')">+ 거래명세서 작성</button></h2>${l.length?`<table><thead><tr><th>날짜</th><th>공급받는자</th><th style="text-align:right">절</th><th style="text-align:right">수량(YD)</th><th>납품 반영</th></tr></thead><tbody>${l.map(s=>{const t=stTot(s);return `<tr class="r" onclick="go('stmt');editStmt('${s.id}')"><td>${esc(s.date)}</td><td>${tag(s)}${esc(s.cust.name)}</td><td style="text-align:right">${t.c}</td><td style="text-align:right">${fnum(t.q)}</td><td>${s.linkShip&&s.shipId?'✓':'-'}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">아직 발행한 거래명세서가 없습니다.</p>'}</div>`}
