@@ -18,6 +18,15 @@
   const p=q.then(run);q=p.catch(()=>{});return p}
  window.uiAlert=m=>open(m,false).then(()=>undefined);
  window.uiConfirm=(m,ok)=>open(m,true,ok);
+ // 버튼 여러 개: uiChoice(메시지, [{t:'개별 삭제'},{t:'일괄 삭제',c:'d'}]) → 누른 버튼 번호(0부터), 취소·Esc는 -1. 맨 오른쪽은 항상 [취소]
+ window.uiChoice=(msg,btns)=>{const run=()=>new Promise(res=>{const prev=document.activeElement,d=document.createElement('dialog');d.className='uidlg';
+  d.innerHTML=`<div class="db"></div><div class="df">${btns.map((b,i)=>`<button data-i="${i}" class="${b.c||''}"></button>`).join('')}<button data-i="-1">취소</button></div>`;
+  d.querySelector('.db').textContent=String(msg==null?'':msg);btns.forEach((b,i)=>d.querySelector(`button[data-i="${i}"]`).textContent=b.t);
+  let done=false;const fin=v=>{if(done)return;done=true;try{d.close()}catch(e){}d.remove();if(prev&&prev.isConnected&&prev!==document.body&&typeof prev.focus==='function')try{prev.focus({preventScroll:true})}catch(e){}res(v)};
+  d.addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(b)fin(+b.dataset.i)});
+  d.addEventListener('cancel',e=>{e.preventDefault();fin(-1)});
+  d.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();e.stopPropagation();const b=e.target.closest&&e.target.closest('button[data-i]');fin(b?+b.dataset.i:-1)}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fin(-1)}});
+  document.body.appendChild(d);d.showModal();d.querySelector('button[data-i="0"]').focus()});const p=q.then(run);q=p.catch(()=>{});return p};
  // 혹시 남아 있는 기본 alert도 앱 창으로 (confirm은 결과가 바로 필요해서 uiConfirm을 직접 씀)
  window.alert=m=>{window.uiAlert(m)};
 })();

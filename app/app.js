@@ -241,19 +241,29 @@ function moveDlv(oid,id,d){const o=findO(oid);if(!o||!o.dlv)return;const i=o.dlv
 async function delDlv(oid,id){const o=findO(oid);if(!o||!await uiConfirm('이 납품 내역을 삭제할까요?'))return;await ssOnShipDelete(id);const r=(o.dlv||[]).find(x=>x.id===id);if(r&&r.src)o.dlvSkip=[...new Set([...(o.dlvSkip||[]),r.src])];o.dlv=(o.dlv||[]).filter(x=>x.id!==id);touch(o)}
 function dlQtyKey(e,oid,id,el){if(e.isComposing||!(e.key==='Enter'||e.key==='Tab'&&!e.shiftKey))return;e.preventDefault();const o=findO(oid),s=o&&(o.dlv||[]).find(x=>x.id===id);
  if(s&&el.value!==(s.qty?num(s.qty):''))editDlv(oid,id,'qty',el.value);const go=()=>{const m=document.querySelector(`#pd_wrap [data-shm="${id}"]`);if(m&&document.activeElement!==m){m.focus();m.select()}};go();setTimeout(go,0);requestAnimationFrame(go)}
-// 선택한 오더 여러 건 삭제 (단건 삭제와 같은 처리: 오더만 지움, 다른 카테고리 데이터는 그대로)
-function ordLinks(l){const ids=new Set(l.map(o=>o.id)),nos=new Set(l.map(o=>blNk(o.no)).filter(Boolean)),c={sl:0,bl:0,st:0,wf:0,ow:0},hit=new Set(),mk=o=>o&&hit.add(o.id);
- sales.forEach(x=>{const k=blNk(x.orderNo);if(k&&nos.has(k)){c.sl++;mk(l.find(o=>blNk(o.no)===k))}});
- Object.values(bills).forEach(b=>((b.locked&&b.frozen?b.frozen.lines:b.lines)||[]).forEach(x=>{const r=String(x.ref||'').split('|')[0],o=l.find(o=>o.id===r||(x.orderNo&&blNk(x.orderNo)===blNk(o.no)));if(o){c.bl++;mk(o)}}));
- stmts.forEach(s=>{if(ids.has(s.orderId)){c.st++;mk(l.find(o=>o.id===s.orderId))}});
- (typeof wfFiles!=='undefined'?wfFiles:[]).forEach(f=>{if(ids.has(f.orderId)){c.wf++;mk(l.find(o=>o.id===f.orderId))}});
- (typeof owReqs!=='undefined'?owReqs:[]).forEach(r=>{if(ids.has(r.orderId)){c.ow++;mk(l.find(o=>o.id===r.orderId))}});
- return {c,n:hit.size}}
-async function bulkDelOrders(){const l=orders.filter(o=>lbSel.has(o.id));if(!l.length)return;const {c,n}=ordLinks(l);
- const L=[['sl','매출 관리','행'],['bl','청구서','줄'],['st','거래명세서','건'],['wf','작업의뢰서·발주서 파일','개'],['ow','외주작업의뢰서','건']].filter(([k])=>c[k]).map(([k,t,u])=>`· ${t} ${c[k]}${u}`);
- if(!await uiConfirm(n?`선택한 ${l.length}건 중 ${n}건은 다른 카테고리와 연동되어 있습니다.\n${L.join('\n')}\n정말 삭제할까요?`:`선택한 ${l.length}건을 삭제할까요?`,'삭제'))return;
- const ids=new Set(l.map(o=>o.id));orders=orders.filter(o=>!ids.has(o.id));ids.forEach(id=>lbSel.delete(id));if(pv&&ids.has(pv))pv=null;save();render();toast(`${l.length}건을 삭제했습니다`)}
-async function delOrder(id){const o=orders.find(x=>x.id===id);if(o&&await uiConfirm(`오더 ${o.no}을(를) 출고 내역과 함께 삭제할까요?`)){orders=orders.filter(x=>x.id!==id);pv=null;save();render();toast('삭제했습니다')}}
+// 오더 삭제 (목록 일괄 '삭제 (N)'·상세 [삭제] 공통). 연동 데이터가 있으면 [개별 삭제](오더만) · [일괄 삭제](연동 데이터까지) · [취소]
+// 일괄 삭제: 그 오더의 매출 관리 행(같은 오더번호, 남는 오더와 겹치지 않는 것), 잠기지 않은 청구서의 그 오더 줄, 거래명세서, 외주작업의뢰서, 첨부 파일 연결(파일 자체는 남김 → 실행 취소 가능)
+// 청구완료(잠금) 청구서는 손대지 않음. 한 번의 저장 → Ctrl+Z 한 번으로 모두 되돌림
+function ordLinks(l){const ids=new Set(l.map(o=>o.id)),keepNo=new Set(orders.filter(o=>!ids.has(o.id)).map(o=>blNk(o.no))),nos=new Set(l.map(o=>blNk(o.no)).filter(k=>k&&!keepNo.has(k))),R={sl:[],bl:[],lk:[],st:[],wf:[],ss:[],ow:[]},hit=new Set();
+ const own=x=>{const r=String(x.ref||'').split('|')[0];return l.find(o=>o.id===r)||(x.orderNo&&nos.has(blNk(x.orderNo))?l.find(o=>blNk(o.no)===blNk(x.orderNo)):null)};
+ sales.forEach(x=>{const k=blNk(x.orderNo);if(k&&nos.has(k)){R.sl.push(x);hit.add(l.find(o=>blNk(o.no)===k).id)}});
+ Object.values(bills).forEach(b=>{if(b.locked){if(((b.frozen&&b.frozen.lines)||b.lines||[]).some(x=>own(x)))R.lk.push(b);return}(b.lines||[]).forEach(x=>{const o=own(x);if(o){R.bl.push(x);hit.add(o.id)}})});
+ stmts.forEach(s=>{if(ids.has(s.orderId)){R.st.push(s);hit.add(s.orderId)}});
+ (typeof wfFiles!=='undefined'?wfFiles:[]).forEach(f=>{if(ids.has(f.orderId)&&!['tr','qs'].includes(f.kind)){R.wf.push(f);hit.add(f.orderId)}});
+ (typeof shipFiles!=='undefined'?shipFiles:[]).forEach(f=>{if(ids.has(f.orderId)){R.ss.push(f);hit.add(f.orderId)}});
+ (typeof owReqs!=='undefined'?owReqs:[]).forEach(r=>{if(ids.has(r.orderId)){R.ow.push(r);hit.add(r.orderId)}});
+ return {R,n:hit.size}}
+async function ordDelete(l){if(!l.length)return false;const {R,n}=ordLinks(l),one=l.length===1;
+ const T=[['sl','매출 관리','행'],['bl','청구서','줄'],['st','거래명세서','건'],['ow','외주작업의뢰서','건'],['wf','작업의뢰서·발주서 파일','개'],['ss','거래명세서 파일','개']].filter(([k])=>R[k].length).map(([k,t,u])=>`· ${t} ${R[k].length}${u}`);
+ let all=false;
+ if(!n){if(!await uiConfirm(one?`오더 ${l[0].no}을(를) 출고 내역과 함께 삭제할까요?`:`선택한 ${l.length}건을 삭제할까요?`,'삭제'))return false}
+ else{const c=await uiChoice(`${one?`오더 ${l[0].no}은(는)`:`선택한 ${l.length}건 중 ${n}건은`} 다른 카테고리와 연동되어 있습니다.\n${T.join('\n')}${R.lk.length?`\n· 청구완료 청구서 ${R.lk.length}건은 그대로 둬요`:''}\n정말 삭제할까요?`,[{t:'개별 삭제'},{t:'일괄 삭제',c:'d'}]);if(c<0)return false;all=c===1}
+ const ids=new Set(l.map(o=>o.id));orders=orders.filter(o=>!ids.has(o.id));
+ if(all){const del=a=>{const S=new Set(a);return x=>!S.has(x)};sales=sales.filter(del(R.sl));Object.values(bills).forEach(b=>{if(!b.locked)b.lines=b.lines.filter(del(R.bl))});stmts=stmts.filter(del(R.st));
+  if(typeof stEd!=='undefined'&&stEd&&R.st.some(s=>s.id===stEd.id))stEd=null;owReqs=owReqs.filter(del(R.ow));if(typeof owEd!=='undefined'&&owEd&&R.ow.some(r=>r.id===owEd.id))owEd=null;wfFiles=wfFiles.filter(del(R.wf));shipFiles=shipFiles.filter(del(R.ss))}
+ ids.forEach(id=>lbSel.delete(id));if(pv&&ids.has(pv))pv=null;save();render();toast(`${one?'':l.length+'건을 '}삭제했습니다${all?' (연동 데이터 포함)':''}`);return true}
+async function bulkDelOrders(){await ordDelete(orders.filter(o=>lbSel.has(o.id)))}
+async function delOrder(id){const o=orders.find(x=>x.id===id);if(o)await ordDelete([o])}
 let fprocs=[];
 const isRaw=p=>String(p.name||'').trim()==='생지';
 function rawSync(i,el){const p=fprocs[i],s=el.parentNode.querySelector('.shk');if(isRaw(p)){p.shrink=null;s.value='';s.disabled=true}else s.disabled=false}
