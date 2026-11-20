@@ -225,7 +225,21 @@ ipcMain.handle('lotOcr',async(e,bytes)=>{const buf=Buffer.from(bytes),w=await oc
   return {words,digits,digits6:d6}});
 app.on('will-quit',()=>{if(ocrW)ocrW.then(w=>w.terminate()).catch(()=>{})});
 // ===== 백업용 첨부 파일 (base64) =====
-const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):k==='br'?brAbs(rel):wfAbs(rel);
+const attAbs=(k,rel)=>k==='ss'?ssAbs(rel):k==='br'?brAbs(rel):k==='dc'?dcAbs(rel):wfAbs(rel);
+// ===== 서류 보관함: 직접 추가한 서류 (docs 폴더) + 다른 카테고리 첨부 파일 공통 열기 =====
+const DC=()=>path.join(DIR(),'docs');
+function dcAbs(rel){const a=path.resolve(DC(),String(rel||''));if(!a.startsWith(path.resolve(DC())+path.sep))throw new Error('잘못된 경로');return a}
+ipcMain.handle('dcPick',async()=>{const r=await dialog.showOpenDialog(win,{filters:ATT_FILTERS,properties:['openFile','multiSelections']});return r.canceled?[]:r.filePaths});
+ipcMain.handle('dcAttach',(e,src)=>{src=String(src);if(!ATT_EXT.test(src)||!fs.statSync(src).isFile())throw new Error('PDF·이미지 파일만 넣을 수 있어요');
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),dir=path.join(DC(),id);fs.mkdirSync(dir,{recursive:true});
+  const ext=path.extname(src),name=(path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'서류')+ext;fs.copyFileSync(src,path.join(dir,name));
+  return {id,name,path:id+'/'+name,size:fs.statSync(path.join(dir,name)).size}});
+// 앱을 열 때: 목록에 없는 직접 추가 서류 폴더 정리 (3일 지난 것만 — 같은 세션의 Ctrl+Z로 되살릴 수 있게 지울 때는 파일을 남겨 둠)
+ipcMain.handle('dcGc',(e,keep)=>{const K=new Set((Array.isArray(keep)?keep:[]).map(p=>String(p).split('/')[0]));let n=0;
+  try{for(const d of fs.readdirSync(DC())){if(K.has(d))continue;const a=path.join(DC(),d);const st=fs.statSync(a);if(st.isDirectory()&&Date.now()-st.mtimeMs>3*864e5){fs.rmSync(a,{recursive:true,force:true});n++}}}catch(err){}return n});
+ipcMain.handle('fileStat',(e,list)=>(Array.isArray(list)?list:[]).slice(0,5000).map(([k,rel])=>{try{const st=fs.statSync(attAbs(k,rel));return st.isFile()?st.size:-1}catch(err){return -1}}));
+ipcMain.handle('fileOpen',async(e,k,rel)=>{let a;try{a=attAbs(k,rel)}catch(err){return false}if(!fs.existsSync(a))return false;if(process.env.IJO_SHOT){console.log('FILEOPEN '+k+' '+rel);return true}return !(await shell.openPath(a))});
+ipcMain.handle('fileReveal',(e,k,rel)=>{let a;try{a=attAbs(k,rel)}catch(err){return false}if(!fs.existsSync(a))return false;if(process.env.IJO_SHOT){console.log('FILEREVEAL '+k+' '+rel);return true}shell.showItemInFolder(a);return true});
 ipcMain.handle('attRead',(e,k,rel)=>{try{const a=attAbs(k,rel);return fs.existsSync(a)?fs.readFileSync(a).toString('base64'):null}catch(err){return null}});
 ipcMain.handle('attWrite',(e,k,rel,b64)=>{const a=attAbs(k,rel);if(!(ATT_EXT.test(a)||k==='wf'&&/^qs-/.test(String(rel))&&QS_EXT.test(a)))throw new Error('PDF·이미지만 복원');fs.mkdirSync(path.dirname(a),{recursive:true});fs.writeFileSync(a,Buffer.from(String(b64||''),'base64'));return true});
 ipcMain.on('load',e=>{e.returnValue=readData()});

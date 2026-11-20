@@ -6,7 +6,7 @@ const {app,ipcMain,shell}=require('electron');
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const ROOT=()=>path.join(app.getPath('userData'),'requests');
 const D={inbox:()=>path.join(ROOT(),'inbox'),done:()=>path.join(ROOT(),'done'),rejected:()=>path.join(ROOT(),'rejected'),error:()=>path.join(ROOT(),'error')};
-const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile','testReport.setResults','quality.addItem','quality.updateItem','quality.attachFile','bill.split','bill.create','bill.moveLines','bill.merge','bill.update','bill.addLine','bill.updateLine','bill.removeLine','bill.remove','contact.attachImage','contact.add','contact.addContact','contact.update','contact.updateContact'];
+const TYPES=['production.addOrder','production.updateOrder','production.addShipment','production.setDone','statement.createFromOrder','sales.addRow','price.addRow','production.attachFile','testReport.attachFile','testReport.setResults','quality.addItem','quality.updateItem','quality.attachFile','bill.split','bill.create','bill.moveLines','bill.merge','bill.update','bill.addLine','bill.updateLine','bill.removeLine','bill.remove','contact.attachImage','contact.add','contact.addContact','contact.update','contact.updateContact','docs.add'];
 const MAX_SIZE=2*1024*1024,SETTLE_MS=1500,POLL_MS=5000;
 function ensure(){for(const k in D)fs.mkdirSync(D[k](),{recursive:true})}
 const isReqFile=n=>/\.json$/i.test(n)&&!/\.result\.json$/i.test(n)&&!/^[.~]/.test(n);
@@ -43,7 +43,7 @@ function attInfo(rel,qs){
   return {rel,abs,name:path.basename(abs),size:st.size,mtime:st.mtimeMs}}
 // 거래처 명함(contact.*): file · image (문자열) 또는 files · images (배열, 앞/뒤 여러 장)
 const ctRels=a=>[a.file,a.image,...(Array.isArray(a.files)?a.files:[]),...(Array.isArray(a.images)?a.images:[])].filter(x=>typeof x==='string');
-const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.flatMap(a=>!a?[]:(a.type==='production.attachFile'||a.type==='testReport.attachFile'||a.type==='quality.attachFile')&&typeof a.file==='string'?[a.file]:/^contact\./.test(String(a.type))?ctRels(a):[]))]:[];
+const attRels=req=>req&&Array.isArray(req.actions)?[...new Set(req.actions.flatMap(a=>!a?[]:(a.type==='production.attachFile'||a.type==='testReport.attachFile'||a.type==='quality.attachFile')&&typeof a.file==='string'?[a.file]:/^contact\./.test(String(a.type))||a.type==='docs.add'?ctRels(a):[]))]:[];
 function attMap(req){const m={},qs=new Set(req.actions.filter(a=>a&&a.type==='quality.attachFile').map(a=>a.file));for(const r of attRels(req))m[r]=attInfo(r,qs.has(r));return m}
 // 요청 파일을 옮길 때 첨부 원본도 같이: <폴더>\<요청이름>.files\<상대경로>
 function moveAtt(req,dir,n){const m=attMap(req),base=path.join(dir,n.replace(/\.json$/i,'')+'.files');
