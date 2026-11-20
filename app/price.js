@@ -28,7 +28,7 @@ function renderPrice(){document.querySelectorAll('#p_price .tab').forEach(e=>e.c
 const PC_F=[['g','생지 단가 (/YD)'],['d','염색 단가'],['dS','염색 축 (%)','dye'],['p1','가공1 단가'],['p1S','가공1 축 (%)','g1'],['p2','가공2 단가'],['p2S','가공2 축 (%)','g2'],['e','기타부대비용'],['t','TRANS (운임)'],['m','마진율 (%)','margin']];
 const prIsPct=k=>/S$|^m$/.test(k);
 function prCalcView(){const box=$('pr_calc');if(!box.dataset.b){box.dataset.b=1;
- box.innerHTML=`<div class="card prtop"><b>품목 선택</b><input id="pc_pick" list="pc_dl" placeholder="품목·ITEM·CODE 검색 — 비워 두면 계산기로 사용" oninput="prPick(this.value)" autocomplete="off"><datalist id="pc_dl"></datalist><button onclick="prReset()">초기화</button><button class="p" id="pc_save" onclick="prCalcSave()">목록에 저장</button></div>
+ box.innerHTML=`<div class="card prtop"><b>품목 선택</b><input id="pc_pick" class="srch" list="pc_dl" placeholder="품목·ITEM·CODE 검색 — 비워 두면 계산기로 사용" oninput="prPick(this.value)" autocomplete="off"><datalist id="pc_dl"></datalist><button onclick="prReset()">초기화</button><button class="p" id="pc_save" onclick="prCalcSave()">목록에 저장</button></div>
  <div class="prg"><div class="card"><h2>입력 <span class="muted" id="pc_mode" style="font-weight:normal;font-size:12px"></span></h2><div class="pcf">
  <label>생지 통화<select id="pc_gCur" onchange="prRecalc()"><option>KRW</option><option>USD</option></select></label>
  ${PC_F.map(([k,l,d])=>`<label>${l}<input id="pc_${k}" class="num" inputmode="decimal" oninput="prRecalc()" ${d?`data-def="${d}"`:''}></label>`).join('')}</div>
