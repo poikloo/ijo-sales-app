@@ -32,7 +32,7 @@ function snapBuild(){
   search:snapS([c.company,c.name,c.team,c.title,c.email,c.memo,...c.tels,...c.mobiles])}));
  const QS=typeof qsSnap==='function'?qsSnap():[];
  const BL=typeof blSnap==='function'?blSnap():[];
- const DC=typeof dcItems==='function'?dcItems().map(x=>({key:x.key,name:x.name,kind:x.kind,client:x.client,orderNo:x.orderNo,date:x.date,expiry:x.expiry||'',source:x.org,own:!!x.own,search:snapS([x.name,x.kind,x.client,x.orderNo,x.memo])})):[];
+ const DC=typeof dcItems==='function'?dcItems().map(x=>({key:x.key,name:x.name,kind:x.kind,client:x.client,orderNo:x.orderNo,date:x.date,source:x.org,own:!!x.own,search:snapS([x.name,x.kind,x.client,x.orderNo,x.memo])})):[];
  return {schema:SNAP_SCHEMA,app:'ijo-sales',appVersion:appVer,generatedAt:new Date().toISOString(),readOnly:true,
   priceSettings:{fx:S.fx,yd2m:S.yd2m,vat:S.vat,defaultDyeShrink:S.dye,defaultProc1Shrink:S.g1,defaultProc2Shrink:S.g2,defaultMargin:S.margin},
   counts:{prices:P.length,sales:SL.length,orders:O.length,statements:ST.length,testReports:TR.length,contacts:CT.length,qualityStandards:QS.length,bills:BL.length,documents:DC.length},
