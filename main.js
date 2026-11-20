@@ -204,6 +204,8 @@ ipcMain.handle('brAttach',(e,src)=>{src=String(src);if(!BR_EXT.test(src)||!fs.st
   const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),dir=path.join(BR(),id);fs.mkdirSync(dir,{recursive:true});
   const ext=path.extname(src),name=(path.basename(src,ext).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_')||'사업자등록증')+ext;fs.copyFileSync(src,path.join(dir,name));
   return {id,name,path:id+'/'+name}});
+// 명함 미리보기(상세 창): 이미지 파일만 data URL로 (10MB까지)
+ipcMain.handle('brThumb',(e,rel)=>{const a=brAbs(rel),m={'.jpg':'jpeg','.jpeg':'jpeg','.png':'png','.webp':'webp','.gif':'gif'}[path.extname(a).toLowerCase()];if(!m||!fs.existsSync(a)||fs.statSync(a).size>10*1024*1024)return '';return `data:image/${m};base64,`+fs.readFileSync(a).toString('base64')});
 ipcMain.handle('brPreview',(e,rel,name,ttl)=>{const a=brAbs(rel);if(!fs.existsSync(a))return false;
   const w=new BrowserWindow({width:900,height:1000,parent:win,title:(ttl==='명함'?'명함':'사업자등록증')+' - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   w.setMenu(null);w.webContents.setWindowOpenHandler(()=>({action:'deny'}));w.loadFile(a);w.on('page-title-updated',ev=>ev.preventDefault());return true});

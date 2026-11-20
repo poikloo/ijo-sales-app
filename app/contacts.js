@@ -6,6 +6,8 @@ const strArr=a=>(Array.isArray(a)?a:[]).map(x=>String(x??'').trim()).filter(Bool
 function normContact(c){const o={id:String(c&&c.id||uid()),example:!!(c&&c.example),updated:c&&c.updated||''};CT_TEXT.forEach(([k])=>o[k]=String(c&&c[k]||'').trim());CT_LISTS.forEach(([k])=>o[k]=strArr(c&&c[k]));o.cards=(Array.isArray(c&&c.cards)?c.cards:[]).filter(x=>x&&x.path).map(x=>({id:String(x.id||uid()),name:String(x.name||''),path:String(x.path),addedAt:String(x.addedAt||'')}));return o}
 const exContact=()=>normContact({id:'xct1',example:true,company:'예시상사',name:'홍길동',team:'영업팀',title:'과장',addrs:['(예시) 서울시 ○○구 ○○로 00'],tels:['000-0000-0000'],faxes:['000-0000-0001'],mobiles:['000-0000-0002'],email:'example@example.com',web:'www.example.com',updated:now()});
 function ctLoad(r){const o=r&&!Array.isArray(r)?r:{};contacts=Array.isArray(o.contacts)?o.contacts.map(normContact):[];
+ // 예전 데이터: id가 없거나 겹치는 명함에 고정 id를 매기고 바로 저장 (요청함 · 스냅샷의 contactId가 바뀌지 않도록)
+ {const seen=new Set();let mig=false;contacts.forEach((c,i)=>{const raw=o.contacts[i];if(!raw||!raw.id||seen.has(c.id)){c.id='ct_'+uid();mig=true}seen.add(c.id)});if(mig)setTimeout(save,0)}
  if(!Array.isArray(o.contacts)){if(!r||(Array.isArray(r.bids)&&r.bids.some(x=>x.example))||(Array.isArray(r.orders)&&r.orders.some(x=>x.example)))contacts.push(exContact());setTimeout(save,0)}}
 const ctPayload=()=>({contacts});
 function ctImport(raw){if(raw&&!Array.isArray(raw)&&Array.isArray(raw.contacts))contacts=raw.contacts.map(normContact)}
@@ -23,7 +25,7 @@ function viewContact(id){const c=contacts.find(x=>x.id===id);if(!c)return;$('dt'
  const ph=(l)=>l.map(p=>`<div>${esc(p)} <button class="mini" onclick="ctCopy(${esc(JSON.stringify(p))})">복사</button></div>`).join('');
  const rows=[['회사명',esc(c.company)],['성함',esc(c.name)],['팀명',esc(c.team)],['직급',esc(c.title)],['주소',c.addrs.map(esc).join('<br>')],['회사 전화',ph(c.tels)],['회사 팩스',ph(c.faxes)],['휴대폰',ph(c.mobiles)],
   ['메일',c.email?`<a href="#" onclick="A.openExternal('mailto:'+${esc(JSON.stringify(c.email))});return false">${esc(c.email)}</a> <button class="mini" onclick="ctCopy(${esc(JSON.stringify(c.email))})">복사</button>`:''],
-  ['명함',ncBox(c.id)],['메모',esc(c.memo).replace(/\n/g,'<br>')],['사업자등록증',brBox(c.company)],['홈페이지',c.web?`<a href="#" onclick="A.openExternal(${esc(JSON.stringify(webUrl(c.web)))});return false">${esc(c.web)}</a>`:'']].filter(r=>r[1]);
+  ['명함',ncBox(c.id)+ncThumbs(c)],['메모',esc(c.memo).replace(/\n/g,'<br>')],['사업자등록증',brBox(c.company)],['홈페이지',c.web?`<a href="#" onclick="A.openExternal(${esc(JSON.stringify(webUrl(c.web)))});return false">${esc(c.web)}</a>`:'']].filter(r=>r[1]);
  $('dbody').innerHTML=`<dl class="dv">${rows.map(([k,v])=>`<dt>${k}</dt><dd style="white-space:normal">${v}</dd>`).join('')}</dl>`;
  brModal();ncModal();
  $('dfoot').innerHTML=`<button class="d" onclick="delContact('${id}')">삭제</button><button onclick="openContact('${id}')">수정</button><button onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
@@ -57,7 +59,10 @@ attReg('nc',{label:'명함',title:cid=>{const c=ncT(cid);return c?(cid==='_d'?($
  del:async(f,cid)=>{const t=ncT(cid);if(!t)return;t.cards=t.cards.filter(x=>x.id!==f.id);if(cid==='_d')(t._rm=t._rm||[]).push(f);else{try{await A.brDelete(f.path)}catch(e){}t.updated=now();save()}}});
 function ncCell(c){return attCell('nc',c.id)}
 function ncBox(cid){return attCell('nc',cid,{tag:'span'})}
-function ncModal(){}
+function ncModal(){ncThumbFill()}
+// 상세 창: 명함 이미지 미리보기 (이미지 파일만, 누르면 크게 보기)
+function ncThumbs(c){const l=c.cards.filter(f=>attIsImg(f.name));return l.length?`<div class="ncth">${l.map(f=>`<img data-nc="${esc(f.path)}" alt="${esc(f.name)}" title="${esc(f.name)} (누르면 크게 보기)" onclick="A.brPreview(this.dataset.nc,this.alt,'명함')">`).join('')}</div>`:''}
+function ncThumbFill(){if(!A.brThumb)return;document.querySelectorAll('img[data-nc]:not([src])').forEach(im=>A.brThumb(im.dataset.nc).then(u=>{if(u)im.src=u;else im.remove()}).catch(()=>im.remove()))}
 // 창을 저장 없이 닫으면 초안에 새로 넣은 파일 정리
 function ctDraftDrop(){const d=ctDraft;ctDraft=null;if(d&&!d._saved)(d._new||[]).forEach(f=>A.brDelete(f.path).catch(()=>{}))}
 dlg.addEventListener('close',()=>{if(ctDraft)ctDraftDrop()});

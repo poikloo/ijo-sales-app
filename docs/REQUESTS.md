@@ -438,6 +438,45 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ```
 결과: −50 × 3,000 = 공급가액 −150,000 / 부가세 −15,000, +80 × 4,000 = 320,000 / 32,000 → 차액 청구서 총액 187,000. (B·C는 `actions` 배열 안에 넣으세요. 같은 달에 자동 줄이 생기면 그 줄은 자동 줄이 켜진 기본 청구서로 가고 B·C에는 섞이지 않습니다.)
 
+### 3.15 거래처 정보 (명함) — `contact.attachImage` · `contact.add` · `contact.update`
+
+별칭: `contact.addContact` = `contact.add`, `contact.updateContact` = `contact.update` (같은 동작). 파일 칸 별칭: `image` = `file`, `images` = `files`.
+
+**명함 찾기** (`attachImage` · `update`): `contactId`(스냅샷 `contacts[].id`) 또는 `company` + `name`. 회사명 · 성함은 **띄어쓰기 · `(주)` · `㈜` · `주식회사` · 대소문자를 무시**하고 비교합니다 (`(주)(예시)가나상사` = `(예시) 가나상사`). 맞는 명함이 없거나 2장 이상이면 ⛔ 오류 — 여러 장이면 카드에 후보 id가 나오니 `contactId`로 다시 보내세요. `contactId`를 적으면 그것만 봅니다.
+
+**명함 이미지 파일**: `file`(또는 `image`) 하나, 또는 `files`(또는 `images`) 배열(앞/뒤 등, 한 동작에 10장까지). 넷 중 하나만 적습니다. 경로 규칙은 3.8과 같음 — 요청 JSON보다 먼저 `inbox\files\…`에 넣고 inbox 기준 상대 경로(`files/cards/card_001.jpg`). JPG · PNG · WEBP · GIF · PDF, 20MB까지. 적용할 때 앱의 첨부 저장소로 복사하고, 원본은 요청 파일과 함께 `done\<요청이름>.files\`로 옮깁니다. 복사가 하나라도 실패하면 전부 되돌립니다. 명함 한 장에 이미지를 여러 장 붙일 수 있고, 거래처 정보 상세 창에 미리보기(누르면 크게 보기), 목록에 📎 N으로 보입니다.
+
+| 동작 | 필드 | 설명 |
+|---|---|---|
+| `contact.attachImage` | 명함 찾기, `file`/`image` 또는 `files`/`images`, `replace`(선택) | 명함 이미지 첨부. 이미 있으면 **덧붙임**(같은 이름 파일은 ⚠ 건너뜀). `replace: true`면 기존 이미지를 모두 빼고 새 이미지로 — 카드에 ⚠ 경고(빠지는 파일 이름). 빠진 파일은 디스크에 남아 Ctrl+Z로 되돌릴 수 있음 |
+| `contact.add` | `company` · `name`(둘 중 하나 필수), `team` `title` `email` `web` `memo`(문자열), `addrs` `tels` `faxes` `mobiles`(문자열 배열 — 문자열 하나도 됨), `file`/`files`/`image`/`images`(선택), `onDuplicate`(선택) | 새 명함. **중복**(같은 회사+성함, 위 규칙으로 비교)이면 카드에 ⚠ 경고와 함께 `onDuplicate`대로: `'skip'`(기본 — 건너뜀, 이미지도 붙이지 않음) · `'add'`(그래도 새로 추가) · `'fillEmpty'`(기존 명함의 빈 칸만 채우고 배열은 겹치지 않게 더함, 이미지는 기존 명함에 덧붙임. 중복이 2장 이상이면 오류) |
+| `contact.update` | 명함 찾기, `set{company, name, team, title, email, web, memo, addrs, tels, faxes, mobiles}`, `fillEmptyOnly`(선택) | 명함 고치기. 기본은 적은 칸을 바꿈(배열은 통째로 바꿈). `fillEmptyOnly: true`면 **빈 칸만 채우고**(값이 있는 칸은 그대로 — 카드에 '유지'로 표시) 배열은 기존 값에 겹치지 않게 더함(전화번호는 숫자만 비교, `000 0000 0000` = `000-0000-0000`) |
+
+- **거래처(회사)**: 앱에는 회사 목록이 따로 없고 명함의 회사명이 곧 거래처 정보의 회사입니다. 처음 보는 회사명으로 `add`하면 그 회사가 새로 생기고 카드에 ⚠ "새 거래처" 경고가 나옵니다. 생산 관리 · 매출 관리 · 거래명세서(공급받는자)에 비슷한 이름이 있으면 같이 알려 주니, 같은 회사면 그 이름으로 맞춰 보내세요. 사업자등록증은 요청으로 붙이지 않습니다.
+- 같은 요청 안에서 `add`로 만든 명함에 뒤의 `attachImage`로 이미지를 더 붙일 수 있습니다 (company+name으로 찾음).
+- 미리보기는 데이터를 바꾸지 않습니다(사본에서 실행). 적용 한 번 = 저장 한 번이라 Ctrl+Z 한 번으로 전부 되돌립니다(복사한 이미지 파일은 남지만 명함에서 빠짐).
+- 한 요청에 동작 200개까지. 명함 150장은 30~50개씩 나눠 보내는 것을 권장합니다(카드 확인이 쉬움).
+
+```json
+{ "version": 1, "id": "ex-cards-001", "createdAt": "2026-11-20T07:00:00Z", "source": "grokbot",
+  "note": "(예시) 명함 스캔 1차 (1/4)",
+  "actions": [
+    { "type": "contact.attachImage", "company": "(예시)가나상사", "name": "김예시",
+      "files": ["files/cards/ga_front.jpg", "files/cards/ga_back.png"] },
+    { "type": "contact.attachImage", "contactId": "ct_0001", "image": "files/cards/card_002.jpg" },
+    { "type": "contact.attachImage", "company": "(예시)마바산업", "name": "박테스트",
+      "file": "files/cards/ma_new.jpg", "replace": true },
+    { "type": "contact.add", "company": "(예시)신규상사", "name": "신입일", "team": "(예시) 구매팀", "title": "대리",
+      "email": "new01@example.com", "tels": ["000-0000-0000"], "mobiles": ["000-0000-0002"],
+      "addrs": ["(예시) 서울시 ○○구 ○○로 00"], "memo": "(예시) 명함 스캔 OCR",
+      "files": ["files/cards/new_001.jpg", "files/cards/new_001_back.jpg"] },
+    { "type": "contact.add", "company": "㈜ (예시)다라무역", "name": "이샘플", "email": "sample@example.com",
+      "tels": ["000-1111-2222"], "onDuplicate": "fillEmpty" },
+    { "type": "contact.updateContact", "company": "(예시)거래처03", "name": "담당03", "fillEmptyOnly": true,
+      "set": { "title": "과장", "tels": ["000-3333-4444"] } }
+  ] }
+```
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -479,7 +518,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - 거래명세서는 "임시" 상태가 따로 없고 바로 일반 거래명세서로 저장됩니다 (목록에 **요청** 표시).
 - `linkShip`(기본 true)은 최종 납품에 납품 줄을 만듭니다(마지막 공정 출고는 그대로). 최종 납품 줄이 하나라도 있으면 오더 완료 수량·매출 관리·청구서 수량은 최종 납품 합계를 따릅니다.
 - 최종 납품은 마지막 공정 출고 줄마다 같은 날짜·수량의 **자동 줄**이 생깁니다(출고를 고치면 따라 바뀜, 사용자가 납품일·납품량을 고치거나 지우면 더는 따라가지 않음). `linkShip` 줄은 같은 날짜(여럿이면 수량이 가장 가까운), 없으면 같은 수량의 자동 줄을 대신합니다 — 겹쳐 세지 않음. 명세서를 지우면 그 자동 줄이 다시 생깁니다.
-- 거래처 정보(등록번호·주소)는 요청으로 만들지 않습니다 — 상호만 넣고 ⚠로 알려 줍니다.
+- 거래명세서의 공급받는자 정보(등록번호·주소)는 요청으로 만들지 않습니다 — 상호만 넣고 ⚠로 알려 줍니다. (거래처 정보의 명함은 3.15 `contact.*`로)
 - 오더 삭제·공정 삭제·출고 수정/삭제, 거래명세서 수정은 아직 요청으로 할 수 없습니다.
 - 첨부(`production.attachFile`)는 파일을 추가만 합니다. 첨부 삭제는 요청으로 할 수 없고, `replace: true`일 때만 기존 거래명세서 파일을 바꿉니다.
 - 백업은 적용 직전 디스크의 `data.json` 기준입니다.
@@ -552,7 +591,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ### `contacts[]` — 거래처 정보 (명함)
 
-`company` `name` `team` `title` `email` `web` `addrs[]` `tels[]` `faxes[]` `mobiles[]` `memo`
+`id`(고정 — 요청의 `contactId`로 사용. 예전 데이터의 id 없는 명함은 앱을 열 때 한 번 매겨 저장) `company` `name` `team` `title` `email` `web` `addrs[]` `tels[]` `faxes[]` `mobiles[]` `memo` `cards[]`(명함 이미지 파일 이름) `hasCard`(명함 이미지 있음 true) `cardCount`(장 수) `businessReg`
 
 ### `bills[]` — 청구서 (월 · 거래처별, 나눈 청구서는 따로 한 항목)
 
