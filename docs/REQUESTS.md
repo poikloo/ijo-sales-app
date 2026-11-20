@@ -359,6 +359,33 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - `replace`: `true`면 이 성적서의 기존 입력값·판정·메모를 지우고 새로 넣음. `false`/없음이면 보낸 항목만 덮어씀.
 - 스냅샷 `testReports[].linkedQuality` = `{name, fabric, specNo, qualityItemId, values(원본 입력 맵), results[] / rows[]{item,part,subItem,standard,unit,value,judge,manual,memo,unmatched}}` (results와 rows는 같은 목록).
 
+### 3.14 청구서 나누기 — `bill.split` · `bill.create` · `bill.moveLines` · `bill.merge` · `bill.update`
+
+같은 달 · 같은 거래처 청구서를 여러 장으로 나눌 수 있습니다. 기본 청구서 id는 `"YYYY-MM|거래처"`, 나눈 청구서는 `"YYYY-MM|거래처#고유값"`이고 구분명(`label`)을 붙일 수 있습니다.
+나눈 청구서는 자기 줄을 기억하므로 매출 관리·최종 납품으로 자동 줄을 다시 계산해도 다시 합쳐지지 않습니다. 그 달 그 거래처에 새로 생긴 자동 줄은 기본 청구서로 들어갑니다.
+
+**청구서 찾기 (공통)**: `billId`(스냅샷 `bills[].id`) 또는 `month`(YYYY-MM) + `client`(거래처, 공백·대소문자 무시) + 선택 `billLabel`(여러 장일 때 구분명; 없으면 기본 청구서).
+**줄 찾기 (`lines`)**: `[{ "orderNo": "…" }, { "item": "…" }, { "lineId": "…" }]` — 한 항목에 적은 칸이 모두 맞는 줄(오더번호·품명은 공백·대소문자 무시, `lineId` = 스냅샷 `bills[].lines[].lineId`). 항목마다 적어도 한 줄은 맞아야 하고, 아니면 오류.
+**옮길 곳 (공통)**: `toBillId` 또는 `toLabel`(같은 달·거래처의 구분명) 또는 `toPrimary: true`. 아무것도 없으면 기본 청구서.
+**청구완료(잠금)** 청구서는 나누기 · 옮기기 · 합치기를 하지 않습니다(오류) — 앱에서 잠금을 푼 뒤 다시 요청하세요. `bill.update`는 잠긴 청구서에 `label`만 바꿀 수 있습니다.
+
+```json
+{ "type": "bill.split", "month": "2026-10", "client": "(예시)가나상사",
+  "lines": [ { "orderNo": "EX-2610-13" } ], "label": "(예시)2차분" }
+```
+
+| 동작 | 칸 | 하는 일 |
+|---|---|---|
+| `bill.split` | 청구서 찾기, `lines`(필수), `label`(선택) | 고른 줄을 새 청구서로 옮김. 발행 일자·도착지는 원래 청구서 값을 물려받음. 모든 줄을 옮기면 경고(원래 청구서는 빔) |
+| `bill.create` | `month`, `client`(필수), `label`, `issueDate`, `dest`, `memo`(선택) | 빈 청구서를 만듦. 그 달·거래처에 아무 청구서도 없으면 기본 청구서, 있으면 나눈 청구서로 |
+| `bill.moveLines` | 청구서 찾기(옮길 줄이 있는 곳), 옮길 곳, `lines`(필수) | 같은 달·거래처 청구서끼리 줄을 옮김 |
+| `bill.merge` | 청구서 찾기(나눈 청구서), 옮길 곳(선택, 기본=기본 청구서) | 줄을 모두 옮기고 그 청구서를 없앰. 기본 청구서는 합칠 수 없음 |
+| `bill.update` | 청구서 찾기, `set{label, issueDate, dest, memo}` | 구분명 · 세금계산서 발행 일자 · 도착지 · 비고 |
+
+- 같은 요청 안에서 앞 동작이 만든 청구서를 뒤 동작에서 `billLabel`/`toLabel`로 가리킬 수 있습니다.
+- 카드에 새 청구서 id, 옮긴 줄 표, 청구서별 총액 전/후가 나옵니다. 적용은 한 번의 저장 → 앱에서 Ctrl+Z 한 번으로 되돌림.
+- 앱 화면: 청구서 상세에서 줄 왼쪽 칸을 고르면 **나누기 (N)** · **옮기기 (N)**(같은 달·거래처 청구서가 2장 이상일 때), 나눈 청구서에는 **합치기**. 청구완료 청구서는 확인 후 잠금을 풀고 진행합니다.
+
 ## 4. 전체 예시 파일
 
 `2026-10-28_001_new-order.json`:
@@ -428,7 +455,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `readOnly` | 항상 `true` |
 | `priceSettings` | 단가 계산 설정: `fx` 환율(USD→KRW), `yd2m`(0.9144), `vat`(0.1), `defaultDyeShrink`/`defaultProc1Shrink`/`defaultProc2Shrink`/`defaultMargin` (비율, 0.05 = 5%) |
 | `counts` | 각 목록의 건수 |
-| `prices` `sales` `orders` `statements` `testReports` `contacts` `qualityStandards` | 아래 표 |
+| `prices` `sales` `orders` `statements` `testReports` `contacts` `qualityStandards` `bills` | 아래 표 |
 
 ### `prices[]` — 단가 관리 (YD당, 원)
 
@@ -474,3 +501,9 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `contacts[]` — 거래처 정보 (명함)
 
 `company` `name` `team` `title` `email` `web` `addrs[]` `tels[]` `faxes[]` `mobiles[]` `memo`
+
+### `bills[]` — 청구서 (월 · 거래처별, 나눈 청구서는 따로 한 항목)
+
+`id`(기본 `"YYYY-MM|거래처"`, 나눈 청구서 `"YYYY-MM|거래처#…"` — 요청의 `billId`로 사용) `label`(구분명, 기본 청구서는 보통 `""`) `primary`(기본 청구서 true) `billsForClientMonth`(같은 달·거래처 청구서 장수)
+`month` `client` `status`(미청구/청구완료) `locked` `issueDate` `qty` `supply` `vat` `total` `warnings[]`
+`lines[]{lineId,item,spec,orderNo,qty,unitPrice,vatIncluded,supply,vat,total,memo,source(auto/sales/edited/manual)}` `shipments[]{date,item,orderNo,qty}`
