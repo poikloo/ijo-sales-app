@@ -359,7 +359,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - `replace`: `true`면 이 성적서의 기존 입력값·판정·메모를 지우고 새로 넣음. `false`/없음이면 보낸 항목만 덮어씀.
 - 스냅샷 `testReports[].linkedQuality` = `{name, fabric, specNo, qualityItemId, values(원본 입력 맵), results[] / rows[]{item,part,subItem,standard,unit,value,judge,manual,memo,unmatched}}` (results와 rows는 같은 목록).
 
-### 3.14 청구서 나누기 — `bill.split` · `bill.create` · `bill.moveLines` · `bill.merge` · `bill.update`
+### 3.14 청구서 — `bill.split` · `bill.create` · `bill.moveLines` · `bill.merge` · `bill.update` · `bill.addLine` · `bill.updateLine` · `bill.removeLine` · `bill.remove`
 
 같은 달 · 같은 거래처 청구서를 여러 장으로 나눌 수 있습니다. 기본 청구서 id는 `"YYYY-MM|거래처"`, 나눈 청구서는 `"YYYY-MM|거래처#고유값"`이고 구분명(`label`)을 붙일 수 있습니다.
 나눈 청구서는 자기 줄을 기억하므로 매출 관리·최종 납품으로 자동 줄을 다시 계산해도 다시 합쳐지지 않습니다. 그 달 그 거래처에 새로 생긴 자동 줄은 기본 청구서로 들어갑니다.
@@ -367,7 +367,13 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 **청구서 찾기 (공통)**: `billId`(스냅샷 `bills[].id`) 또는 `month`(YYYY-MM) + `client`(거래처, 공백·대소문자 무시) + 선택 `billLabel`(여러 장일 때 구분명; 없으면 기본 청구서).
 **줄 찾기 (`lines`)**: `[{ "orderNo": "…" }, { "item": "…" }, { "lineId": "…" }]` — 한 항목에 적은 칸이 모두 맞는 줄(오더번호·품명은 공백·대소문자 무시, `lineId` = 스냅샷 `bills[].lines[].lineId`). 항목마다 적어도 한 줄은 맞아야 하고, 아니면 오류.
 **옮길 곳 (공통)**: `toBillId` 또는 `toLabel`(같은 달·거래처의 구분명) 또는 `toPrimary: true`. 아무것도 없으면 기본 청구서.
-**청구완료(잠금)** 청구서는 나누기 · 옮기기 · 합치기를 하지 않습니다(오류) — 앱에서 잠금을 푼 뒤 다시 요청하세요. `bill.update`는 잠긴 청구서에 `label`만 바꿀 수 있습니다.
+**청구완료(잠금)** 청구서: `bill.split` · `bill.moveLines` · `bill.merge`는 하지 않습니다(오류) — 앱에서 잠금을 푼 뒤 다시 요청하세요.
+`bill.update`(label 외) · `bill.addLine` · `bill.updateLine` · `bill.removeLine` · `bill.remove`는 **`allowLocked: true`** 를 적었을 때만 합니다. 카드 맨 위와 그 동작에 빨간 **🔒 청구완료 청구서 수정** 경고가 나오고, 적용한 뒤에도 청구완료 잠금은 그대로입니다(고정본의 자동 줄은 그대로, 수동 줄만 반영). `allowLocked`는 사용자가 그 청구완료 청구서를 고치라고 분명히 말했을 때만 쓰세요. 앱 화면에서는 여전히 [잠금 해제]를 눌러야 고칠 수 있습니다.
+
+**수동 줄 · 자동 줄**
+- 자동 줄 = 매출 관리 · 최종 납품에서 앱이 계산하는 줄(구분: 자동 / 매출 연동 / 수정됨). 수동 줄 = 사람이(또는 `bill.addLine`으로) 적은 줄(구분: **수동**). 수동 줄은 자동 계산이 절대 바꾸거나 지우지 않습니다.
+- 수량은 음수도 됩니다(빼는 줄). 공급가액 = 수량 × 단가(10원 미만 버림), 부가세 = 공급가액의 10%(10원 미만 버림), 총액 = 공급가액 + 부가세. 음수 줄은 합계를 줄입니다.
+- 청구서마다 **자동 줄 켜짐/꺼짐**(`autoLines`)이 있습니다. 꺼진 청구서(수동 청구서)에는 자동 줄이 들어오지 않고, 자동 데이터가 없는 달에도 그대로 남습니다. 그 달 그 거래처의 자동 줄은 자동 줄이 켜진 기본 청구서로 갑니다 — 기본 청구서가 꺼져 있으면 자동 줄이 있을 때만 `"YYYY-MM|거래처#auto"` 청구서(구분 '자동')가 생깁니다.
 
 ```json
 { "type": "bill.split", "month": "2026-10", "client": "(예시)가나상사",
@@ -377,14 +383,60 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | 동작 | 칸 | 하는 일 |
 |---|---|---|
 | `bill.split` | 청구서 찾기, `lines`(필수), `label`(선택) | 고른 줄을 새 청구서로 옮김. 발행 일자·도착지는 원래 청구서 값을 물려받음. 모든 줄을 옮기면 경고(원래 청구서는 빔) |
-| `bill.create` | `month`, `client`(필수), `label`, `issueDate`, `dest`, `memo`(선택) | 빈 청구서를 만듦. 그 달·거래처에 아무 청구서도 없으면 기본 청구서, 있으면 나눈 청구서로 |
+| `bill.create` | `month`, `client`(필수), `label`, `issueDate`, `dest`, `memo`, `autoLines`(선택, 기본 true) | 빈 청구서를 만듦. `autoLines: false`면 항상 새 **수동 청구서**(자동 줄 없음). 아니면 그 달·거래처에 아무 청구서도 없을 때 기본 청구서, 있으면 나눈 청구서 |
 | `bill.moveLines` | 청구서 찾기(옮길 줄이 있는 곳), 옮길 곳, `lines`(필수) | 같은 달·거래처 청구서끼리 줄을 옮김 |
 | `bill.merge` | 청구서 찾기(나눈 청구서), 옮길 곳(선택, 기본=기본 청구서) | 줄을 모두 옮기고 그 청구서를 없앰. 기본 청구서는 합칠 수 없음 |
-| `bill.update` | 청구서 찾기, `set{label, issueDate, dest, memo}` | 구분명 · 세금계산서 발행 일자 · 도착지 · 비고 |
+| `bill.update` | 청구서 찾기, `set{label, issueDate, dest, memo, month, autoLines}`, `convertAuto`(선택), `allowLocked`(선택) | 구분명 · 발행 일자 · 도착지 · 비고 · **청구 월 옮기기** · **자동 줄 켜기/끄기**. 자동 줄을 끄거나 월을 옮길 때 그 청구서의 자동 줄은 빠지고(원래 달 / 자동 줄을 받는 청구서로), `convertAuto: true`면 지금 값 그대로 수동 줄로 바꿔 남김. 월을 옮기면 id가 바뀜(카드에 새 id) — 뒤 동작에서는 `month`+`client`+`billLabel`로 가리키세요. 새 달에 기본 청구서가 없고 자동 줄이 켜져 있으면 그 달 기본 청구서가 되고, 아니면 그 달의 나눈 청구서가 됨 |
+| `bill.addLine` | 청구서 찾기, `item`(필수), `qty`(필수, 음수 가능), `unitPrice`(필수), `orderNo` · `spec`(또는 `color`) · `memo` · `date`(선택), `allowLocked` | 수동 줄 추가. `date`를 적으면 출고 내역에도 그 날짜·수량이 나옴 |
+| `bill.updateLine` | 청구서 찾기, `line{lineId}` 또는 `line{orderNo, item}`, `set{item, spec/color, orderNo, qty, unitPrice, memo, date}`, `allowLocked` | 수동 줄 하나 고치기. 맞는 수동 줄이 0개 또는 2개 이상이면 오류(→ `lineId`). 자동 줄은 고칠 수 없음 |
+| `bill.removeLine` | 청구서 찾기, `lines`(수동 줄 찾기), `allowLocked` | 수동 줄 지우기. 자동 줄이 맞으면 오류 |
+| `bill.remove` | 청구서 찾기, `force`(줄이 있으면 필수), `allowLocked` | 청구서 삭제. 줄이 있으면 `force: true`가 없을 때 오류. 자동 줄로만 보이는(저장되지 않은) 청구서는 지울 수 없음 |
 
 - 같은 요청 안에서 앞 동작이 만든 청구서를 뒤 동작에서 `billLabel`/`toLabel`로 가리킬 수 있습니다.
 - 카드에 새 청구서 id, 옮긴 줄 표, 청구서별 총액 전/후가 나옵니다. 적용은 한 번의 저장 → 앱에서 Ctrl+Z 한 번으로 되돌림.
+- 앱 화면: [+ 줄 추가]로 수동 줄(오더번호 · 음수 수량 가능), [수정]에서 **청구 월** · **자동 줄** 켜기/끄기(자동 줄이 있으면 '수동 줄로 바꾸기 / 빼기'를 물음) · 청구서 삭제(확인), [+ 추가]에서 '수동 청구서' 선택.
 - 앱 화면: 청구서 상세에서 줄 왼쪽 칸을 고르면 **나누기 (N)** · **옮기기 (N)**(같은 달·거래처 청구서가 2장 이상일 때), 나눈 청구서에는 **합치기**. 청구완료 청구서는 확인 후 잠금을 풀고 진행합니다.
+
+
+#### 예시 시나리오 (모두 (예시) 이름 · 가짜 숫자)
+
+**A) 10월 청구완료 청구서를 9월 선청구(수동 청구서)로 — 수주 수량 기준 6줄.** 사용자가 "청구완료된 10월 (예시)가나상사 청구서를 9월 선청구로 바꿔 줘"라고 분명히 말했을 때만 `allowLocked`.
+
+```json
+{ "version": 1, "id": "ex-prebill-a", "createdAt": "2026-11-20T06:00:00Z", "source": "grokbot",
+  "note": "(예시) 10월 청구서를 9월 선청구로",
+  "actions": [
+    { "type": "bill.update", "month": "2026-10", "client": "(예시)가나상사",
+      "set": { "month": "2026-09", "autoLines": false, "issueDate": "2026-09-30", "label": "(예시)선청구" },
+      "convertAuto": false, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구",
+      "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "color": "카키", "qty": 2000, "unitPrice": 3000,
+      "memo": "(예시) 수주 수량 기준 선청구", "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2000, "unitPrice": 4000, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "orderNo": "EX-2610-23", "item": "(예시) 메쉬원단 C", "qty": 2000, "unitPrice": 2500, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 난연원단 D", "qty": 2000, "unitPrice": 3500, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 투습원단 E", "qty": 2000, "unitPrice": 3200, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 보강원단 F", "qty": 2000, "unitPrice": 2800, "allowLocked": true }
+  ] }
+```
+결과: 9월 '(예시)선청구'(청구완료 유지 · 자동 줄 꺼짐 · 발행 일자 2026-09-30 · 수동 6줄). 원래 10월의 자동 줄(실제 출고)은 10월 기본 청구서(미청구)로 다시 나타납니다. 잠금 유지를 원치 않으면 앱에서 잠금을 풀고 고치세요.
+
+**B) 11월 '최종 납품' 청구서 — 최종 납품 수량으로 (수동 청구서).**
+
+```json
+{ "type": "bill.create", "month": "2026-11", "client": "(예시)가나상사", "label": "(예시)최종 납품", "autoLines": false, "issueDate": "2026-11-30" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": 1950, "unitPrice": 3000 },
+{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2080, "unitPrice": 4000 }
+```
+
+**C) 11월 '차액' 청구서 — 선청구와 최종 납품의 차이 (+/− 줄).**
+
+```json
+{ "type": "bill.create", "month": "2026-11", "client": "(예시)가나상사", "label": "(예시)차액", "autoLines": false, "issueDate": "2026-11-30" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)차액", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": -50, "unitPrice": 3000, "memo": "(예시) 선청구 2,000 − 최종 1,950" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)차액", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 80, "unitPrice": 4000, "memo": "(예시) 최종 2,080 − 선청구 2,000" }
+```
+결과: −50 × 3,000 = 공급가액 −150,000 / 부가세 −15,000, +80 × 4,000 = 320,000 / 32,000 → 차액 청구서 총액 187,000. (B·C는 `actions` 배열 안에 넣으세요. 같은 달에 자동 줄이 생기면 그 줄은 자동 줄이 켜진 기본 청구서로 가고 B·C에는 섞이지 않습니다.)
 
 ## 4. 전체 예시 파일
 
@@ -504,6 +556,6 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ### `bills[]` — 청구서 (월 · 거래처별, 나눈 청구서는 따로 한 항목)
 
-`id`(기본 `"YYYY-MM|거래처"`, 나눈 청구서 `"YYYY-MM|거래처#…"` — 요청의 `billId`로 사용) `label`(구분명, 기본 청구서는 보통 `""`) `primary`(기본 청구서 true) `billsForClientMonth`(같은 달·거래처 청구서 장수)
+`id`(기본 `"YYYY-MM|거래처"`, 나눈 청구서 `"YYYY-MM|거래처#…"` — 요청의 `billId`로 사용) `label`(구분명, 기본 청구서는 보통 `""`) `primary`(기본 청구서 true) `autoLines`(자동 줄 켜짐 true / 수동 청구서 false) `billsForClientMonth`(같은 달·거래처 청구서 장수)
 `month` `client` `status`(미청구/청구완료) `locked` `issueDate` `qty` `supply` `vat` `total` `warnings[]`
-`lines[]{lineId,item,spec,orderNo,qty,unitPrice,vatIncluded,supply,vat,total,memo,source(auto/sales/edited/manual)}` `shipments[]{date,item,orderNo,qty}`
+`lines[]{lineId,manual(수동 줄 true),item,spec,orderNo,qty,unitPrice,vatIncluded,supply,vat,total,memo,source(auto/sales/edited/manual)}` `shipments[]{date,item,orderNo,qty}`

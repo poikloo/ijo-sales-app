@@ -150,7 +150,7 @@ const RQ_H={
 function rqRun(P){const req=P.req,ctx={stmtIds:[],attach:[],lastShip:{},ssTaken:new Set(),trTaken:new Set(),qsTaken:new Set()},top=[];
  const done=rqLog.find(x=>x.id===req.id&&x.status==='done')||(rqDoneIds.includes(req.id)?{at:''}:null);if(done)top.push(`이 요청 id(${req.id})는 이미 ${done.at?new Date(done.at).toLocaleString('ko-KR')+' ':''}적용했습니다 — 같은 요청을 두 번 적용하지 않도록 막았어요`);
  const twin=rqPend.find(x=>x.file!==P.file&&x.req.id===req.id&&x.file<P.file);if(twin)top.push(`같은 id(${req.id})의 요청 파일 '${twin.file}'이(가) 먼저 와 있습니다`);
- const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],diff:[],table:null};
+ const items=req.actions.map(a=>{const it={type:a.type,title:RQ_T[a.type]||a.type,summary:'',comment:rqS(a.comment),errors:[],warns:[],alerts:[],diff:[],table:null};
   rqExtra(a,['type','comment',...(RQ_KEYS[a.type]||[])],'동작',it);try{RQ_H[a.type](a,it,ctx,req,P)}catch(e){it.errors.push('처리 중 오류: '+(e&&e.message||e))}return it});
  return {top,items,ctx,nerr:top.length+items.reduce((s,x)=>s+x.errors.length,0)}}
 const rqClone=v=>JSON.parse(JSON.stringify(v));
@@ -158,7 +158,7 @@ function rqSnap(){return {orders,stmts,sales,prices,qualities,trs,bills,stEd}}
 function rqWork(){orders=rqClone(orders);stmts=rqClone(stmts);sales=rqClone(sales);prices=rqClone(prices);qualities=rqClone(qualities);trs=rqClone(trs);bills=rqClone(bills)}
 function rqRestore(s){orders=s.orders;stmts=s.stmts;sales=s.sales;prices=s.prices;qualities=s.qualities;trs=s.trs;bills=s.bills;stEd=s.stEd}
 function rqPreview(P){const s=rqSnap();try{rqWork();return rqRun(P)}finally{rqRestore(s)}}
-const rqSummary=(P,R)=>R.items.map(it=>`· ${it.title}: ${it.summary}`).join('\n');
+const rqSummary=(P,R)=>R.items.map(it=>`· ${it.title}: ${it.summary}${(it.alerts||[]).length?' [청구완료 청구서 수정]':''}`).join('\n');
 // ---- 카드에서 고치기: 원래 요청은 그대로 두고, 고친 actions 사본(rqEdits[file])으로 미리보기·적용 ----
 const rqEff=P=>rqEdits[P.file]?{...P,req:{...P.req,actions:rqEdits[P.file]}}:P;
 const rqIsEdited=P=>!!rqEdits[P.file]&&JSON.stringify(rqEdits[P.file])!==JSON.stringify(P.req.actions);
@@ -255,12 +255,12 @@ const rqPath=()=>rqInfo?rqInfo.inbox:'';
 function rqFolderBar(){return `<div class="rqbar"><span class="muted">요청 파일 폴더</span><code class="rqp" title="${esc(rqPath())}">${esc(rqPath()||'-')}</code><button onclick="A.reqOpenFolder('inbox')">폴더 열기</button><button onclick="A.copyText(rqPath());toast('경로를 복사했어요')">경로 복사</button><button onclick="rqRefresh('manual');toast('요청함을 확인했어요')">지금 확인</button></div>`}
 function rqCard(P){const E=rqEff(P),R=rqPreview(E),q=P.req,ed=rqIsEdited(P),on=!!rqEditOn[P.file],hasSt=R.items.some(it=>it.stmt),def=R.items.some(it=>it.stmt&&it.open!==false),chk=rqOpenAfter[P.file]==null?def:rqOpenAfter[P.file];
  const ct=q.createdAt&&!isNaN(Date.parse(q.createdAt))?new Date(q.createdAt).toLocaleString('ko-KR'):'';
- const act=R.items.map((it,i)=>`<div class="rqa${it.errors.length?' bad':''}"><div class="rqat"><span class="rqn2">${i+1}</span><span class="rqty">${esc(it.title)}</span><span>${esc(it.summary)}</span></div>${it.comment?`<div class="muted rqcm">${esc(it.comment)}</div>`:''}
+ const act=R.items.map((it,i)=>`<div class="rqa${it.errors.length?' bad':''}${(it.alerts||[]).length?' lk':''}"><div class="rqat"><span class="rqn2">${i+1}</span><span class="rqty">${esc(it.title)}</span><span>${esc(it.summary)}</span></div>${it.comment?`<div class="muted rqcm">${esc(it.comment)}</div>`:''}
   ${it.diff.length?`<table class="rqd"><tbody>${it.diff.map(([k,b,a])=>`<tr><th>${esc(k)}</th>${b!==''&&b===a?'<td class="rqb rqsame" colspan="2">그대로</td>':b!==''&&b!=null||it.type==='production.updateOrder'||it.type==='production.setDone'||k==='출고 소계'?`<td class="rqb">${esc(b)||'-'}</td><td class="rqar">→</td>`:'<td class="rqb rqnew" colspan="2">새로</td>'}<td class="rqv">${esc(a)}</td></tr>`).join('')}</tbody></table>`:''}
   ${on?rqForm(P,i,E.req.actions[i]):''}${it.table?`<table class="rqt"><thead><tr>${it.table.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${it.table.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:''}
-  ${it.file?`<div class="rqfl"><button data-r="${esc(it.file)}" onclick="A.reqFileOpen(this.dataset.r).then(r=>{if(r)uiAlert('파일을 열지 못했어요: '+r)})">📎 파일 열어 보기</button></div>`:''}${it.errors.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${it.warns.map(e=>`<div class="rqw">⚠ ${esc(e)}</div>`).join('')}</div>`).join('');
+  ${it.file?`<div class="rqfl"><button data-r="${esc(it.file)}" onclick="A.reqFileOpen(this.dataset.r).then(r=>{if(r)uiAlert('파일을 열지 못했어요: '+r)})">📎 파일 열어 보기</button></div>`:''}${(it.alerts||[]).map(e=>`<div class="rqe rqlk">🔒 ${esc(e)}</div>`).join('')}${it.errors.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${it.warns.map(e=>`<div class="rqw">⚠ ${esc(e)}</div>`).join('')}</div>`).join('');
  return `<div class="card rqc${R.nerr?' bad':''}"><div class="rqch"><span class="rqsrc">Grok Bot 요청</span><b>${esc(q.note||'(메모 없음)')}</b>${ed?'<span class="rqmod">수정됨</span>':''}<span style="flex:1"></span>${ed?`<button data-f="${esc(P.file)}" onclick="rqEditReset(this.dataset.f)">원래대로</button>`:''}<button data-f="${esc(P.file)}" onclick="rqEditToggle(this.dataset.f)"${rqBusy?' disabled':''}>${on?'수정 닫기':'✎ 수정'}</button><span class="muted">${esc(ct)}</span></div>${on?'<datalist id="rqe_vl">'+rqVendors().map(x=>`<option value="${esc(x)}">`).join('')+'</datalist><div class="rqw">✎ 수정 중 — 칸을 고치고 다른 곳을 누르면 아래 미리보기와 검사가 바로 다시 계산돼요. 원래 요청 파일은 그대로 두고, 적용할 때 고친 내용과 원래 내용을 함께 기록해요.</div>':''}
- <div class="muted rqmeta">id ${esc(q.id)} · 파일 ${esc(P.file)} · 동작 ${R.items.length}개</div>${R.top.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${act}
+ <div class="muted rqmeta">id ${esc(q.id)} · 파일 ${esc(P.file)} · 동작 ${R.items.length}개</div>${R.items.some(it=>(it.alerts||[]).length)?`<div class="rqlkb">🔒 청구완료 청구서 수정 — 이 요청은 청구완료(잠금)된 청구서를 고칩니다 (allowLocked). 적용해도 잠금은 유지돼요. 내용을 꼭 확인하세요.</div>`:''}${R.top.map(e=>`<div class="rqe">⛔ ${esc(e)}</div>`).join('')}${act}
  <div class="rqf">${hasSt?`<label class="rqo"><input type="checkbox" ${chk?'checked':''} data-f="${esc(P.file)}" onchange="rqOpenAfter[this.dataset.f]=this.checked"> 적용한 뒤 거래명세서 열기</label>`:''}<span style="flex:1"></span>${R.nerr?`<span class="neg">오류 ${R.nerr}건 — 적용할 수 없어요 (고친 요청을 다시 받거나 거부하세요)</span>`:''}
  <button class="d" data-f="${esc(P.file)}" onclick="rqReject(this.dataset.f)"${rqBusy?' disabled':''}>거부</button><button class="p" data-f="${esc(P.file)}" onclick="rqApply(this.dataset.f)"${R.nerr||rqBusy?' disabled':''}>적용</button></div></div>`}
 function renderReqs(){const el=$('rq_wrap');if(!el)return;
