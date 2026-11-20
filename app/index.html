@@ -5,7 +5,9 @@
 #side{width:220px;background:#1d2327;color:#c3c4c7;display:flex;flex-direction:column;flex-shrink:0}
 #side .logo{display:flex;align-items:center;gap:10px;padding:16px 14px;color:#fff;font-weight:bold;font-size:16px;border-bottom:1px solid #2c3338}
 #side .logo img{width:34px;height:34px}#side .logo small{display:block;font-size:11px;color:#8c8f94;font-weight:normal}
-#side nav{flex:1;padding:8px 0}#side a{display:flex;align-items:center;gap:11px;padding:11px 16px;color:#c3c4c7;text-decoration:none;cursor:pointer;border-left:4px solid transparent}
+#side{min-height:0}#side .logo,#side .foot{flex:none}
+#side nav{flex:1;padding:8px 0;min-height:0;overflow-y:auto;overflow-x:hidden}
+#side nav::-webkit-scrollbar{width:6px}#side nav::-webkit-scrollbar-button{display:none}#side nav::-webkit-scrollbar-track{background:transparent}#side nav::-webkit-scrollbar-thumb{background:#3c434a;border-radius:3px}#side nav::-webkit-scrollbar-thumb:hover{background:#646970}#side a{display:flex;align-items:center;gap:11px;padding:11px 16px;color:#c3c4c7;text-decoration:none;cursor:pointer;border-left:4px solid transparent}
 #side a:hover{background:#2c3338;color:#fff}#side a.on{background:#2271b1;color:#fff;border-left-color:#72aee6}
 #side a .soon{margin-left:auto;font-size:10px;background:#3c434a;color:#aaa;border-radius:8px;padding:1px 6px}
 #side .sep{height:1px;background:#3c434a;margin:8px 16px}#side .ic{flex:none;opacity:.85}#side a:hover .ic,#side a.on .ic{opacity:1}#side .foot{padding:10px 14px;font-size:11px;color:#8c8f94}
