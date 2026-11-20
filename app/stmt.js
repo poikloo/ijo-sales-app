@@ -92,9 +92,9 @@ function stOrderInput(v){const o=orders.find(x=>orderLabel(x)===v||x.no===v);if(
 function stCustInput(v){const c=custs.find(x=>x.name===v);if(c){stPick(c.id);renderEditor()}else stEd.cust.name=v}
 function stClearOrder(){Object.assign(stEd,{orderId:'',linkShip:false});renderEditor()}
 function stF(k,v){stEd[k]=v;if(k==='price')stRecalc()}
-function renderEditor(){const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderId),missing=e.cust.name&&!custs.some(c=>c.name===e.cust.name);
+function renderEditor(){edMark(stEd);const e=stEd,o=e.orderId&&orders.find(x=>x.id===e.orderId),missing=e.cust.name&&!custs.some(c=>c.name===e.cust.name);
  const inp=(k,l,attr='',w)=>`<label${w?' class="w"':''}>${l}<input value="${esc(e[k])}" oninput="stF('${k}',this.value)" ${attr}></label>`;
- $('st_edit').innerHTML=`<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button onclick="stCancel()">◀ 목록</button><span style="flex:1"></span>
+ $('st_edit').innerHTML=`<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button data-back onclick="stCancel()">◀ 목록</button><span style="flex:1"></span>
   <button onclick="stOut('preview')">미리보기</button><button onclick="stOut('print')">인쇄</button><button onclick="stOut('xlsx')">엑셀 저장</button><button onclick="stOut('pdf')">PDF 저장</button>${e._new?'':`<button onclick="dupStmt('${e.id}')">복제</button><button class="d" onclick="delStmt('${e.id}')">삭제</button>`}<button class="p" onclick="stSave()">저장</button></div></div>
  <div class="dgrid"><div class="card"><h2>기본 정보</h2><div class="g">
   <label>공급자<span style="display:flex;gap:6px;align-items:center"><select style="flex:1" onchange="stSupPick(this.value)">${sups.length?'':'<option value="">(설정에서 공급자를 먼저 등록하세요)</option>'}${sups.map(x=>`<option value="${x.id}"${x.id===e.supplierId?' selected':''}>${esc(x.name||'(상호 없음)')}${x.id===supDef?' (기본)':''}</option>`).join('')}${e.supplierId&&!sups.some(x=>x.id===e.supplierId)?`<option value="${esc(e.supplierId)}" selected>${esc(e.sup&&e.sup.name||'')} (삭제된 공급자)</option>`:''}</select>${stSupStale(e)?'<button onclick="stSupRefresh()" title="설정의 최신 공급자 정보로 바꿉니다">최신 정보로 갱신</button>':''}</span>${stSupStale(e)?'<span class="muted">이 명세서는 저장 당시의 공급자 정보로 인쇄됩니다.</span>':''}</label><label>날짜<input type="date" value="${esc(e.date)}" oninput="stF('date',this.value)"></label>
@@ -131,7 +131,7 @@ function stAddLot(){const last=stEd.lots[stEd.lots.length-1];const o=stEd.orderI
 function stMvLot(k,d){const j=mvArr(stEd.lots,k,d);if(j<0)return;renderEditor();mvFocus('lot:'+j,d)}
 async function stDelLot(k){const l=stEd.lots[k];if(lotCnt(l)&&!await uiConfirm('이 LOT에 입력된 수량이 있습니다. 삭제할까요?'))return;stEd.lots.splice(k,1);if(!stEd.lots.length)stEd.lots.push(emptyLot());renderEditor()}
 function stRegCust(){openCust('',stEd.cust.name);P_FIELDS.forEach(([k])=>{const i=$('cu_'+k);if(i&&!i.value)i.value=stEd.cust[k]});$('cu_dest').value=stEd.dest;$('cu_contact').value=stEd.contact}
-async function stCancel(){if(await uiConfirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
+async function stCancel(){if(!edDirty(stEd)||await uiConfirm('저장하지 않은 변경 내용은 사라집니다. 목록으로 돌아갈까요?')){stEd=null;render()}}
 function stClean(e){const s=normStmt(e);s.lots=s.lots.filter(l=>l.lotNo||lotCnt(l));s.lots.forEach(l=>{while(l.rolls.length>20&&l.rolls.slice(-10).every(v=>v===''))l.rolls=l.rolls.slice(0,-10)});s.updated=now();return s}
 function stSave(silent){if(stEd._new){const d=sups.find(x=>x.id===stEd.supplierId);if(d)stEd.sup=supSnap(d)}const s=stClean(stEd);
  const old=stmts.find(x=>x.id===s.id);if(old)s.shipId=old.shipId;linkShip(s);

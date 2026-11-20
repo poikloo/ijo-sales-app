@@ -6,5 +6,5 @@ function setHint(k){try{if(k==='sup')return typeof sups!=='undefined'&&Array.isA
 function setNav(){const pg=$('p_settings'),el=$('set_nav');if(!pg||!el)return;if(setSec&&!SET_SECS.some(x=>x[0]===setSec))setSec='';pg.dataset.sec=setSec;
  {const t=$('ptitle'),L=SET_SECS.find(x=>x[0]===setSec);if(t)t.textContent=L?'설정 › '+L[1]:'설정'}
  pg.querySelectorAll('.card[data-sec]').forEach(c=>c.style.display=setSec&&c.dataset.sec===setSec?'block':'');
- el.innerHTML=setSec?`<div class="sback"><button onclick="setOpen('')">◀ 설정</button></div>`:`<div class="stiles">${SET_SECS.map(([k,l])=>{const h=setHint(k);return `<button class="stile" onclick="setOpen('${k}')">${esc(l)}${h&&h!=='-'?`<small>${esc(h)}</small>`:''}</button>`}).join('')}</div>`}
+ el.innerHTML=setSec?`<div class="sback"><button data-back onclick="setOpen('')">◀ 설정</button></div>`:`<div class="stiles">${SET_SECS.map(([k,l])=>{const h=setHint(k);return `<button class="stile" onclick="setOpen('${k}')">${esc(l)}${h&&h!=='-'?`<small>${esc(h)}</small>`:''}</button>`}).join('')}</div>`}
 function setOpen(k){setSec=k||'';if(page!=='settings')return go('settings');render();const c=$('content');if(c)c.scrollTop=0;if(k==='lb'&&typeof lbSetCard==='function')lbSetCard()}

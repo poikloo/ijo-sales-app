@@ -12,7 +12,9 @@
  function after(){if(!P)return;const pg=document.getElementById('p_'+P.page);if(!pg||!pg.classList.contains('on')){return}
   const tb=(P.tbid&&document.getElementById(P.tbid))||pg.querySelector(`[data-lrt="${P.tb}"]`);const shown=tb&&tb.offsetParent!==null;
   if(!shown){P.hid=true;return}if(!P.hid)return;// 아직 목록을 떠난 적 없음 (편집 창 등은 dlgClose에서 처리)
-  const tr=find(),p=P;P=null;requestAnimationFrame(()=>{if(tr&&tr.isConnected){toTop(tr);flash(tr)}else C().scrollTop=p.top})}
+  const tr=find(),p=P;P=null;requestAnimationFrame(()=>{const c=C();c.scrollTop=p.top;if(window.stickyUpdate)window.stickyUpdate();if(!tr||!tr.isConnected)return; // 보던 스크롤 위치 그대로 → 그 행이 가려져 있으면 머리줄 바로 아래로
+  requestAnimationFrame(()=>{const r=tr.getBoundingClientRect(),cr=c.getBoundingClientRect(),th=tr.closest('table')&&tr.closest('table').tHead,top=Math.max(cr.top,th?th.getBoundingClientRect().bottom:cr.top);
+   if(r.top<top||r.bottom>cr.bottom)c.scrollTop+=r.top-top-4;flash(tr)})})}
  window.lrAfter=after;
  // 편집 창(dialog)으로 여는 목록: 닫힌 뒤 그 행을 강조 (화면 밖이면 맨 위로)
  window.addEventListener('load',()=>{const d=document.getElementById('dlg');if(d)d.addEventListener('close',()=>setTimeout(()=>{if(!P||P.hid)return;const tr=find();P=null;if(!tr)return;const r=tr.getBoundingClientRect(),c=C().getBoundingClientRect();if(r.top<c.top+(window.stickyOffset?window.stickyOffset(tr):0)||r.bottom>c.bottom)toTop(tr);flash(tr)},0))});
