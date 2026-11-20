@@ -45,10 +45,19 @@ ipcMain.handle('stmtPDF',async(e,html,name)=>{const {w,f}=await renderPDF(html);
   const buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,margins:{top:0.3,bottom:0.3,left:0.3,right:0.3}});
   let p=process.env.IJO_PDF;if(!p){const r=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),name),filters:[{name:'PDF',extensions:['pdf']}]});if(r.canceled)return null;p=r.filePath}
   fs.writeFileSync(p,buf);if(!process.env.IJO_PDF)shell.openPath(p);return p}finally{w.destroy();fs.rmSync(f,{force:true})}});
-ipcMain.handle('stmtPreview',async(e,html,name)=>{const {w,f}=await renderPDF(html);let buf;try{buf=await w.webContents.printToPDF({pageSize:'A4',printBackground:true,margins:{top:0.3,bottom:0.3,left:0.3,right:0.3}})}finally{w.destroy();fs.rmSync(f,{force:true})}
+// 미리보기: PDF로 저장될 모습 그대로(같은 printToPDF 옵션) 별도 창에 띄움 · 확대/축소는 PDF 뷰어 · Esc로 닫힘
+async function previewPDF(html,name,opt){if(!/<title>/i.test(html))html=html.replace(/<head>/i,'<head><title>'+String(name||'').replace(/[&<>]/g,'')+'</title>');const {w,f}=await renderPDF(html);let buf;try{buf=await w.webContents.printToPDF(opt)}finally{w.destroy();fs.rmSync(f,{force:true})}
   const pf=path.join(os.tmpdir(),'ijo_preview_'+Date.now()+'.pdf');fs.writeFileSync(pf,buf);
-  const v=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
-  v.setMenu(null);v.webContents.setWindowOpenHandler(()=>({action:'deny'}));v.on('page-title-updated',ev=>ev.preventDefault());v.on('closed',()=>fs.rmSync(pf,{force:true}));await v.loadFile(pf);return true});
+  const v=new BrowserWindow({width:900,height:1000,parent:win,title:'미리보기 - '+String(name||''),icon:path.join(__dirname,'app','icon.png'),autoHideMenuBar:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  // Esc로 닫기: 숨긴 메뉴의 단축키(PDF 화면 안을 눌러 포커스가 뷰어에 있어도 동작) + 창 자체 키 입력
+  const close=()=>{if(!v.isDestroyed())v.close()};
+  v.setMenu(Menu.buildFromTemplate([{label:'창',submenu:[{label:'닫기',accelerator:'Escape',click:close}]}]));v.setMenuBarVisibility(false);
+  v.webContents.on('before-input-event',(ev,i)=>{if(i.type==='keyDown'&&i.key==='Escape'&&!i.control&&!i.alt&&!i.meta){ev.preventDefault();close()}});
+  v.webContents.setWindowOpenHandler(()=>({action:'deny'}));v.on('page-title-updated',ev=>ev.preventDefault());v.on('closed',()=>fs.rmSync(pf,{force:true}));
+  await v.loadFile(pf);return true}
+ipcMain.handle('stmtPreview',(e,html,name)=>previewPDF(html,name,{pageSize:'A4',printBackground:true,margins:{top:0.3,bottom:0.3,left:0.3,right:0.3}}));
+// 청구서 등 pdfSave(htmlPDF)로 저장하는 문서의 미리보기 — htmlPDF와 같은 옵션
+ipcMain.handle('htmlPreview',(e,html,name)=>previewPDF(html,name,{pageSize:'A4',printBackground:true,preferCSSPageSize:true}));
 ipcMain.handle('stmtPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4'},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});
 // 라벨: 여백 없음 · 100%
 ipcMain.handle('labelPrint',async(e,html)=>{const {w,f}=await renderPDF(html);return new Promise(res=>w.webContents.print({silent:false,printBackground:true,pageSize:'A4',margins:{marginType:'none'},scaleFactor:100},(ok,err)=>{w.destroy();fs.rmSync(f,{force:true});res(ok?true:(err||false))}))});

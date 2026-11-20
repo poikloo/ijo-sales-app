@@ -73,7 +73,7 @@ function blListHTML(){const L=blMonth(blYm),k=blNk(blF.k),l=L.filter(v=>(!blF.st
 function blOpen(key){blYm=key.slice(0,7);blSel=key;if(page!=='bill')go('bill');else render()}
 function blDetailHTML(v){const lk=v.b.locked,P=blParty(),dest=v.b.dest||v.client;
  return `<div class="blhd"><button data-back onclick="blSel=null;render()">‹ 목록</button><h2>${+v.ym.slice(5)}월 청구내역서 · ${esc(v.client)}</h2>${lk?'<span class="blst d">청구완료</span>':'<span class="blst n">미청구</span>'}<span style="flex:1"></span>
- ${lk?`<button onclick="blUnlock('${esc(v.key)}')">잠금 해제</button>`:`<button onclick="blLine('${esc(v.key)}','')">+ 줄 추가</button><button onclick="blInfo('${esc(v.key)}')">수정</button>`}<button onclick="blXlsx('${esc(v.key)}')">엑셀 저장</button><button onclick="blPDF('${esc(v.key)}')">PDF 저장</button>${lk?'':`<button class="p" onclick="blLock('${esc(v.key)}')">청구완료</button>`}</div>
+ ${lk?`<button onclick="blUnlock('${esc(v.key)}')">잠금 해제</button>`:`<button onclick="blLine('${esc(v.key)}','')">+ 줄 추가</button><button onclick="blInfo('${esc(v.key)}')">수정</button>`}<button onclick="blPreview('${esc(v.key)}')">미리보기</button><button onclick="blXlsx('${esc(v.key)}')">엑셀 저장</button><button onclick="blPDF('${esc(v.key)}')">PDF 저장</button>${lk?'':`<button class="p" onclick="blLock('${esc(v.key)}')">청구완료</button>`}</div>
  ${v.warn.length?`<div class="blalert">${v.warn.map(w=>`<span class="${w.c}">⚠ ${esc(w.t)}</span>`).join('')}</div>`:''}
  <div class="card"><div class="blmeta"><span>세금계산서 발행 일자 <b>${esc(blIssue(v))}</b></span><span>도착지 <b>${esc(dest)}</b></span>${v.b.memo?`<span>비고 <b>${esc(v.b.memo)}</b></span>`:''}</div>
  <h3>1. 청구 내역</h3><div class="tw"><table class="blt" data-rz="bill_lines"><colgroup><col style="width:240px"><col style="width:130px"><col style="width:90px"><col style="width:90px"><col style="width:120px"><col style="width:110px"><col style="width:130px"><col style="width:120px"><col></colgroup><thead><tr><th>품명</th><th>오더 · 규격</th><th class="r">수량</th><th class="r">단가</th><th class="r">공급가액</th><th class="r">부가세</th><th class="r">총액</th><th>비고</th><th>구분</th></tr></thead><tbody>
@@ -131,7 +131,8 @@ async function blXlsx(key){const v=blView(key),P=blParty(),dest=v.b.dest||v.clie
  try{const p=await A.billXlsx(d,`청구내역서_${v.ym}_${v.client.replace(/[\\/:*?"<>|]/g,'_')}.xlsx`);if(p)toast('엑셀 저장: '+p)}catch(e){uiAlert('내보내기 실패: '+(e.message||e))}}
 function blData(key){const v=blView(key),P=blParty(),dest=v.b.dest||v.client;return {v,d:{title:`${+v.ym.slice(5)}월 청구내역서`,client:v.client,issue:blIssue(v),lines:v.lines.map(l=>({item:l.item,spec:l.spec,qty:+l.qty||0,price:l.vat==='inc'?null:+l.price||0,sup:l.c.sup,vat:l.c.vat,tot:l.c.tot,memo:l.vat==='inc'?[l.memo,'VAT 포함'].filter(Boolean).join(' · '):l.memo})),T:v.T,
   ships:v.ships.map(s=>({item:s.item,date:s.date,qty:+s.qty||0,from:P.name,dest,memo:s.memo})),party:P}}}
-async function blPDF(key){const {v,d}=blData(key),n=x=>x||x===0?(+x).toLocaleString('ko-KR'):'',P=d.party;
+// 청구내역서 문서(HTML) — PDF 저장과 미리보기가 같은 것을 씀
+function blDoc(key){const {v,d}=blData(key),n=x=>x||x===0?(+x).toLocaleString('ko-KR'):'',P=d.party;
  const body=`<h1>${pE(d.title)}</h1><div class="meta"><b>${pE(d.client)} 귀하</b><span>세금계산서 발행 일자: ${pE(d.issue)}</span></div>
  <h3>1. 청구 내역</h3><table><colgroup><col style="width:26%"><col style="width:11%"><col style="width:10%"><col style="width:13%"><col style="width:11%"><col style="width:13%"><col></colgroup><thead><tr><th>품명</th><th>수량(YD)</th><th>단가</th><th>공급가액</th><th>부가세</th><th>총액</th><th>비고</th></tr></thead><tbody>
  ${d.lines.map(l=>`<tr><td>${pE(l.item+(l.spec?' ('+l.spec+')':''))}</td><td class="r">${l.qty?n(l.qty):''}</td><td class="r">${l.price?n(l.price):''}</td><td class="r">${n(l.sup)}</td><td class="r">${n(l.vat)}</td><td class="r">${n(l.tot)}</td><td>${pE(l.memo)}</td></tr>`).join('')}
@@ -140,7 +141,9 @@ async function blPDF(key){const {v,d}=blData(key),n=x=>x||x===0?(+x).toLocaleStr
  ${d.ships.map(s=>`<tr><td>${pE(s.item)}</td><td class="c">${pE(s.date)}</td><td class="r">${n(s.qty)}</td><td class="c">${pE(s.from)}</td><td>${pE(s.dest)}</td><td>${pE(s.memo)}</td></tr>`).join('')}
  <tr class="t"><td class="c">합 계</td><td></td><td class="r">${n(d.ships.reduce((a,s)=>a+s.qty,0))}</td><td></td><td></td><td></td></tr></tbody></table>
  <table class="ft"><tr><td>은 행:</td><td>${pE(P.bank)}</td></tr><tr><td>예 금 주:</td><td>${pE(P.holder)}</td></tr><tr><td>계좌번호:</td><td>${pE(P.account)}</td></tr><tr><td>&nbsp;</td><td></td></tr><tr><td>주 소:</td><td>${pE(P.addr)}</td></tr><tr><td>청 구 인:</td><td>${pE(P.name)}</td></tr><tr><td>대 표:</td><td>${pE(P.ceo)}  (인)</td></tr></table>`;
- await pdfSave(pdfDoc(body,false),`청구내역서_${v.ym}_${v.client.replace(/[\\/:*?"<>|]/g,'_')}.pdf`)}
+ return {html:pdfDoc(body,false),name:`청구내역서_${v.ym}_${v.client.replace(/[\\/:*?"<>|]/g,'_')}`}}
+async function blPDF(key){const r=blDoc(key);await pdfSave(r.html,r.name+'.pdf')}
+async function blPreview(key){const r=blDoc(key);await pdfPreview(r.html,r.name)}
 // 설정
 function blSettings(){const el=$('bl_card');if(!el)return;const s=typeof defSup==='function'&&defSup()||{},ph={name:s.name,ceo:s.ceo,addr:s.addr};
  el.innerHTML=`<h2>청구서 정보</h2><div class="blform blset">${BL_INFO.map(([k,t])=>`<label class="${k==='addr'?'w':''}">${t}<input id="bls_${k}" value="${esc(billInfo[k]||'')}" placeholder="${esc(ph[k]||'')}" onchange="billInfo['${k}']=this.value.trim();save()"></label>`).join('')}</div>`}

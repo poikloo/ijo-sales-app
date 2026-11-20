@@ -8,6 +8,7 @@ td.r{text-align:right}td.c{text-align:center}tr.t td{background:#f2f2f2;font-wei
 const pdfDoc=(body,land)=>`<!doctype html><html><head><meta charset="utf-8"><style>${PDF_CSS.replace('__O',land?'landscape':'portrait')}</style></head><body>${body}</body></html>`;
 const pE=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function pdfSave(html,name){if(!A.htmlPDF)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');try{const p=await A.htmlPDF(html,name);if(p)toast('PDF 저장: '+p)}catch(e){uiAlert('PDF 저장 실패: '+(e.message||e))}}
+async function pdfPreview(html,name){if(!A.htmlPreview)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');try{await A.htmlPreview(html,name)}catch(e){uiAlert('미리보기 실패: '+(e.message||e))}}
 // 화면에 보이는(필터된) 표 읽기
 function pdfGrab(tb){const t=$(tb)&&$(tb).closest('table');if(!t)return null;const ths=[...t.querySelectorAll('thead th')],keep=ths.map((h,i)=>h.innerText.trim()?i:-1).filter(i=>i>=0);
  const rows=[...t.querySelectorAll('tbody tr')].filter(r=>r.offsetParent!==null||!r.closest('.page:not(.on)')).map(r=>[...r.children]).filter(c=>c.length>=keep.length&&!(c.length===1)).map(c=>keep.map(i=>c[i]?c[i].dataset.x!=null?c[i].dataset.x:c[i].innerText.replace(/\s*\n\s*/g,' ').trim():''));
