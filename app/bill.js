@@ -11,9 +11,11 @@ const blNk=s=>String(s||'').replace(/\s+/g,'').toLowerCase();
 const blCurYm=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
 function blNormLine(l){l=l&&typeof l==='object'?l:{};const n=k=>{const v=+String(l[k]==null?'':l[k]).replace(/,/g,'');return isFinite(v)?v:0};
  return {id:String(l.id||uid()),src:l.src==='auto'?'auto':'manual',ref:String(l.ref||''),edited:!!l.edited,removed:!!l.removed,date:/^\d{4}-\d{2}-\d{2}$/.test(l.date||'')?l.date:'',
-  item:String(l.item||''),spec:String(l.spec||''),orderNo:String(l.orderNo||''),qty:n('qty'),price:n('price'),vat:l.vat==='inc'?'inc':'ex',total:n('total'),memo:String(l.memo||''),autoQty:n('autoQty'),autoPrice:n('autoPrice')}}
+  item:String(l.item||''),spec:String(l.spec||''),orderNo:String(l.orderNo||''),qty:n('qty'),price:n('price'),vat:l.vat==='inc'?'inc':'ex',total:n('total'),memo:String(l.memo||''),autoQty:n('autoQty'),autoPrice:n('autoPrice'),...(l.sFrom?{sFrom:String(l.sFrom)}:{}),...(l.sDest?{sDest:String(l.sDest)}:{}),...(l.sMemo?{sMemo:String(l.sMemo)}:{})}}
+// 청구서 전용 출고 줄 (오더 없는 출고 · 수동 청구서): 청구 내역에는 영향 없음, 출고 내역에만 표시
+function blNormShip(x){x=x&&typeof x==='object'?x:{};return {id:String(x.id||uid()),date:/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')?x.date:'',item:String(x.item||''),orderNo:String(x.orderNo||''),qty:+x.qty||0,from:String(x.from||''),dest:String(x.dest||''),memo:String(x.memo||'')}}
 function blNormBill(b){b=b&&typeof b==='object'?b:{};const ym=/^\d{4}-\d{2}$/.test(b.ym||'')?b.ym:blCurYm(),client=String(b.client||'');return {id:String(b.id||blKey(ym,client)),label:String(b.label||'').trim(),own:(Array.isArray(b.own)?b.own:[]).map(String).filter(Boolean),created:String(b.created||''),ym,client,auto:b.auto!==false,manual:!!b.manual,locked:!!b.locked,lockedAt:String(b.lockedAt||''),
- issue:/^\d{4}-\d{2}-\d{2}$/.test(b.issue||'')?b.issue:'',dest:String(b.dest||''),memo:String(b.memo||''),lines:(Array.isArray(b.lines)?b.lines:[]).map(blNormLine),frozen:b.frozen&&typeof b.frozen==='object'?b.frozen:null}}
+ issue:/^\d{4}-\d{2}-\d{2}$/.test(b.issue||'')?b.issue:'',dest:String(b.dest||''),memo:String(b.memo||''),lines:(Array.isArray(b.lines)?b.lines:[]).map(blNormLine),ships:(Array.isArray(b.ships)?b.ships:[]).map(blNormShip),frozen:b.frozen&&typeof b.frozen==='object'?b.frozen:null}}
 function blLoad(r){const o=r&&!Array.isArray(r)&&r.bills&&typeof r.bills==='object'?r.bills:{};bills={};
  // 예전 데이터(키 '월|거래처', id 없음) → id = 키 그대로(기본 청구서). id가 그 달·거래처와 안 맞거나 겹치면 안전하게 다시 매김
  Object.entries(o).forEach(([k,x])=>{if(!x||typeof x!=='object')return;const b=blNormBill({...x,id:x.id||k});if(!b.client)return;const P=blKey(b.ym,b.client);
@@ -34,7 +36,7 @@ function blSpec(o){return [...new Set((o.lines||[]).map(l=>l.color).filter(Boole
 function blSlYm(x,o){if(blDate(x.date))return x.date.slice(0,7);const d=o?finalShips(o).map(s=>blDate(s.date)).filter(Boolean).sort().pop():'';return d?d.slice(0,7):''}
 function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
  orders.forEach(o=>{if(!o.client)return;const sh=finalShips(o).filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty),k=blNk(o.no);if(k)ON.add(k);
-  const SH=sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||''})).sort((a,b)=>a.date.localeCompare(b.date));
+  const SH=sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||'',from:s.from||'',dest:s.dest||'',oid:o.id})).sort((a,b)=>a.date.localeCompare(b.date));
   const S=k?sales.filter(x=>blNk(x.orderNo)===k):[];
   if(S.length){const M=S.filter(x=>blSlYm(x,o)===ym);M.forEach((x,i)=>add(o.client,{ref:S.length===1?o.id:o.id+'|'+x.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:i?[]:SH}));
    if(!M.length&&SH.length)add(o.client,{ref:o.id,shipOnly:1,ships:SH});return}
@@ -64,7 +66,8 @@ function blView(key,A0){const b=blBill(key),ym=b.ym,client=b.client,Am=A0||blAut
    let L;if(s&&s.edited){L={...s,badge:'m',auto:a};if(s.autoQty!==a.qty||s.autoPrice!==a.price)L.changed=true}else L={id:'a_'+a.ref,src:'auto',ref:a.ref,item:a.item,spec:a.spec,qty:a.qty,price:a.price,vat:'ex',total:0,memo:'',badge:a.sl?'s':'a',auto:a,priceSrc:a.priceSrc,sample:a.sample};
    L.orderNo=a.orderNo;lines.push(L);ships.push(...a.ships)});
   b.lines.filter(l=>b.auto&&l.src==='auto'&&!l.removed&&!auto.some(a=>!a.shipOnly&&a.ref===l.ref)).forEach(l=>lines.push({...l,badge:'m',gone:true}));
-  b.lines.filter(l=>l.src==='manual').forEach(l=>{lines.push({...l,badge:'u'});if(l.date&&l.qty)ships.push({id:'m_'+l.id,date:l.date,qty:l.qty,item:l.item,orderNo:l.orderNo||'',memo:''})});
+  b.lines.filter(l=>l.src==='manual').forEach(l=>{lines.push({...l,badge:'u'});if(l.date&&l.qty)ships.push({id:'m_'+l.id,date:l.date,qty:l.qty,item:l.item,orderNo:l.orderNo||'',memo:l.sMemo||'',from:l.sFrom||'',dest:l.sDest||''})});
+  (b.ships||[]).forEach(x=>ships.push({...x,bo:1}));
   lines.forEach(l=>{l.c=blCalc(l);if(l.vat==='ex'&&l.qty&&!l.price&&!l.sample)warn.push({t:`단가 없음: ${l.item}`,c:'wn'});if(l.changed)warn.push({t:`자동 값 바뀜 (수정한 줄): ${l.item}`,c:'wn2'})});
   ships.sort((a,b)=>a.date.localeCompare(b.date))}
  lines.forEach(l=>{if(!l.c)l.c=blCalc(l)});
@@ -78,7 +81,7 @@ const blYmTxt=ym=>ym?`${ym.slice(0,4)}년 ${+ym.slice(5)}월`:'';
 function blShift(d){const [y,m]=blYm.split('-').map(Number),t=new Date(y,m-1+d,1);blYm=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0');blSel=null;render()}
 const BL_BD={a:'<span class="blbd a">자동</span>',s:'<span class="blbd s">매출 연동</span>',m:'<span class="blbd m">수정됨</span>',u:'<span class="blbd u">수동</span>'};
 function renderBill(){if(!blYm)blYm=blCurYm();const el=$('blv');if(!el)return;if(blSel&&!(bills[blSel]||blMonth(blSel.slice(0,7)).some(v=>v.key===blSel)))blSel=null;
- if(blSel)blChkSync(blSel);el.innerHTML=blSel?blDetailHTML(blView(blSel)):blListHTML();if(blSel)blSelBar(blSel);if(typeof crInit==='function')crInit()}
+ if(blSel)blChkSync(blSel);el.innerHTML=blSel?blDetailHTML(blView(blSel)):blListHTML();if(blSel){blSelBar(blSel);blShBar(blSel)}if(typeof crInit==='function')crInit()}
 // 같은 달 · 같은 거래처 청구서가 여러 장이면 위에 탭처럼 보여 줌
 function blGroupBar(v){const G=blGroup(v.ym,v.client);if(G.length<2)return '';return `<div class="blgrp"><span class="muted">${+v.ym.slice(5)}월 ${esc(v.client)} 청구서 ${G.length}장</span>${G.map(b=>{const x=blView(b.id);return `<button class="${b.id===v.key?'on':''}" onclick="blOpen('${esc(b.id)}')">${esc(b.label||(blIsPrim(b)?'기본':'나눔'))} · ₩${blWon(x.T.tot)}${b.locked?' ✓':''}</button>`}).join('')}</div>`}
 function blListHTML(){const L=blMonth(blYm),_p=new Set(L.map(v=>v.key));[...blLs].forEach(k=>{if(!_p.has(k))blLs.delete(k)});const _n=blLs.size,k=blNk(blF.k),l=L.filter(v=>(!blF.st||v.status===blF.st)&&(!k||blNk([v.client,...v.lines.map(x=>x.item+' '+(x.orderNo||''))].join(' ')).includes(k))),
@@ -100,7 +103,7 @@ const blLsViews=()=>blMonth(blYm).filter(v=>blLs.has(v.key));
 // 복사: 고른 청구서마다 같은 달·거래처에 새 수동 청구서(자동 줄 꺼짐 · 미청구). 줄은 보이는 그대로 수동 줄로, 발행 일자·도착지·비고도 복사. 구분명 '<원래 구분명>-복사'(겹치면 -복사2 …)
 function blCopyCore(v){const used=new Set(blGroup(v.ym,v.client).map(b=>blLabel(b))),base=(v.label||'기본')+'-복사';let lb=base,k=2;while(used.has(lb))lb=base+(k++);
  const b=blNewSplit(v.ym,v.client,lb,v.b);b.auto=false;b.manual=true;b.memo=v.b.memo;
- b.lines=v.lines.map(l=>blNormLine({src:'manual',item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,date:l.src==='manual'?l.date:''}));return b}
+ b.lines=v.lines.map(l=>blNormLine({src:'manual',item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,date:l.src==='manual'?l.date:'',sFrom:l.src==='manual'?l.sFrom:'',sDest:l.src==='manual'?l.sDest:'',sMemo:l.src==='manual'?l.sMemo:''}));b.ships=(v.b.ships||[]).map(x=>blNormShip({...x,id:''}));return b}
 function blBulkCopy(){const V=blLsViews();if(!V.length)return;V.forEach(blCopyCore);blLs.clear();save();render();toast(`${V.length}건을 복사했습니다`)}
 // 삭제: 확인 창([삭제] 왼쪽 · [취소] 오른쪽). 청구완료 · 줄 있음 · 다시 생기는 자동 줄을 알려 줌. 한 번 저장 → Ctrl+Z 한 번으로 되돌림
 async function blBulkDel(){const V=blLsViews();if(!V.length)return;
@@ -118,15 +121,15 @@ async function blBulkDel(){const V=blLsViews();if(!V.length)return;
 function blOpen(key){blYm=key.slice(0,7);blSel=key;if(page!=='bill')go('bill');else render()}
 function blDetailHTML(v){const lk=v.b.locked,P=blParty(),dest=v.b.dest||v.client;
  return `<div class="blhd"><button data-back onclick="blSel=null;render()">‹ 목록</button><h2>${+v.ym.slice(5)}월 청구내역서 · ${esc(v.client)}</h2>${v.label||blGroup(v.ym,v.client).length>1?`<span class="bllb${v.prim?' p':''}">${esc(v.label||'기본')}</span>`:''}${lk?'<span class="blst d">청구완료</span>':'<span class="blst n">미청구</span>'}${v.b.auto?'':'<span class="blst e" title="이 청구서에는 자동 줄이 들어오지 않아요 (수동 줄만)">수동 청구서</span>'}<span style="flex:1"></span>
- ${lk?`<button onclick="blUnlock('${esc(v.key)}')">잠금 해제</button>`:`<button onclick="blLine('${esc(v.key)}','')">+ 줄 추가</button><button onclick="blInfo('${esc(v.key)}')">수정</button>`}${v.prim?'':`<button onclick="blMergeUi('${esc(v.key)}')" title="이 청구서의 줄을 모두 다른 청구서로 합치고 이 청구서는 없앱니다">합치기</button>`}<button onclick="blPreview('${esc(v.key)}')">미리보기</button><button onclick="blXlsx('${esc(v.key)}')">엑셀 저장</button><button onclick="blPDF('${esc(v.key)}')">PDF 저장</button>${lk?'':`<button class="p" onclick="blLock('${esc(v.key)}')">청구완료</button>`}</div>
+ ${lk?`<button onclick="blUnlock('${esc(v.key)}')">잠금 해제</button>`:`<button onclick="blInfo('${esc(v.key)}')">청구서 수정</button>`}${v.prim?'':`<button onclick="blMergeUi('${esc(v.key)}')" title="이 청구서의 줄을 모두 다른 청구서로 합치고 이 청구서는 없앱니다">합치기</button>`}<button onclick="blPreview('${esc(v.key)}')">미리보기</button><button onclick="blXlsx('${esc(v.key)}')">엑셀 저장</button><button onclick="blPDF('${esc(v.key)}')">PDF 저장</button>${lk?'':`<button class="p" onclick="blLock('${esc(v.key)}')">청구완료</button>`}</div>
  ${v.warn.length?`<div class="blalert">${v.warn.map(w=>`<span class="${w.c}">⚠ ${esc(w.t)}</span>`).join('')}</div>`:''}
  ${blGroupBar(v)}<div class="card"><div class="blmeta"><span>세금계산서 발행 일자 <b>${esc(blIssue(v))}</b></span><span>도착지 <b>${esc(dest)}</b></span>${v.b.memo?`<span>비고 <b>${esc(v.b.memo)}</b></span>`:''}</div>
- <h3 class="blh3">1. 청구 내역<span id="blselbar" class="blselbar"></span></h3><div class="tw"><table class="blt" data-rz="bill_lines3"><colgroup><col style="width:34px"><col style="width:200px"><col style="width:120px"><col style="width:80px"><col style="width:90px"><col style="width:110px"><col style="width:100px"><col style="width:120px"><col style="width:150px"><col style="width:130px"></colgroup><thead><tr><th class="c"><input type="checkbox" title="모두 선택" onclick="event.stopPropagation();blTickAll('${esc(v.key)}',this.checked)"${v.lines.length&&v.lines.every(l=>blChk.has(l.id))?' checked':''}></th><th>품명</th><th>오더 · 규격</th><th class="r">수량</th><th class="r">단가</th><th class="r">공급가액</th><th class="r">부가세</th><th class="r">총액</th><th>비고</th><th>구분</th></tr></thead><tbody>
- ${v.lines.map(l=>`<tr class="r" ${lk?'':`onclick="blLine('${esc(v.key)}','${esc(l.id)}')"`}><td class="c" onclick="event.stopPropagation()"><input type="checkbox" data-id="${esc(l.id)}" onchange="blTick('${esc(v.key)}',this.dataset.id,this.checked)"${blChk.has(l.id)?' checked':''}></td><td><b>${esc(l.item)}</b></td><td class="muted">${esc([l.orderNo,l.spec].filter(Boolean).join(' · '))}</td><td class="r${+l.qty<0?' neg':''}">${(+l.qty||0).toLocaleString('ko-KR')}</td><td class="r">${l.vat==='inc'?'<small class="muted">VAT 포함</small>':l.price?'₩'+blWon(l.price):l.sample?'<small class="muted">샘플</small>':'<span class="wn">없음</span>'}</td><td class="r">${blWon(l.c.sup)}</td><td class="r">${blWon(l.c.vat)}</td><td class="r"><b>${blWon(l.c.tot)}</b></td><td>${esc(l.memo)}</td><td>${BL_BD[l.badge]||''}${l.priceSrc==='오더 단가'?' <small class="muted">오더 단가</small>':''}${!lk?` <button class="blrb" onclick="event.stopPropagation();blLine('${esc(v.key)}','${esc(l.id)}')">수정</button>`:''}</td></tr>`).join('')||'<tr><td colspan="10" class="muted">청구 줄이 없습니다.</td></tr>'}
+ <h3 class="blh3">1. 청구 내역<span id="blselbar" class="blselbar"></span><span style="flex:1"></span><span class="blsec" id="bl_lbtn"></span></h3><div class="tw"><table class="blt" data-rz="bill_lines3"><colgroup><col style="width:34px"><col style="width:200px"><col style="width:120px"><col style="width:80px"><col style="width:90px"><col style="width:110px"><col style="width:100px"><col style="width:120px"><col style="width:150px"><col style="width:130px"></colgroup><thead><tr><th class="c"><input type="checkbox" title="모두 선택" onclick="event.stopPropagation();blTickAll('${esc(v.key)}',this.checked)"${v.lines.length&&v.lines.every(l=>blChk.has(l.id))?' checked':''}></th><th>품명</th><th>오더 · 규격</th><th class="r">수량</th><th class="r">단가</th><th class="r">공급가액</th><th class="r">부가세</th><th class="r">총액</th><th>비고</th><th>구분</th></tr></thead><tbody>
+ ${v.lines.map(l=>`<tr><td class="c"><input type="checkbox" data-id="${esc(l.id)}" onchange="blTick('${esc(v.key)}',this.dataset.id,this.checked)"${blChk.has(l.id)?' checked':''}></td><td><b>${esc(l.item)}</b></td><td class="muted">${esc([l.orderNo,l.spec].filter(Boolean).join(' · '))}</td><td class="r${+l.qty<0?' neg':''}">${(+l.qty||0).toLocaleString('ko-KR')}</td><td class="r">${l.vat==='inc'?'<small class="muted">VAT 포함</small>':l.price?'₩'+blWon(l.price):l.sample?'<small class="muted">샘플</small>':'<span class="wn">없음</span>'}</td><td class="r">${blWon(l.c.sup)}</td><td class="r">${blWon(l.c.vat)}</td><td class="r"><b>${blWon(l.c.tot)}</b></td><td>${esc(l.memo)}</td><td>${BL_BD[l.badge]||''}${l.priceSrc==='오더 단가'?' <small class="muted">오더 단가</small>':''}</td></tr>`).join('')||'<tr><td colspan="10" class="muted">청구 줄이 없습니다.</td></tr>'}
  <tr class="bltot"><td></td><td>합 계</td><td></td><td class="r">${v.T.qty.toLocaleString('ko-KR')}</td><td></td><td class="r">${blWon(v.T.sup)}</td><td class="r">${blWon(v.T.vat)}</td><td class="r">₩${blWon(v.T.tot)}</td><td></td><td></td></tr></tbody></table></div></div>
- <div class="card"><h3>2. 출고 내역</h3><div class="tw"><table class="blt" data-rz="bill_ships"><colgroup><col style="width:240px"><col style="width:110px"><col style="width:110px"><col style="width:100px"><col style="width:180px"><col style="width:180px"><col></colgroup><thead><tr><th>품명</th><th>일자</th><th>오더</th><th class="r">수량</th><th>출고처</th><th>도착지</th><th>비고</th></tr></thead><tbody>
- ${v.ships.map(s=>`<tr><td>${esc(s.item)}</td><td>${esc(s.date)}</td><td>${esc(s.orderNo)}</td><td class="r">${(+s.qty||0).toLocaleString('ko-KR')}</td><td>${esc(P.name)}</td><td>${esc(dest)}</td><td>${esc(s.memo)}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">출고 내역이 없습니다.</td></tr>'}
- <tr class="bltot"><td>합 계</td><td></td><td></td><td class="r">${v.ships.reduce((a,s)=>a+(+s.qty||0),0).toLocaleString('ko-KR')}</td><td></td><td></td><td></td></tr></tbody></table></div></div>`}
+ <div class="card"><h3 class="blh3">2. 출고 내역<span class="muted" style="font-size:12px;font-weight:normal">생산 관리 최종 납품 · 수동 줄 일자 · 청구서 전용 출고</span><span style="flex:1"></span><span class="blsec" id="bl_sbtn"></span></h3><div class="tw"><table class="blt" data-rz="bill_ships2"><colgroup><col style="width:34px"><col style="width:220px"><col style="width:110px"><col style="width:110px"><col style="width:100px"><col style="width:170px"><col style="width:170px"><col></colgroup><thead><tr><th class="c"><input type="checkbox" id="bl_sall" title="모두 선택" onclick="event.stopPropagation();blShTickAll('${esc(v.key)}',this.checked)"${v.ships.length&&v.ships.every(s=>blSChk.has(s.id))?' checked':''}></th><th>품명</th><th>일자</th><th>오더</th><th class="r">수량</th><th>출고처</th><th>도착지</th><th>비고</th></tr></thead><tbody id="bl_stb">
+ ${v.ships.map(s=>`<tr><td class="c"><input type="checkbox" data-id="${esc(s.id)}" onchange="blShTick('${esc(v.key)}',this.dataset.id,this.checked)"${blSChk.has(s.id)?' checked':''}></td><td>${esc(s.item)}${s.bo?' <span class="blbd u" title="청구서에만 저장된 출고 (생산 관리에 없음)">청구서 전용</span>':''}</td><td>${esc(s.date)}</td><td>${esc(s.orderNo)}</td><td class="r">${(+s.qty||0).toLocaleString('ko-KR')}</td><td>${esc(s.from||P.name)}</td><td>${esc(s.dest||dest)}</td><td>${esc(s.memo)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">출고 내역이 없습니다.</td></tr>'}
+ <tr class="bltot"><td></td><td>합 계</td><td></td><td></td><td class="r">${v.ships.reduce((a,s)=>a+(+s.qty||0),0).toLocaleString('ko-KR')}</td><td></td><td></td><td></td></tr></tbody></table></div></div>`}
 function blIssue(v){if(v.b.issue)return v.b.issue;const [y,m]=v.ym.split('-').map(Number);return ymd(new Date(y,m,0))}
 function blGet(key){if(!bills[key])bills[key]=blBill(key);return bills[key]}
 // 새 청구서
@@ -150,8 +153,8 @@ async function blInfoOk(key){const v=blView(key),ym=$('bli_ym').value,au=$('bli_
  save();blSel=k;if(ym!==v.ym)blYm=ym;render();if(ym!==v.ym)toast(`${blYmTxt(ym)}로 옮겼어요`)}
 async function blDel(key,n){const b=bills[key];if(b&&b.auto&&!blIsPrim(b)&&blView(key).lines.some(l=>l.src==='auto')){dlg.close();return blMergeUi(key)}if(!await uiConfirm(n?`이 청구서를 줄 ${n}개와 함께 삭제할까요?`:'이 청구서를 삭제할까요?'))return;delete bills[key];blSel=null;save();dlg.close();render()}
 // 줄 추가 / 수정
-function blLine(key,id){const v=blView(key);if(v.b.locked)return;const l=id?v.lines.find(x=>x.id===id):null;if(id&&!l)return;
- const x=l?{...l}:blNormLine({src:'manual'});blDraft={key,id,src:x.src,ref:x.ref,auto:l&&l.auto};const man=x.src==='manual';
+function blLine(key,id,force,ref){const lk0=blBill(key).locked;if(lk0&&!force)return;const v=lk0?blViewLive(key):blView(key);const l=id?v.lines.find(x=>x.id===id)||(ref&&v.lines.find(x=>x.src==='auto'&&x.ref===ref)):null;if(id&&!l)return;if(l)id=l.id;
+ const x=l?{...l}:blNormLine({src:'manual'});blDraft={key,id,src:x.src,ref:x.ref,auto:l&&l.auto,unlock:lk0};const man=x.src==='manual';
  $('dt').innerHTML=(l?'청구 줄 수정 ':'청구 줄 추가 ')+(l?BL_BD[l.badge]:BL_BD.u);
  $('dbody').innerHTML=`<div class="blform">${man?`<label>일자 (선택 · 넣으면 출고 내역에도 표시)<input id="bll_date" type="date" value="${esc(x.date)}"></label><label>오더번호 (선택)<input id="bll_ono" value="${esc(x.orderNo||'')}"></label>`:''}<label class="${man?'':'w'}">품명<input id="bll_item" value="${esc(x.item)}"></label>
  <label>규격<input id="bll_spec" value="${esc(x.spec)}"></label><label>부가세<select id="bll_vat" onchange="blCalcUi()"><option value="ex"${x.vat==='ex'?' selected':''}>별도 (10%)</option><option value="inc"${x.vat==='inc'?' selected':''}>포함 금액</option></select></label>
@@ -162,15 +165,15 @@ function blLine(key,id){const v=blView(key);if(v.b.locked)return;const l=id?v.li
 const blNum=id=>{const v=+String($(id).value).replace(/[,\s원₩]/g,'');return isFinite(v)?v:NaN};
 function blCalcUi(){const inc=$('bll_vat').value==='inc';document.querySelectorAll('.blform .blex').forEach(e=>e.style.display=inc?'none':'');document.querySelectorAll('.blform .blinc').forEach(e=>e.style.display=inc?'':'none');
  const c=blCalc({vat:inc?'inc':'ex',qty:blNum('bll_qty')||0,price:blNum('bll_price')||0,total:blNum('bll_total')||0});$('bll_calc').innerHTML=`<span>공급가액 ${blWon(c.sup)}</span><span>부가세 ${blWon(c.vat)}</span><b>총액 ₩${blWon(c.tot)}</b>`}
-function blLineOk(){const d=blDraft,b=blGet(d.key),q=blNum('bll_qty'),p=blNum('bll_price'),t=blNum('bll_total'),vat=$('bll_vat').value;
+function blLineOk(){blDraftUnlock();const d=blDraft,b=blGet(d.key),q=blNum('bll_qty'),p=blNum('bll_price'),t=blNum('bll_total'),vat=$('bll_vat').value;
  if([q,p,t].some(isNaN))return uiAlert('숫자를 확인하세요.');const item=$('bll_item').value.trim();if(!item)return uiAlert('품명을 입력하세요.');if(vat==='inc'&&!t)return uiAlert('총액을 입력하세요.');
  const o={item,spec:$('bll_spec').value.trim(),qty:q,price:vat==='inc'?0:p,vat,total:vat==='inc'?t:0,memo:$('bll_memo').value.trim()};
  if(d.src==='manual'){o.date=$('bll_date').value;o.orderNo=$('bll_ono').value.trim();const i=b.lines.findIndex(l=>l.id===d.id);if(i>=0)b.lines[i]=blNormLine({...b.lines[i],...o});else b.lines.push(blNormLine({...o,src:'manual'}))}
  else{b.lines=b.lines.filter(l=>!(l.src==='auto'&&l.ref===d.ref));b.lines.push(blNormLine({...o,src:'auto',ref:d.ref,edited:true,autoQty:d.auto?d.auto.qty:0,autoPrice:d.auto?d.auto.price:0}))}
  save();dlg.close();render()}
-function blLineReset(){const d=blDraft,b=blGet(d.key);b.lines=b.lines.filter(l=>!(l.src==='auto'&&l.ref===d.ref));save();dlg.close();render()}
-async function blLineRemove(){const d=blDraft;if(!await uiConfirm('이 줄을 청구서에서 뺄까요? (누락 경고로 계속 표시됩니다)'))return;const b=blGet(d.key);b.lines=b.lines.filter(l=>!(l.src==='auto'&&l.ref===d.ref));b.lines.push(blNormLine({src:'auto',ref:d.ref,removed:true}));save();dlg.close();render()}
-async function blLineDel(){const d=blDraft;if(!await uiConfirm('이 줄을 삭제할까요?'))return;const b=blGet(d.key);b.lines=b.lines.filter(l=>l.id!==d.id);save();dlg.close();render()}
+function blLineReset(){blDraftUnlock();const d=blDraft,b=blGet(d.key);b.lines=b.lines.filter(l=>!(l.src==='auto'&&l.ref===d.ref));save();dlg.close();render()}
+async function blLineRemove(){const d=blDraft;if(!await uiConfirm('이 줄을 청구서에서 뺄까요? (누락 경고로 계속 표시됩니다)'))return;blDraftUnlock();const b=blGet(d.key);b.lines=b.lines.filter(l=>!(l.src==='auto'&&l.ref===d.ref));b.lines.push(blNormLine({src:'auto',ref:d.ref,removed:true}));save();dlg.close();render()}
+async function blLineDel(){const d=blDraft;if(!await uiConfirm('이 줄을 삭제할까요?'))return;blDraftUnlock();const b=blGet(d.key);b.lines=b.lines.filter(l=>l.id!==d.id);save();dlg.close();render()}
 // ---- 나누기 · 옮기기 · 합치기 (공용 핵심: 저장은 부르는 쪽에서 한 번 → Ctrl+Z 한 번으로 되돌림) ----
 // 자동 줄은 ref 소속(own[])만 옮기고, 그 줄의 수정/뺀 기록(b.lines의 auto 줄)도 함께 옮김. 수동 줄은 줄 자체를 옮김
 function blOwnNow(key){const b=bills[key],v=blView(key);if(!b||blIsPrim(b))return [];const A=(blAuto(v.ym)[v.client]||[]).filter(a=>blOwner(v.ym,v.client,a.ref)===key).map(a=>a.ref);
@@ -184,7 +187,7 @@ function blMoveCore(fromKey,toKey,sel){if(fromKey===toKey||!sel.length)return 0;
 function blNewSplit(ym,c,label,from){const P=blKey(ym,c),b=blNormBill({id:P+'#'+uid(),ym,client:c,label,created:new Date().toISOString()});if(from){b.dest=from.dest;b.issue=from.issue}bills[b.id]=b;return b}
 function blSplitCore(fromKey,sel,label){const F=blGet(fromKey),b=blNewSplit(F.ym,F.client,label,F);blMoveCore(fromKey,b.id,sel);return b}
 function blMergeCore(key,intoKey){const b=bills[key];if(!b||blIsPrim(b))throw new Error('기본 청구서는 합칠 수 없습니다 (나눈 청구서를 기본 청구서로 합치세요)');const into=intoKey||blKey(b.ym,b.client);
- const v=blView(key);blMoveCore(key,into,v.lines);const T=blGet(into),rest=b.lines.filter(l=>l.src==='auto'&&!T.lines.some(x=>x.src==='auto'&&x.ref===l.ref));T.lines.push(...rest);if(!blIsPrim(T))rest.forEach(l=>{if(!T.own.includes(l.ref))T.own.push(l.ref)});delete bills[key];return into}
+ const v=blView(key);blMoveCore(key,into,v.lines);const T=blGet(into),rest=b.lines.filter(l=>l.src==='auto'&&!T.lines.some(x=>x.src==='auto'&&x.ref===l.ref));T.lines.push(...rest);if(!blIsPrim(T))rest.forEach(l=>{if(!T.own.includes(l.ref))T.own.push(l.ref)});T.ships=[...(T.ships||[]),...(b.ships||[])];delete bills[key];return into}
 // ---- 수동 줄 · 자동 줄 끄기 · 청구 월 옮기기 · 삭제 (공용 핵심, 저장은 부르는 쪽에서) ----
 // 잠긴(청구완료) 청구서: 고정본(frozen)의 자동 줄은 그대로 두고 수동 줄만 b.lines 기준으로 다시 맞춤 → 잠금은 유지
 const blFz=l=>({id:l.id,src:l.src,ref:l.ref||'',orderNo:l.orderNo||'',item:l.item,spec:l.spec,qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,date:l.date||'',badge:l.badge||(l.src==='manual'?'u':'a'),c:blCalc(l)});
@@ -205,12 +208,12 @@ function blSetMonth(key,ym,convert){const b=blGet(key);if(!/^\d{4}-\d{2}$/.test(
  blDropAuto(b,!!convert);blRefreeze(b);const P=blKey(ym,b.client);delete bills[key];b.ym=ym;b.id=b.auto&&!bills[P]?P:P+'#'+uid();if(!b.created)b.created=new Date().toISOString();bills[b.id]=b;return b.id}
 function blRemoveCore(key){if(!bills[key])return false;delete bills[key];return true}
 // 화면: 줄 고르기 → 나누기 / 옮기기 / 합치기
-let blChk=new Set(),blChkKey='';
-function blChkSync(key){if(blChkKey!==key){blChk=new Set();blChkKey=key}}
+let blChk=new Set(),blSChk=new Set(),blChkKey='';
+function blChkSync(key){if(blChkKey!==key){blChk=new Set();blSChk=new Set();blChkKey=key}}
 function blTick(key,id,on){blChkSync(key);on?blChk.add(id):blChk.delete(id);blSelBar(key)}
 function blTickAll(key,on){blChkSync(key);const v=blView(key);blChk=new Set(on?v.lines.map(l=>l.id):[]);render()}
 function blSelBar(key){const el=$('blselbar');if(!el)return;const v=blView(key),n=v.lines.filter(l=>blChk.has(l.id)).length,g=blGroup(v.ym,v.client).length;
- el.innerHTML=n?`<b>${n}줄 선택</b><button onclick="blSplitUi('${esc(key)}')">나누기 (${n})</button>${g>1?`<button onclick="blMoveUi('${esc(key)}')">옮기기 (${n})</button>`:''}<button onclick="blTickAll('${esc(key)}',false)">선택 해제</button>`:'<span class="muted">줄을 골라 다른 청구서로 나누거나 옮길 수 있어요</span>'}
+ el.innerHTML=n?`<b>${n}줄 선택</b><button onclick="blSplitUi('${esc(key)}')">나누기 (${n})</button>${g>1?`<button onclick="blMoveUi('${esc(key)}')">옮기기 (${n})</button>`:''}`:'<span class="muted">줄을 골라 다른 청구서로 나누거나 옮길 수 있어요</span>';blSecBtns('l',key,n)}
 const blSelLines=key=>blView(key).lines.filter(l=>blChk.has(l.id)).map(l=>({id:l.id,src:l.src,ref:l.ref,item:l.item,orderNo:l.orderNo||'',qty:l.qty,tot:l.c.tot}));
 // 잠긴 청구서를 건드릴 때: 확인 후 잠금 해제
 async function blUnlockFor(keys,what){const L=[...new Set(keys)].map(k=>bills[k]).filter(b=>b&&b.locked);if(!L.length)return true;
@@ -232,6 +235,102 @@ async function blMergeUi(key){const b=bills[key];if(!b)return;const P=blKey(b.ym
  if(G.length>1){const c=await uiChoice('어느 청구서로 합칠까요?',G.map(x=>({t:x.label||(blIsPrim(x)?'기본 청구서':'나눔')})));if(c<0)return;into=G[c].id}
  else if(!await uiConfirm(`'${b.label||'나눔'}' 청구서의 줄을 모두 기본 청구서로 합치고 이 청구서는 없앨까요?`))return;
  if(!await blUnlockFor([key,into],'합치기'))return;blMergeCore(key,into);save();blSel=into;render();toast('청구서를 합쳤어요')}
+// ---- 청구 내역 · 출고 내역: 섹션 오른쪽 [추가] [수정] [복사 (N)] [삭제 (N)] — 동작마다 저장 한 번 → Ctrl+Z 한 번 ----
+// 잠긴(청구완료) 청구서: 먼저 확인을 받고(blLockAsk), 실제로 바꿀 때 잠금을 풂(blUnlockNow) → 취소하면 아무것도 안 바뀜
+function blViewLive(key){const b=bills[key];if(!b||!b.locked)return blView(key);const s=[b.locked,b.frozen];b.locked=false;b.frozen=null;try{return blView(key)}finally{b.locked=s[0];b.frozen=s[1]}}
+async function blLockAsk(key,what){const b=bills[key];if(!b||!b.locked)return true;return await uiConfirm(`이 청구서는 청구완료로 잠겨 있습니다.\n${what}하면 잠금이 풀리고 생산 관리 · 매출 관리의 현재 값으로 다시 계산됩니다. (다시 '청구완료'를 눌러 잠그세요)\n\n계속할까요?`)}
+function blUnlockNow(key){const b=bills[key];if(b&&b.locked){b.locked=false;b.frozen=null;b.lockedAt=''}}
+function blDraftUnlock(){const d=blDraft;if(d&&d.unlock){blUnlockNow(d.key);d.unlock=false}}
+function blSecBtns(kind,key,n){const el=$(kind==='l'?'bl_lbtn':'bl_sbtn');if(!el)return;const f=kind==='l'?'blLn':'blSh',k=esc(key);
+ el.innerHTML=`<button onclick="${f}Add('${k}')">추가</button><button onclick="${f}Edit('${k}')"${n===1?'':' disabled'} title="한 줄만 골랐을 때 수정">수정</button><button onclick="${f}Copy('${k}')"${n?'':' disabled'}>복사${n?` (${n})`:''}</button><button class="d" onclick="${f}Del('${k}')"${n?'':' disabled'}>삭제${n?` (${n})`:''}</button>`}
+const blTakeL=(key)=>blView(key).lines.filter(l=>blChk.has(l.id));
+// 청구 내역
+async function blLnAdd(key){if(!await blLockAsk(key,'줄을 추가'))return;blLine(key,'',true)}
+async function blLnEdit(key){const S=blTakeL(key);if(S.length!==1)return;if(!await blLockAsk(key,'줄을 수정'))return;blLine(key,S[0].id,true,S[0].ref)}
+async function blLnCopy(key){const S=blTakeL(key);if(!S.length)return;if(!await blLockAsk(key,'줄을 복사'))return;blUnlockNow(key);const b=blGet(key);
+ S.forEach(l=>b.lines.push(blNormLine({src:'manual',item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,date:l.src==='manual'?l.date:'',sFrom:l.sFrom,sDest:l.sDest,sMemo:l.sMemo})));
+ blChk=new Set();save();render();toast(`${S.length}줄을 수동 줄로 복사했어요${S.some(l=>l.src!=='manual')?' (자동 · 매출 연동 줄은 같은 값의 수동 줄로 — 같은 금액이 한 번 더 청구돼요)':''}`)}
+async function blLnDel(key){const S=blTakeL(key);if(!S.length)return;const lk=!!(bills[key]&&bills[key].locked);
+ const man=S.filter(l=>l.src==='manual'),au=S.filter(l=>l.src!=='manual'),sl=au.filter(l=>l.badge==='s'||(l.auto&&l.auto.sl)),gone=au.filter(l=>l.gone),L=[];
+ if(man.length)L.push(`· 수동 줄 ${man.length}개: 청구서에서 지워져요${man.some(l=>l.date&&l.qty)?' (일자가 있는 줄은 출고 내역에서도 빠져요)':''}`);
+ const live=au.length-gone.length;if(live)L.push(`· 자동 줄 ${live}개${sl.length?` (그중 매출 연동 ${sl.length}개)`:''}: 매출 관리 · 생산 관리(최종 납품) 데이터는 그대로 두고 이 청구서에서만 빼요.\n  매출 관리의 수량 · 단가 · 금액은 바뀌지 않고, 뺀 줄은 '청구서 미포함' 누락 경고로 계속 표시돼요. 그 출고도 출고 내역에서 빠져요.\n  매출 자체를 없애려면 매출 관리에서, 출고를 없애려면 생산 관리에서 지우세요.`);
+ if(gone.length)L.push(`· 원본이 없어진 수정 줄 ${gone.length}개: 저장된 수정 기록을 지워요`);if(lk)L.push('· 청구완료 잠금이 풀려요');
+ if(await uiChoice(`선택한 줄 ${S.length}개를 삭제할까요?\n\n${L.join('\n')}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,[{t:'삭제',c:'d'}])!==0)return;
+ blUnlockNow(key);const b=blGet(key),T=lk?blReSel(key,S.map(l=>({id:l.id,src:l.src,ref:l.ref}))):S;
+ T.forEach(l=>{if(l.src==='manual'||l.gone){b.lines=b.lines.filter(x=>x.id!==l.id);return}b.lines=b.lines.filter(x=>!(x.src==='auto'&&x.ref===l.ref));b.lines.push(blNormLine({src:'auto',ref:l.ref,removed:true}))});
+ blChk=new Set();save();render();toast(`${T.length}줄을 삭제했어요`)}
+// 출고 내역: 줄마다 원본을 찾아 그 자리에 씀
+//  · 오더 출고 = 생산 관리 그 오더의 '최종 납품' 기록(o.dlv) — 최종 납품이 없으면 마지막 공정 출고
+//  · 수동 줄 출고('m_'+줄 id) = 청구 내역 수동 줄의 일자 · 수량  · 청구서 전용(b.ships) = 오더 없는 출고 / 수동 청구서
+function blShSrc(key,s){const id=String(s.id),b=bills[key];
+ if(id.startsWith('m_')){const l=b&&b.lines.find(x=>x.id===id.slice(2)&&x.src==='manual');return l?{t:'m',l,nm:`청구 내역 수동 줄 '${l.item}'`}:{t:'x'}}
+ const r0=b&&(b.ships||[]).find(x=>x.id===id);if(r0)return {t:'b',r:r0,nm:'이 청구서의 청구서 전용 출고'};
+ for(const o of orders){const r=(o.dlv||[]).find(x=>x.id===id);if(r)return {t:'dlv',o,r,nm:`생산 관리 › ${o.no} 최종 납품`};
+  for(const p of o.procs){const r=p.ships.find(x=>x.id===id);if(r)return {t:'proc',o,p,r,nm:`생산 관리 › ${o.no} ${p.name||'공정'} 출고`}}}
+ return {t:'x'}}
+const blTakeS=key=>blView(key).ships.filter(s=>blSChk.has(s.id));
+function blShTick(key,id,on){blChkSync(key);on?blSChk.add(id):blSChk.delete(id);blShBar(key)}
+function blShTickAll(key,on){blChkSync(key);blSChk=new Set(on?blView(key).ships.map(s=>s.id):[]);render()}
+function blShBar(key){const v=blView(key),n=v.ships.filter(s=>blSChk.has(s.id)).length,all=$('bl_sall');if(all){all.checked=!!v.ships.length&&n===v.ships.length;all.indeterminate=n>0&&n<v.ships.length}blSecBtns('s',key,n)}
+const blCliOrders=c=>orders.filter(o=>o.no&&blNk(o.client)===blNk(c));
+function blShOrder(key,no){const b=blBill(key);return no?blCliOrders(b.client).find(o=>blNk(o.no)===blNk(no)):null}
+async function blShAdd(key){if(!await blLockAsk(key,'출고를 추가'))return;blShDlg(key,null)}
+async function blShEdit(key){const S=blTakeS(key);if(S.length!==1)return;const src=blShSrc(key,S[0]);if(src.t==='x')return uiAlert('이 출고의 원본(생산 관리 기록 또는 수동 줄)이 없어져 고칠 수 없어요. 청구완료 잠금을 풀면 현재 데이터로 다시 보여요.');
+ if(!await blLockAsk(key,'출고를 수정'))return;blShDlg(key,S[0])}
+function blShDlg(key,s){const v=blView(key),b=v.b,P=blParty(),dest0=b.dest||v.client,src=s?blShSrc(key,s):null,ord=src&&(src.t==='dlv'||src.t==='proc');
+ const x=s?{date:s.date,item:s.item,orderNo:s.orderNo,qty:s.qty,from:s.from||'',dest:s.dest||'',memo:s.memo||''}:{date:'',item:'',orderNo:'',qty:'',from:'',dest:'',memo:''};
+ blDraft={key,ship:s?s.id:'',unlock:!!b.locked};$('dt').textContent=s?'출고 수정':'출고 추가';
+ $('dbody').innerHTML=`<div class="blform"><label>일자 *<input id="bsh_d" type="date" value="${esc(x.date)}"></label><label>오더 ${s?(ord?'':'(선택)'):'(선택 · 이 거래처 오더면 생산 관리 최종 납품에 저장)'}<input id="bsh_o" list="bsh_ol" value="${esc(x.orderNo)}"${ord?' disabled':''} oninput="blShHint('${esc(key)}')"></label>
+ <label>품명${ord?'':' *'}<input id="bsh_i" value="${esc(x.item)}"${ord?' disabled':''}></label><label>수량 *<input id="bsh_q" inputmode="decimal" value="${x.qty===''?'':x.qty}"></label>
+ <label>출고처<input id="bsh_f" value="${esc(x.from)}" placeholder="${esc(P.name)}"></label><label>도착지<input id="bsh_t" value="${esc(x.dest)}" placeholder="${esc(dest0)}"></label><label class="w">비고<input id="bsh_m" value="${esc(x.memo)}"></label>
+ <div class="w muted" id="bsh_h" style="font-size:12px"></div>${b.locked?'<div class="w wn">청구완료로 잠긴 청구서예요 — 저장하면 잠금이 풀립니다.</div>':''}</div><datalist id="bsh_ol">${blCliOrders(v.client).map(o=>`<option value="${esc(o.no)}">${esc(o.item||'')}</option>`).join('')}</datalist>`;
+ $('dfoot').innerHTML=`<button class="p" onclick="blShOk()">확인</button><button onclick="dlg.close()">취소</button>`;blShHint(key);if(!dlg.open)dlg.showModal()}
+function blShHint(key){const h=$('bsh_h');if(!h)return;const d=blDraft,b=blBill(key);let t;
+ if(d.ship){const src=blShSrc(key,{id:d.ship});t=`저장 위치: ${src.nm}`+(src.t==='dlv'||src.t==='proc'?' — 품명 · 오더는 생산 관리에서 바꿔요. 일자 · 수량을 바꾸면 청구 내역 자동 줄 수량도 다시 계산돼요 (매출 관리 행이 있는 오더는 매출 수량 기준)':src.t==='m'?' — 같은 줄이라 일자 · 품명 · 오더 · 수량을 바꾸면 청구 내역도 함께 바뀌어요':' — 청구 내역에는 영향 없음')}
+ else{const o=blShOrder(key,$('bsh_o').value.trim());if(o&&!$('bsh_i').value.trim())$('bsh_i').value=o.item||o.no;$('bsh_i').disabled=!!(o&&b.auto);
+  t=o&&b.auto?`저장 위치: 생산 관리 › ${o.no} 최종 납품 (새 줄) — 청구 내역의 그 오더 자동 줄 수량에 반영돼요 (매출 관리 행이 있는 오더는 매출 수량 기준). 일자의 달 청구서에 들어가요.`
+   :o?'저장 위치: 이 청구서의 청구서 전용 출고 — 수동 청구서(자동 줄 꺼짐)라 생산 관리에는 넣지 않아요':'저장 위치: 이 청구서의 청구서 전용 출고 (생산 관리에 없는 출고) — 청구 내역에는 영향 없음'}
+ h.textContent=t}
+function blDlvPut(o,rec){if(typeof dlvSync==='function')dlvSync(o);if(!o.dlv)o.dlv=[];let at=o.dlv.findIndex(r=>(r.date||'')>(rec.date||''));if(at<0)at=o.dlv.length;o.dlv.splice(at,0,rec);o.updated=now()}
+const blFD=(f,d)=>({...(f?{from:f}:{}),...(d?{dest:d}:{})});
+function blShOk(){const d=blDraft,key=d.key,date=$('bsh_d').value,q=+String($('bsh_q').value).replace(/[,\s]/g,''),f=$('bsh_f').value.trim(),t=$('bsh_t').value.trim(),m=$('bsh_m').value.trim(),item=$('bsh_i').value.trim(),no=$('bsh_o').value.trim();
+ if(!blDate(date))return uiAlert('일자를 입력하세요.');if(!isFinite(q)||!q)return uiAlert('수량을 확인하세요.');
+ let where='',id='';
+ if(d.ship){const src=blShSrc(key,{id:d.ship});if(src.t==='x')return uiAlert('원본을 찾을 수 없어요.');blDraftUnlock();where=src.nm;id=d.ship;
+  if(src.t==='dlv'||src.t==='proc'){const r=src.r;if(r.date!==date||+r.qty!==q)delete r.auto;r.date=date;r.qty=q;r.memo=m;delete r.from;delete r.dest;Object.assign(r,blFD(f,t));src.o.updated=now()}
+  else if(src.t==='m'){if(!item)return uiAlert('품명을 입력하세요.');Object.assign(src.l,{date,qty:q,item,orderNo:no,sFrom:f,sDest:t,sMemo:m});const i=blGet(key).lines.indexOf(src.l);blGet(key).lines[i]=blNormLine(src.l)}
+  else{if(!item)return uiAlert('품명을 입력하세요.');Object.assign(src.r,blNormShip({...src.r,date,qty:q,item,orderNo:no,from:f,dest:t,memo:m}))}}
+ else{const b0=blBill(key),o=blShOrder(key,no);if(!(o&&b0.auto)&&!item)return uiAlert('품명을 입력하세요.');blDraftUnlock();const b=blGet(key);
+  if(o&&b.auto){const rec={id:uid(),date,qty:q,memo:m,...blFD(f,t)};blDlvPut(o,rec);id=rec.id;where=`생산 관리 › ${o.no} 최종 납품`}
+  else{const r=blNormShip({date,item,orderNo:no,qty:q,from:f,dest:t,memo:m});b.ships.push(r);id=r.id;where='청구서 전용 출고'}}
+ save();dlg.close();render();const here=blView(key).ships.some(s=>s.id===id);
+ toast(`${d.ship?'수정':'추가'}했어요 → ${where}${here?'':` (일자 ${date.slice(0,7)} · 이 청구서가 아닌 ${blYmTxt(date.slice(0,7))} 청구서에 보여요)`}`)}
+async function blShCopy(key){const S=blTakeS(key);if(!S.length)return;const R=S.map(s=>({s,src:blShSrc(key,s)})).filter(x=>x.src.t!=='x');if(!R.length)return uiAlert('원본이 없어진 출고는 복사할 수 없어요.');
+ const nO=R.filter(x=>x.src.t==='dlv'||x.src.t==='proc').length,nM=R.filter(x=>x.src.t==='m').length;
+ if(nO||nM){const L=[];if(nO)L.push(`· 오더 출고 ${nO}건 → 그 오더의 생산 관리 최종 납품에 같은 줄을 추가 (청구 내역 자동 줄 수량도 늘어요)`);if(nM)L.push(`· 수동 줄 출고 ${nM}건 → 청구 내역 수동 줄째로 복사 (같은 금액이 한 번 더 청구돼요)`);const nB=R.length-nO-nM;if(nB)L.push(`· 청구서 전용 출고 ${nB}건 → 이 청구서에 같은 줄 추가 (청구 내역에는 영향 없음)`);
+  if(await uiChoice(`선택한 출고 ${R.length}건을 복사할까요?\n\n${L.join('\n')}${bills[key]&&bills[key].locked?'\n· 청구완료 잠금이 풀려요':''}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,[{t:'복사',c:'p'}])!==0)return}
+ else if(!await blLockAsk(key,'출고를 복사'))return;
+ blUnlockNow(key);const b=blGet(key);
+ R.forEach(({s,src})=>{if(src.t==='dlv'||src.t==='proc')blDlvPut(src.o,{id:uid(),date:src.r.date,qty:+src.r.qty||0,memo:src.r.memo||'',...blFD(src.r.from,src.r.dest)});
+  else if(src.t==='m')b.lines.push(blNormLine({...src.l,id:''}));else b.ships.push(blNormShip({...src.r,id:''}))});
+ blSChk=new Set();save();render();toast(`출고 ${R.length}건을 복사했어요`)}
+async function blShDel(key){const S=blTakeS(key);if(!S.length)return;const R=S.map(s=>({s,src:blShSrc(key,s)})),G={dlv:[],proc:[],m:[],b:[],x:[]};R.forEach(x=>G[x.src.t].push(x));
+ const ls=a=>a.slice(0,4).map(x=>`${x.s.orderNo||x.s.item} ${x.s.date} ${(+x.s.qty||0).toLocaleString('ko-KR')}`).join(', ')+(a.length>4?' …':''),L=[];
+ if(G.dlv.length)L.push(`· 생산 관리 최종 납품 ${G.dlv.length}건 (${ls(G.dlv)}): 그 오더의 최종 납품 기록에서 지워져요 → 청구 내역 자동 줄 수량도 줄어요 (매출 관리 행이 있는 오더는 매출 수량 기준).${G.dlv.some(x=>x.src.r.src)?' 마지막 공정 출고에서 자동으로 만든 줄은 다시 생기지 않게 표시하고, 공정 출고 기록은 그대로 둬요.':''}`);
+ {const E=[...new Set(G.dlv.map(x=>x.src.o))].filter(o=>{const L0=o.procs[o.procs.length-1];return L0&&L0.ships.length&&o.dlv.every(r=>G.dlv.some(x=>x.src.r===r))});
+  if(E.length)L.push(`  ※ ${E.map(o=>o.no).join(', ')}: 최종 납품이 모두 지워지면 생산 관리는 마지막 공정 출고를 납품으로 보기 때문에, 그 공정 출고가 출고 내역에 다시 보여요 (공정 출고는 생산 관리에서 지우세요)`)}
+ if(G.proc.length)L.push(`· 생산 관리 공정 출고 ${G.proc.length}건 (${ls(G.proc)}): ${[...new Set(G.proc.map(x=>x.src.o.no+' '+(x.src.p.name||'공정')))].join(', ')} 출고 기록이 지워져요`);
+ if(G.m.length)L.push(`· 수동 줄 출고 ${G.m.length}건: 그 수동 줄의 일자를 비워 출고 내역에서만 빼요 (청구 내역 줄 · 금액은 그대로)`);
+ if(G.b.length)L.push(`· 청구서 전용 출고 ${G.b.length}건: 지워져요`);if(G.x.length)L.push(`· 원본이 없어진 출고 ${G.x.length}건은 건너뛰어요`);
+ const nf=typeof ssOf==='function'?[...G.dlv,...G.proc].filter(x=>ssOf(x.s.id)).length:0;if(nf)L.push(`· 첨부된 거래명세서 파일 ${nf}건은 남겨 둬요 (서류 보관함에서 지울 수 있어요)`);
+ if(bills[key]&&bills[key].locked)L.push('· 청구완료 잠금이 풀려요');
+ if(await uiChoice(`선택한 출고 ${S.length}건을 삭제할까요?\n\n${L.join('\n')}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,[{t:'삭제',c:'d'}])!==0)return;
+ blUnlockNow(key);const b=blGet(key);let n=0;
+ G.dlv.forEach(({src})=>{const o=src.o,r=src.r;if(r.src)o.dlvSkip=[...new Set([...(o.dlvSkip||[]),r.src])];o.dlv=o.dlv.filter(x=>x!==r);o.updated=now();n++});
+ G.proc.forEach(({src})=>{src.p.ships=src.p.ships.filter(x=>x!==src.r);src.o.updated=now();n++});
+ G.m.forEach(({src})=>{const i=b.lines.indexOf(src.l);if(i>=0){b.lines[i]=blNormLine({...src.l,date:''});n++}});
+ G.b.forEach(({src})=>{b.ships=b.ships.filter(x=>x!==src.r);n++});
+ blSChk=new Set();save();render();toast(`출고 ${n}건을 삭제했어요`)}
 // 청구완료(잠금) / 해제
 async function blLock(key){const v=blView(key);if(v.warn.some(w=>w.c==='wn')&&!await uiConfirm('누락 경고가 있습니다. 그래도 청구완료로 잠글까요?'))return;
  const b=blGet(key);b.locked=true;b.lockedAt=new Date().toISOString();b.frozen={lines:v.lines.map(l=>({id:l.id,src:l.src,ref:l.ref,orderNo:l.orderNo||'',item:l.item,spec:l.spec,qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,badge:l.badge,c:l.c})),ships:v.ships};
@@ -240,10 +339,10 @@ async function blUnlock(key){if(!await uiConfirm('잠금을 해제할까요? 생
 // 엑셀
 async function blXlsx(key){const v=blView(key),P=blParty(),dest=v.b.dest||v.client;if(!A.billXlsx)return uiAlert('데스크톱 앱에서만 사용할 수 있습니다.');
  const d={title:`${+v.ym.slice(5)}월 청구내역서`,client:v.client,issue:blIssue(v),lines:v.lines.map(l=>({item:l.item,spec:l.spec,qty:+l.qty||0,price:l.vat==='inc'?null:+l.price||0,sup:l.c.sup,vat:l.c.vat,tot:l.c.tot,memo:l.vat==='inc'?[l.memo,'VAT 포함'].filter(Boolean).join(' · '):l.memo})),T:v.T,
-  ships:v.ships.map(s=>({item:s.item,date:s.date,qty:+s.qty||0,from:P.name,dest,memo:s.memo})),party:P};
+  ships:v.ships.map(s=>({item:s.item,date:s.date,qty:+s.qty||0,from:s.from||P.name,dest:s.dest||dest,memo:s.memo})),party:P};
  try{const p=await A.billXlsx(d,`청구내역서_${v.ym}_${(v.client+(v.b.label?'_'+v.b.label:'')).replace(/[\\/:*?"<>|]/g,'_')}.xlsx`);if(p)toast('엑셀 저장: '+p)}catch(e){uiAlert('내보내기 실패: '+(e.message||e))}}
 function blData(key){const v=blView(key),P=blParty(),dest=v.b.dest||v.client;return {v,d:{title:`${+v.ym.slice(5)}월 청구내역서`,client:v.client,issue:blIssue(v),lines:v.lines.map(l=>({item:l.item,spec:l.spec,qty:+l.qty||0,price:l.vat==='inc'?null:+l.price||0,sup:l.c.sup,vat:l.c.vat,tot:l.c.tot,memo:l.vat==='inc'?[l.memo,'VAT 포함'].filter(Boolean).join(' · '):l.memo})),T:v.T,
-  ships:v.ships.map(s=>({item:s.item,date:s.date,qty:+s.qty||0,from:P.name,dest,memo:s.memo})),party:P}}}
+  ships:v.ships.map(s=>({item:s.item,date:s.date,qty:+s.qty||0,from:s.from||P.name,dest:s.dest||dest,memo:s.memo})),party:P}}}
 // 청구내역서 문서(HTML) — PDF 저장과 미리보기가 같은 것을 씀
 function blDoc(key){const {v,d}=blData(key),n=x=>x||x===0?(+x).toLocaleString('ko-KR'):'',P=d.party;
  const body=`<h1>${pE(d.title)}</h1><div class="meta"><b>${pE(d.client)} 귀하</b><span>세금계산서 발행 일자: ${pE(d.issue)}</span></div>
@@ -276,7 +375,7 @@ table.blt{min-width:0;width:100%;table-layout:fixed}table.blt td,table.blt th{wh
 .blrb{font-size:11px;padding:1px 8px;margin-left:4px}.blform label.blck{flex-direction:row;align-items:center;gap:6px;color:#333;font-size:12.5px}
 .bllb{display:inline-block;font-size:11px;font-weight:600;padding:0 7px;border-radius:9px;background:#fdebd9;color:#b0560f;line-height:18px;margin-left:6px;vertical-align:1px}.bllb.p{background:#eef0f3;color:#555}
 .blgrp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}.blgrp button{font-size:12px;padding:3px 10px}.blgrp button.on{background:#2271b1;color:#fff;border-color:#2271b1}
-.blh3{display:flex;align-items:center;gap:10px}.blselbar{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:normal}.blselbar button{font-size:12px;padding:2px 9px}table.blt td input[type=checkbox],table.blt th input[type=checkbox]{margin:0;vertical-align:middle}
+.blh3{display:flex;align-items:center;gap:10px}.blsec{display:inline-flex;gap:6px;font-weight:normal}.blsec button{font-size:12px;padding:3px 12px}.blselbar{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:normal}.blselbar button{font-size:12px;padding:2px 9px}table.blt td input[type=checkbox],table.blt th input[type=checkbox]{margin:0;vertical-align:middle}
 .blhd{display:flex;align-items:center;gap:8px;margin-bottom:10px}.blhd h2{font-size:16px;margin:0 6px}
 .blmeta{display:flex;gap:20px;color:#555;margin-bottom:10px}.blmeta b{color:#222}#p_bill h3{font-size:14px;margin:4px 0 8px}#p_bill .card{margin-bottom:10px}
 .blform{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;min-width:480px}.blform label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#555}.blform .w{grid-column:span 2}.blform input,.blform select{font-size:13px}
