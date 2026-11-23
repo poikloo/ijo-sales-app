@@ -359,7 +359,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - `replace`: `true`면 이 성적서의 기존 입력값·판정·메모를 지우고 새로 넣음. `false`/없음이면 보낸 항목만 덮어씀.
 - 스냅샷 `testReports[].linkedQuality` = `{name, fabric, specNo, qualityItemId, values(원본 입력 맵), results[] / rows[]{item,part,subItem,standard,unit,value,judge,manual,memo,unmatched}}` (results와 rows는 같은 목록).
 
-### 3.14 청구서 — `bill.split` · `bill.create` · `bill.moveLines` · `bill.merge` · `bill.update` · `bill.addLine` · `bill.updateLine` · `bill.removeLine` · `bill.remove`
+### 3.14 청구서 — `bill.split` · `bill.create` · `bill.moveLines` · `bill.merge` · `bill.update` · `bill.addLine` · `bill.updateLine` · `bill.removeLine` · `bill.remove` · `bill.excludeLines`
 
 같은 달 · 같은 거래처 청구서를 여러 장으로 나눌 수 있습니다. 기본 청구서 id는 `"YYYY-MM|거래처"`, 나눈 청구서는 `"YYYY-MM|거래처#고유값"`이고 구분명(`label`)을 붙일 수 있습니다.
 나눈 청구서는 자기 줄을 기억하므로 매출 관리·최종 납품으로 자동 줄을 다시 계산해도 다시 합쳐지지 않습니다. 그 달 그 거래처에 새로 생긴 자동 줄은 기본 청구서로 들어갑니다.
@@ -390,7 +390,8 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `bill.addLine` | 청구서 찾기, `item`(필수), `qty`(필수, 음수 가능), `unitPrice`(필수), `orderNo` · `spec`(또는 `color`) · `memo` · `date`(선택), `allowLocked` | 수동 줄 추가. `date`를 적으면 출고 내역에도 그 날짜·수량이 나옴 |
 | `bill.updateLine` | 청구서 찾기, `line{lineId}` 또는 `line{orderNo, item}`, `set{item, spec/color, orderNo, qty, unitPrice, memo, date}`, `allowLocked` | 수동 줄 하나 고치기. 맞는 수동 줄이 0개 또는 2개 이상이면 오류(→ `lineId`). 자동 줄은 고칠 수 없음 |
 | `bill.removeLine` | 청구서 찾기, `lines`(수동 줄 찾기), `allowLocked` | 수동 줄 지우기. 자동 줄이 맞으면 오류 |
-| `bill.remove` | 청구서 찾기, `force`(줄이 있으면 필수), `allowLocked` | 청구서 삭제. 줄이 있으면 `force: true`가 없을 때 오류. 자동 줄로만 보이는(저장되지 않은) 청구서는 지울 수 없음 |
+| `bill.remove` | 청구서 찾기, `force`(수동 줄 · 고친 줄이 있으면 필수), `excludeAuto`(선택), `allowLocked` | 청구서 삭제. **자동 줄만 있는 청구서**(다른 달에 청구한 출고 등)는 그 자동 줄을 그 달 청구에서 **제외**하고 사라짐(`excludeAuto: false`면 제외하지 않음 → 다시 생김). 수동 줄이 있는 청구서의 자동 줄은 `excludeAuto: true`일 때만 제외 |
+| `bill.excludeLines` | 청구서 찾기, `lines`(선택, `[{orderNo} / {item} / {lineId}]`, 없으면 자동 줄 전부), `restore`(선택), `allowLocked` | 자동 줄을 그 달 청구에서 **제외**(누락 경고 · 이전 달 미청구 알림 없음, 매출 관리 · 생산 관리 데이터는 그대로). `restore: true`면 제외한 줄을 되돌림. 모든 자동 줄이 제외된 청구서는 목록에서 사라지고 '제외됨 N'에서 되돌릴 수 있음 |
 
 - 같은 요청 안에서 앞 동작이 만든 청구서를 뒤 동작에서 `billLabel`/`toLabel`로 가리킬 수 있습니다.
 - 카드에 새 청구서 id, 옮긴 줄 표, 청구서별 총액 전/후가 나옵니다. 적용은 한 번의 저장 → 앱에서 Ctrl+Z 한 번으로 되돌림.
@@ -620,4 +621,4 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 `id`(기본 `"YYYY-MM|거래처"`, 나눈 청구서 `"YYYY-MM|거래처#…"` — 요청의 `billId`로 사용) `label`(구분명, 기본 청구서는 보통 `""`) `primary`(기본 청구서 true) `autoLines`(자동 줄 켜짐 true / 수동 청구서 false) `billsForClientMonth`(같은 달·거래처 청구서 장수)
 `month` `client` `status`(미청구/청구완료) `locked` `issueDate` `qty` `supply` `vat` `total` `warnings[]`
-`lines[]{lineId,manual(수동 줄 true),item,spec,orderNo,qty,unitPrice,vatIncluded,supply,vat,total,memo,source(auto/sales/edited/manual)}` `shipments[]{date,item,orderNo,qty}`
+`lines[]{lineId,manual(수동 줄 true),item,spec,orderNo,qty,unitPrice,vatIncluded,supply,vat,total,memo,source(auto/sales/edited/manual)}` `shipments[]{date,item,orderNo,qty}` `excluded[]{orderNo,item,qty,reason(deleted/duplicate)}`(이 달 청구에서 제외한 자동 줄) `excludedOnly`(자동 줄이 모두 제외돼 목록에 안 보이는 청구서)

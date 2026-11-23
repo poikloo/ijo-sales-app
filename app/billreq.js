@@ -1,11 +1,11 @@
-// ===== 요청함: 청구서 (bill.split · bill.create · bill.moveLines · bill.merge · bill.update · bill.addLine · bill.updateLine · bill.removeLine · bill.remove) =====
+// ===== 요청함: 청구서 (bill.split · bill.create · bill.moveLines · bill.merge · bill.update · bill.addLine · bill.updateLine · bill.removeLine · bill.remove · bill.excludeLines) =====
 // 수동 줄(addLine/updateLine/removeLine)은 자동 계산이 절대 바꾸거나 지우지 않음. 청구완료 청구서는 allowLocked:true일 때만 고치고(카드에 빨간 경고), 잠금은 그대로 유지
 // 청구서 찾기: billId(스냅샷 bills[].id) 또는 month+client(+billLabel: 같은 달·거래처에 여러 장일 때 구분명, 없으면 기본 청구서)
 // 줄 찾기: lines:[{orderNo?, item?, lineId?}] — 적은 항목이 모두 맞는 줄. 항목마다 적어도 한 줄은 맞아야 함
 // 청구완료(잠금) 청구서는 나누기·옮기기·합치기를 하지 않음(오류). 앱에서 잠금을 풀고 다시 요청하세요.
-Object.assign(RQ_T,{'bill.addLine':'청구서 줄 추가','bill.updateLine':'청구서 줄 수정','bill.removeLine':'청구서 줄 삭제','bill.remove':'청구서 삭제','bill.split':'청구서 나누기','bill.create':'청구서 추가','bill.moveLines':'청구서 줄 옮기기','bill.merge':'청구서 합치기','bill.update':'청구서 정보 수정'});
+Object.assign(RQ_T,{'bill.addLine':'청구서 줄 추가','bill.updateLine':'청구서 줄 수정','bill.removeLine':'청구서 줄 삭제','bill.remove':'청구서 삭제','bill.excludeLines':'청구서 자동 줄 제외','bill.split':'청구서 나누기','bill.create':'청구서 추가','bill.moveLines':'청구서 줄 옮기기','bill.merge':'청구서 합치기','bill.update':'청구서 정보 수정'});
 const BR_SRC=['billId','month','client','billLabel'],BR_TO=['toBillId','toLabel','toPrimary'];
-Object.assign(RQ_KEYS,{'bill.split':[...BR_SRC,'lines','label'],'bill.create':['month','client','label','issueDate','dest','memo','autoLines'],'bill.moveLines':[...BR_SRC,...BR_TO,'lines'],'bill.merge':[...BR_SRC,...BR_TO],'bill.update':[...BR_SRC,'set','convertAuto','allowLocked'],'bill.addLine':[...BR_SRC,'orderNo','item','spec','color','qty','unitPrice','memo','date','allowLocked'],'bill.updateLine':[...BR_SRC,'line','lineId','set','allowLocked'],'bill.removeLine':[...BR_SRC,'lines','allowLocked'],'bill.remove':[...BR_SRC,'force','allowLocked']});
+Object.assign(RQ_KEYS,{'bill.split':[...BR_SRC,'lines','label'],'bill.create':['month','client','label','issueDate','dest','memo','autoLines'],'bill.moveLines':[...BR_SRC,...BR_TO,'lines'],'bill.merge':[...BR_SRC,...BR_TO],'bill.update':[...BR_SRC,'set','convertAuto','allowLocked'],'bill.addLine':[...BR_SRC,'orderNo','item','spec','color','qty','unitPrice','memo','date','allowLocked'],'bill.updateLine':[...BR_SRC,'line','lineId','set','allowLocked'],'bill.removeLine':[...BR_SRC,'lines','allowLocked'],'bill.remove':[...BR_SRC,'force','excludeAuto','allowLocked'],'bill.excludeLines':[...BR_SRC,'lines','restore','allowLocked']});
 const brName=b=>`${b.ym} ${b.client}${b.label?' · '+b.label:blIsPrim(b)?' (기본)':' · 나눔'}`;
 function brFind(a,it,w){w=w||'';const id=rqS(a.billId);
  if(id){if(bills[id])return bills[id];if(/^\d{4}-\d{2}\|./.test(id)&&blMonth(id.slice(0,7)).some(v=>v.key===id))return blGet(id);it.errors.push(`${w}billId '${id}' 청구서를 찾을 수 없습니다`);return null}
@@ -86,8 +86,21 @@ Object.assign(RQ_H,{
   const LB={item:'품명',orderNo:'오더번호',spec:'규격/색상',qty:'수량',price:'단가',memo:'비고',date:'일자'};it.diff=Object.keys(LB).filter(k=>b0[k]!==l[k]).map(k=>[LB[k],String(b0[k]),String(l[k])]);it.diff.push(['청구서 총액',blWon(t0),blWon(blView(F.id).T.tot)]);if(it.diff.length<2)it.warns.push('바뀌는 내용이 없습니다')},
  'bill.removeLine'(a,it){const F=brFind(a,it);it.summary=`${F?brName(F):'청구서'}에서 수동 줄을 지웁니다`;if(!F||!brLockOk(F,a,it,'수동 줄 삭제'))return;const m=brManual(F.id,a.lines,it,'lines');if(!m)return;
   const t0=blView(F.id).T.tot,ids=new Set(m.map(l=>l.id));F.lines=F.lines.filter(l=>!ids.has(l.id));blRefreeze(F);it.diff=[['지운 줄','',m.length+'줄'],['청구서 총액',blWon(t0),blWon(blView(F.id).T.tot)]];it.table=brTbl(m)},
- 'bill.remove'(a,it){const F=brFind(a,it);if(a.force!=null&&typeof a.force!=='boolean')it.errors.push('force는 true/false여야 합니다');it.summary=`${F?brName(F):'청구서'}를 삭제합니다`;if(!F||it.errors.length)return;
-  if(!bills[F.id]){it.errors.push(`'${brName(F)}'는 자동 줄로만 보이는 청구서라 지울 수 없습니다 (자동 줄은 다시 생김) — 수동 청구서로 쓰려면 bill.update set{autoLines:false}`);return}
-  const v=blView(F.id);if(v.lines.length&&a.force!==true){it.errors.push(`이 청구서에 줄이 ${v.lines.length}개 있습니다 — 지우려면 force: true`);return}if(!brLockOk(F,a,it,'청구서 삭제'))return;
-  const nA=F.auto?v.lines.filter(l=>l.src==='auto').length:0;blRemoveCore(F.id);if(nA)it.warns.push(`자동 줄 ${nA}줄은 자동 줄을 받는 다른 청구서로 돌아갑니다`);
-  it.diff=[['지운 청구서',brName(F)+` (id ${F.id})`,''],['줄',v.lines.length+'줄',''],['총액',blWon(v.T.tot),'']];if(v.lines.length)it.table=brTbl(v.lines)}});
+ 'bill.remove'(a,it){const F=brFind(a,it);['force','excludeAuto'].forEach(k=>{if(a[k]!=null&&typeof a[k]!=='boolean')it.errors.push(`${k}는 true/false여야 합니다`)});it.summary=`${F?brName(F):'청구서'}를 삭제합니다`;if(!F||it.errors.length)return;
+  const v=blView(F.id),man=v.lines.filter(l=>l.src==='manual'||l.badge==='m'),A=blAutoRefs(F.id),only=!man.length&&!(F.ships||[]).length;
+  if(!only&&a.force!==true){it.errors.push(`이 청구서에 수동 줄 · 고친 줄이 ${man.length}개 있습니다 — 지우려면 force: true`);return}if(!brLockOk(F,a,it,'청구서 삭제'))return;
+  const ex=A.length&&(only?a.excludeAuto!==false:a.excludeAuto===true);if(!A.length&&!man.length&&!(F.ships||[]).length&&!F.locked){it.errors.push(`'${brName(F)}'에는 지울 줄이 없습니다`);return}
+  blRemoveCore(F.id);if(ex)blExclPut(blGet(blHome(F.ym,F.client)),A,'del');
+  if(ex)it.warns.push(`자동 줄 ${A.length}줄을 ${F.ym} 청구에서 제외합니다 — 누락 경고 · 미청구 알림이 나오지 않고, 앱 목록의 '제외됨'에서 되돌릴 수 있습니다`);else if(A.length)it.warns.push(`자동 줄 ${A.length}줄은 자동 줄을 받는 청구서로 다시 생깁니다 (제외하려면 excludeAuto: true)`);
+  it.diff=[['지운 청구서',brName(F)+` (id ${F.id})`,''],['줄',v.lines.length+'줄',''],['총액',blWon(v.T.tot),''],...(ex?[['제외한 자동 줄','',A.length+'줄']]:[])];if(v.lines.length)it.table=brTbl(v.lines)},
+ 'bill.excludeLines'(a,it){const F=brFind(a,it);if(a.restore!=null&&typeof a.restore!=='boolean')it.errors.push('restore는 true/false여야 합니다');const rs=a.restore===true;
+  it.summary=`${F?brName(F):'청구서'}의 자동 줄을 ${rs?'다시 청구 대상으로 되돌립니다':'이 달 청구에서 제외합니다'}`;if(!F||it.errors.length)return;
+  const L=a.lines==null?null:a.lines;if(L!=null&&(!Array.isArray(L)||!L.length)){it.errors.push('lines는 [{orderNo} 또는 {item} 또는 {lineId}] 배열입니다 (없으면 전부)');return}
+  const pick=(arr,f)=>{if(!L)return arr;const out=new Set();let ok=true;L.forEach((q,i)=>{if(!rqObj(q)){it.errors.push(`lines[${i}]이(가) 객체가 아닙니다`);ok=false;return}rqExtra(q,['orderNo','item','lineId'],`lines[${i}]`,it);const o=rqS(q.orderNo),t=rqS(q.item),id=rqS(q.lineId);
+   if(!o&&!t&&!id){it.errors.push(`lines[${i}]에 orderNo · item · lineId 중 하나가 필요합니다`);ok=false;return}const m=arr.filter(x=>(!o||blNk(x.orderNo)===blNk(o))&&(!t||blNk(x.item)===blNk(t))&&(!id||f(x)===id));
+   if(!m.length){it.errors.push(`lines[${i}] (${[o,t,id].filter(Boolean).join(' · ')})에 맞는 ${rs?'제외된 ':''}자동 줄이 '${brName(F)}'에 없습니다`);ok=false;return}m.forEach(x=>out.add(x))});return ok?[...out]:null};
+  if(rs){const E=blExclList(F.ym,F.id),S=pick(E,x=>x.id);if(!S)return;if(!S.length){it.errors.push('제외된 자동 줄이 없습니다');return}if(!brLockOk(F,a,it,'자동 줄 되돌리기'))return;
+   const ids=new Set(S.map(x=>x.id));F.lines=F.lines.filter(l=>!ids.has(l.id));blRefreeze(F);it.diff=[['되돌린 자동 줄','',S.length+'줄'],['청구서 총액','',blWon(blView(F.id).T.tot)]];it.table={head:['품명','오더','수량'],rows:S.map(x=>[x.item,x.orderNo||'-',num(+x.qty||0)])};return}
+  const A=blAutoRefs(F.id),lid=x=>(blView(F.id).lines.find(l=>l.src==='auto'&&l.ref===x.ref)||{}).id,S=pick(A,lid);if(!S)return;if(!S.length){it.errors.push(`'${brName(F)}'에 제외할 자동 줄이 없습니다`);return}if(!brLockOk(F,a,it,'자동 줄 제외'))return;
+  const t0=blView(F.id).T.tot;blExclPut(F,S,'del');it.diff=[['제외한 자동 줄','',S.length+'줄'],['청구서 총액',blWon(t0),blWon(blView(F.id).T.tot)]];it.table={head:['품명','오더','수량'],rows:S.map(x=>[x.item,x.orderNo||'-',num(+x.qty||0)])};
+  it.warns.push(`제외한 줄은 ${F.ym} 청구 · 누락 경고 · 미청구 알림에서 빠집니다 (매출 관리 · 생산 관리 데이터는 그대로). 되돌리려면 restore: true 또는 앱 목록의 '제외됨'`)}});
