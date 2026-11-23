@@ -1,4 +1,4 @@
-// 날짜 입력 보조: 모든 <input type=date>에서 숫자 8자리(YYYYMMDD) 또는 6자리(YYMMDD)+Enter로 입력
+// 날짜 입력 보조: 모든 <input type=date>에서 숫자 8자리(YYYYMMDD) 또는 6자리(YYMMDD)+Enter로 입력 (- . / 구분자는 무시)
 // '월'·'일' 칸을 클릭하고 숫자를 치면 그 칸만 고침(브라우저 기본 동작). 칸 위치를 알 수 있도록 칸·구분자 폭을 CSS로 고정
 (function(){
   const bufs=new WeakMap(),segs=new WeakMap(),sess=new WeakMap();let tip=null,tipFor=null,hideT=null,emitting=false,downSeg=null;
@@ -30,14 +30,16 @@
     const s=segAt(el,e.clientX);downSeg=s;setTimeout(()=>{downSeg=null},0);if(s!==null)segs.set(el,s);if(bufs.has(el)){bufs.delete(el);hide()}},true);
   document.addEventListener('focus',e=>{const el=e.target;if(!isDate(el))return;segs.set(el,downSeg!==null?downSeg:0);downSeg=null},true);
   const isDate=el=>el&&el.tagName==='INPUT'&&el.type==='date'&&!el.disabled&&!el.readOnly;
-  function ensureTip(){if(tip)return tip;tip=document.createElement('div');tip.id='datekey-tip';
-    tip.style.cssText='position:fixed;z-index:99999;padding:3px 8px;border-radius:5px;font:600 13px Consolas,monospace;background:#1f2937;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;display:none;letter-spacing:1px';
+  // 모달 창(dialog) 안의 날짜 칸이면 안내 풍선이 창 뒤에 가려지므로 popover(top layer)로 띄움
+  function ensureTip(){if(tip)return tip;tip=document.createElement('div');tip.id='datekey-tip';if('popover' in tip)tip.popover='manual';
+    tip.style.cssText='position:fixed;inset:auto;margin:0;border:0;overflow:visible;z-index:99999;padding:3px 8px;border-radius:5px;font:600 13px Consolas,monospace;background:#1f2937;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;display:none;letter-spacing:1px';
     document.body.appendChild(tip);return tip;}
   function fmt(b){const s=(b+'________').slice(0,8);return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);}
   function show(el,text,err){const t=ensureTip();const r=el.getBoundingClientRect();
     t.textContent=text;t.style.background=err?'#dc2626':'#1f2937';t.style.display='block';
-    t.style.left=Math.max(2,r.left)+'px';t.style.top=(r.bottom+3+24>innerHeight?r.top-26:r.bottom+3)+'px';tipFor=el;clearTimeout(hideT);}
-  function hide(){if(tip)tip.style.display='none';tipFor=null;}
+    t.style.left=Math.max(2,r.left)+'px';t.style.top=(r.bottom+3+24>innerHeight?r.top-26:r.bottom+3)+'px';tipFor=el;clearTimeout(hideT);
+    if(t.showPopover)try{if(t.matches(':popover-open'))t.hidePopover();t.showPopover()}catch(e){}}// 매번 다시 띄워 나중에 열린 창보다 위에
+  function hide(){if(tip){tip.style.display='none';if(tip.hidePopover)try{if(tip.matches(':popover-open'))tip.hidePopover()}catch(e){}}tipFor=null;}
   function flashErr(el,msg){show(el,msg||'잘못된 날짜',true);hideT=setTimeout(hide,1300);}
   function valid(y,m,d){const dt=new Date(y,m-1,d);return y>=1900&&y<=2999&&dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d;}
   const FSEL='input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
@@ -79,6 +81,7 @@
     if(/^[0-9]$/.test(e.key)){e.preventDefault();e.stopPropagation();b+=e.key;
       if(b.length>=8){commit(el,b.slice(0,8));return;}bufs.set(el,b);show(el,fmt(b));return;}
     if(!b)return;
+    if(/^[-./ ]$/.test(e.key)){e.preventDefault();e.stopPropagation();return;}// 2026-11-15처럼 구분자를 함께 쳐도 숫자만 이어서 받음
     if(e.key==='Backspace'){e.preventDefault();e.stopPropagation();b=b.slice(0,-1);if(b){bufs.set(el,b);show(el,fmt(b));}else{bufs.delete(el);hide();}return;}
     if(e.key==='Escape'){e.preventDefault();bufs.delete(el);hide();return;}
     if(e.key==='Enter'){e.preventDefault();e.stopPropagation();if(b.length===6)commit(el,'20'+b);else{bufs.delete(el);flashErr(el,'8자리(YYYYMMDD)로 입력');}return;}
