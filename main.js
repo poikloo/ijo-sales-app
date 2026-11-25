@@ -13,7 +13,8 @@ function writeBackup(s){try{fs.mkdirSync(BK(),{recursive:true});
   while(list.length>50)fs.unlinkSync(path.join(BK(),list.shift()))}catch(e){}bkLast=Date.now();bkPending=null}
 function flushBackup(){if(bkTimer){clearTimeout(bkTimer);bkTimer=null}if(bkPending)writeBackup(bkPending)}
 function writeData(d){
-  const s=JSON.stringify(d,null,2);
+  // 화면에서 이미 JSON 글로 보내면 그대로 씀 (5MB 넘는 데이터를 메인에서 다시 들여쓰기 변환하며 멈추지 않게). 객체도 예전처럼 받음
+  if(typeof d==='string'){JSON.parse(d)}const s=typeof d==='string'?d:JSON.stringify(d,null,2);
   fs.writeFileSync(FILE()+'.tmp',s);fs.renameSync(FILE()+'.tmp',FILE());
   bkPending=s;const wait=60000-(Date.now()-bkLast);
   if(wait<=0)flushBackup();else if(!bkTimer)bkTimer=setTimeout(()=>{bkTimer=null;if(bkPending)writeBackup(bkPending)},wait);

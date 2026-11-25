@@ -5,7 +5,8 @@ const UNDO_MAX=50,UNDO_KEEP=['savedAt','colWidths','listSort','requestLog','requ
 let undoS=[],redoS=[],undoLast=null,undoBusy=false,undoT=0,undoHold=0;
 const undoStr=p=>{const o={...p};UNDO_KEEP.forEach(k=>delete o[k]);return JSON.stringify(o)};
 function undoInit(){try{undoLast=undoStr(payload())}catch(e){undoLast=null}}
-function undoTrack(p){const s=undoStr(p);if(undoBusy||undoLast==null||s===undoLast){undoLast=s;return}
+function undoTrack(p){undoTrackS(undoStr(p))}
+function undoTrackS(s){if(undoBusy||undoLast==null||s===undoLast){undoLast=s;return}
  const t=Date.now();if(!(undoHold||t-undoT<400)){undoS.push(undoLast);if(undoS.length>UNDO_MAX)undoS.shift();redoS=[]}undoT=t;undoLast=s}
 function undoApply(s){const cur=payload(),o=JSON.parse(s);UNDO_KEEP.forEach(k=>{if(k in cur)o[k]=cur[k]});undoBusy=true;
  try{load(o);save()}finally{undoBusy=false}undoLast=s;if(typeof attClose==='function')attClose(false);render()}

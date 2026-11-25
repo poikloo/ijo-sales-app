@@ -39,7 +39,10 @@ function load(r0){const r=r0!==undefined?r0:A.load();dataVer++;stLoad(r);ctLoad(
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
 function payload(){return {app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...qsPayload(),...blPayload(),...dcPayload(),...snapPayload(),...plPayload()}}
-function save(){dataVer++;if(typeof dlvSyncAll==='function')dlvSyncAll();if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
+function save(){dataVer++;if(typeof dlvSyncAll==='function')dlvSyncAll();if(typeof slSync==='function')slSync();const p=payload();
+ // 큰 데이터를 한 번만 JSON으로 바꿔 실행 취소 비교와 파일 저장에 같이 씀 (예전: 실행 취소용 + IPC 복사 + 메인에서 들여쓰기 저장 = 세 번)
+ const keep={};UNDO_KEEP.forEach(k=>{if(k in p){keep[k]=p[k];delete p[k]}});const body=JSON.stringify(p);undoTrackS(body);
+ A.save(JSON.stringify(keep).slice(0,-1)+(Object.keys(keep).length&&body.length>2?',':'')+body.slice(1)).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
 function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender){if(window.gsDirty)gsDirty();gsRender()}xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
