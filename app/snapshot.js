@@ -8,6 +8,8 @@ const snapS=a=>a.map(v=>v==null?'':String(v)).filter(Boolean).join(' ');
 const fnames=(l,f)=>l.filter(f).map(x=>x.name);
 function snapBuild(){
  const S=typeof prSet!=='undefined'?prSet:{};
+ // 첨부 파일을 출고·오더·성적서별로 한 번만 묶어 둠 (출고마다 첨부 전체를 훑지 않게)
+ const grp=(l,key)=>{const m=new Map();l.forEach(f=>{const k=key(f);const a=m.get(k);if(a)a.push(f);else m.set(k,[f])});return m},SSF=grp(shipFiles,f=>f.shipId),WFO=grp(wfFiles,f=>f.orderId),ssN=id=>(SSF.get(id)||[]).map(f=>f.name);
  const P=prices.map(p=>{const c=prCalc(p);return {id:p.id,category:p.cat,part:p.part,code:p.code,item:p.item,color:p.color,width:p.width,
   greige:{vendor:p.gV,currency:p.gCur,price:r2(p.g),priceKRW:r2(c.g)},dye:{vendor:p.dV,shrink:r2(c.dS),price:r2(p.d),cumulative:r2(c.c1)},
   proc1:{vendor:p.p1V,desc:p.p1D,shrink:r2(c.s1),price:r2(p.p1),cumulative:r2(c.c2)},proc2:{vendor:p.p2V,desc:p.p2D,shrink:r2(c.s2),price:r2(p.p2),cumulative:r2(c.c3)},
@@ -16,17 +18,17 @@ function snapBuild(){
   memo:p.memo,example:!!p.example,search:snapS([p.cat,p.part,p.code,p.item,p.color,p.width,p.gV,p.dV,p.p1V,p.p1D,p.p2V,p.p2D,p.eD,p.memo])}});
  const SL=sales.map(x=>({id:x.id,date:x.date,year:x.year,client:x.client,orderNo:x.orderNo,item:x.item,fabric:x.fabric,process:x.process,color:x.color,unitPrice:x.unitPrice,qty:x.qty,supply:x.supply,total:x.total,memo:x.memo,
   search:snapS([x.client,x.orderNo,x.item,x.fabric,x.process,x.color,x.memo])}));
- const O=orders.map(o=>{const wf=wfFiles.filter(f=>f.orderId===o.id);return {id:o.id,no:o.no,item:o.item,fabric:o.fabric,client:o.client,date:o.date,due:o.due,delivered:!!o.delivered,note:o.note||'',
+ const O=orders.map(o=>{const wf=WFO.get(o.id)||[];return {id:o.id,no:o.no,item:o.item,fabric:o.fabric,client:o.client,date:o.date,due:o.due,delivered:!!o.delivered,note:o.note||'',
   qty:o.qty,unit:o.unit,lines:o.lines.map(l=>({color:l.color,qty:l.qty,unit:l.unit})),
   processes:o.procs.map((p,i)=>({step:i+1,name:p.name,vendor:p.vendor,shrink:p.shrink,shippedQty:p.ships.reduce((s,x)=>s+(+x.qty||0),0),
-   shipments:p.ships.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:fnames(shipFiles,f=>f.shipId===x.id)}))})),
-  finalDelivery:(o.dlv||[]).length?{totalQty:dlvSum(o),stock:progress(o).stock,rows:o.dlv.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:fnames(shipFiles,f=>f.shipId===x.id)}))}:null,completedQty:(o.dlv||[]).length?dlvSum(o):(o.procs.length?sum(o.procs[o.procs.length-1]):0),
+   shipments:p.ships.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:ssN(x.id)}))})),
+  finalDelivery:(o.dlv||[]).length?{totalQty:dlvSum(o),stock:progress(o).stock,rows:o.dlv.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:ssN(x.id)}))}:null,completedQty:(o.dlv||[]).length?dlvSum(o):(o.procs.length?sum(o.procs[o.procs.length-1]):0),
   workOrderFiles:fnames(wf,f=>f.kind==='wo'),purchaseOrderFiles:fnames(wf,f=>f.kind==='po'),example:!!o.example,
   search:snapS([o.no,o.item,o.fabric,o.client,o.note,...o.lines.map(l=>l.color),...o.procs.flatMap(p=>[p.name,p.vendor])])}});
  const ST=stmts.map(s=>{const lots=s.lots.map(l=>{const rolls=l.rolls.filter(v=>v!=='');return {lotNo:l.lotNo,color:l.color,rolls,qty:r2(rolls.reduce((a,b)=>a+(+b||0),0))}});
   return {id:s.id,no:s.no,date:s.date,orderNo:s.orderNo,item:s.item,spec:s.spec,customer:{...s.cust},supplier:s.sup?s.sup.name||'':'',dest:s.dest,contact:s.contact,unitPrice:s.price===''?null:s.price,note:s.note,
    lots,totalQty:r2(lots.reduce((a,l)=>a+l.qty,0)),example:!!s.example,search:snapS([s.orderNo,s.item,s.spec,s.cust&&s.cust.name,s.dest,s.note,...lots.flatMap(l=>[l.lotNo,l.color])])}});
- const TR=trs.map(x=>({id:x.id,name:x.name,lab:x.lab,reportNo:x.no,received:x.recv,completed:x.done,result:x.result,failedItems:x.fail,memo:x.memo,linkedQuality:x.qs&&qsGet(x.qs.id)?{name:qsGet(x.qs.id).name,fabric:(qsGet(x.qs.id).fabrics.find(f=>f.id===x.qs.fab)||{}).name||'',values:x.qs.res,results:trSnapRows(x),specNo:qsGet(x.qs.id).spec,qualityItemId:x.qs.id,rows:trSnapRows(x)}:null,files:fnames(wfFiles,f=>f.kind==='tr'&&f.orderId===x.id),attached:wfFiles.some(f=>f.kind==='tr'&&f.orderId===x.id),example:!!x.example,
+ const TR=trs.map(x=>({id:x.id,name:x.name,lab:x.lab,reportNo:x.no,received:x.recv,completed:x.done,result:x.result,failedItems:x.fail,memo:x.memo,linkedQuality:x.qs&&qsGet(x.qs.id)?{name:qsGet(x.qs.id).name,fabric:(qsGet(x.qs.id).fabrics.find(f=>f.id===x.qs.fab)||{}).name||'',values:x.qs.res,results:trSnapRows(x),specNo:qsGet(x.qs.id).spec,qualityItemId:x.qs.id,rows:trSnapRows(x)}:null,files:fnames(WFO.get(x.id)||[],f=>f.kind==='tr'),attached:(WFO.get(x.id)||[]).some(f=>f.kind==='tr'),example:!!x.example,
   search:snapS([x.name,x.lab,x.no,x.result,x.fail,x.memo])}));
  const CT=contacts.map(c=>({id:c.id,company:c.company,name:c.name,team:c.team,title:c.title,email:c.email,web:c.web,addrs:c.addrs,tels:c.tels,faxes:c.faxes,mobiles:c.mobiles,memo:c.memo,cards:(c.cards||[]).map(f=>f.name),hasCard:!!(c.cards||[]).length,cardCount:(c.cards||[]).length,businessReg:(brOf(c.company)||{}).name||'',example:!!c.example,
   search:snapS([c.company,c.name,c.team,c.title,c.email,c.memo,...c.tels,...c.mobiles])}));

@@ -1,6 +1,6 @@
 const ST=['진행중','개찰완료','낙찰','유찰'],PT={gsearch:'통합 검색',dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',bill:'청구서',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
-let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash';
+let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash',dataVer=0; // dataVer: 저장·불러오기마다 +1 → 검색 색인 등 캐시를 다시 만듦
 const PR=['높음','보통','낮음'];
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const won=n=>n?Number(n).toLocaleString('ko-KR')+'원':'',fdt=s=>s?String(s).replace('T',' ').slice(0,16):'';
@@ -32,17 +32,17 @@ function normalizeOrders(arr){return (Array.isArray(arr)?arr:[]).filter(o=>o&&ty
  procs:(Array.isArray(o.procs)?o.procs:[]).map(p=>({id:String(p.id||uid()),name:p.name||'',vendor:p.vendor||'',shrink:numOrNull(p.shrink),ships:(Array.isArray(p.ships)?p.ships:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||'',...(s.from?{from:String(s.from)}:{}),...(s.dest?{dest:String(s.dest)}:{})}))})),
  dlv:(Array.isArray(o.dlv)?o.dlv:[]).map(s=>({id:String(s.id||uid()),date:s.date||'',qty:+s.qty||0,memo:s.memo||'',...(s.src?{src:String(s.src)}:{}),...(s.auto&&s.src?{auto:true}:{}),...(s.from?{from:String(s.from)}:{}),...(s.dest?{dest:String(s.dest)}:{})})),
  ...(Array.isArray(o.dlvSkip)&&o.dlvSkip.length?{dlvSkip:o.dlvSkip.map(String)}:{}),...(o.dlvV?{dlvV:1}:{})}))}
-function load(r0){const r=r0!==undefined?r0:A.load();stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);brLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);prLoad(r);sllLoad(r);xlLoad(r);rqLoad(r);trLoad(r);qsLoad(r);blLoad(r);dcLoad(r);snapLoad(r);plLoad(r);data=r?normalize(r):null;
+function load(r0){const r=r0!==undefined?r0:A.load();dataVer++;stLoad(r);ctLoad(r);pcLoad(r);owLoad(r);wfLoad(r);ssLoad(r);brLoad(r);crLoad(r);lsLoad(r);cmLoad(r);ivLoad(r);dlLoad(r);slLoad(r);prLoad(r);sllLoad(r);xlLoad(r);rqLoad(r);trLoad(r);qsLoad(r);blLoad(r);dcLoad(r);snapLoad(r);plLoad(r);data=r?normalize(r):null;
  const ro=r&&!Array.isArray(r)?r.orders:undefined;
  if(!data){data=examples();cl=exCl();orders=normalizeOrders(exOrders());save();return}
  orders=Array.isArray(ro)?normalizeOrders(ro):(data.some(x=>x.example)?normalizeOrders(exOrders()):[]);if(!Array.isArray(ro))setTimeout(save,0);
  if(r&&!Array.isArray(r)&&Array.isArray(r.checklist))cl=normalizeCl(r.checklist);
  else{cl=data.some(x=>x.example)?exCl():[];save()}}
 function payload(){return {app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...qsPayload(),...blPayload(),...dcPayload(),...snapPayload(),...plPayload()}}
-function save(){if(typeof dlvSyncAll==='function')dlvSyncAll();if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
+function save(){dataVer++;if(typeof dlvSyncAll==='function')dlvSyncAll();if(typeof slSync==='function')slSync();const p=payload();undoTrack(p);A.save(p).catch(e=>uiAlert('저장 실패: '+e));snapSched()}
 function dday(s){const d=new Date(s.slice(0,10)+'T00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
 const ddLabel=n=>n===0?'D-day':n>0?'D-'+n:'D+'+(-n),tag=x=>x.example?'<span class="ex">예시</span>':'';
-function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender)gsRender();xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
+function go(p){if(p!=='prod'||page!=='prod')pv=p==='prod'?pv:null;page=p;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==='p_'+p));document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));$('ptitle').textContent=PT[p];$('bidadd').style.display=p==='bids'?'':'none';render();if(p==='gsearch'&&window.gsRender){if(window.gsDirty)gsDirty();gsRender()}xlOnGo(p);if(A.fbRerun&&document.body.classList.contains('fbon'))setTimeout(A.fbRerun,60)}
 document.querySelectorAll('#side a').forEach(a=>a.onclick=()=>{if(a.dataset.p==='outwork')owEd=null;if(a.dataset.p==='prod')pv=null;if(a.dataset.p==='settings')setSec='';go(a.dataset.p)});
 function mv(k){cur=new Date(cur.getFullYear(),cur.getMonth()+k,1);render()}
 function mvm(k){mcur=new Date(mcur.getFullYear(),mcur.getMonth()+k,1);render()}
