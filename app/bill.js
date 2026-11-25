@@ -42,9 +42,11 @@ function blSplitBy(o,S){if(S.length!==1)return false;const x=S[0],F=finalShips(o
  if(Object.values(bills).some(b=>b.locked&&b.frozen&&blNk(b.client)===blNk(c)&&((b.frozen.lines||[]).some(l=>blBase(l.ref)===o.id)||(b.frozen.ships||[]).some(s=>ids.has(s.id)))))return false;
  return ![...ms].some(m=>{const b=bills[blOwner(m,c,o.id)];return b&&b.locked})}
 function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
+ // 매출 행을 오더번호로 한 번만 묶어 둠 (오더마다 매출 전체를 훑으면 오더×매출×달 수만큼 느려짐)
+ const SI=new Map();sales.forEach(x=>{const k=blNk(x.orderNo);if(!k)return;const l=SI.get(k);if(l)l.push(x);else SI.set(k,[x])});
  orders.forEach(o=>{if(!o.client)return;const sh=finalShips(o).filter(s=>blDate(s.date).slice(0,7)===ym&&+s.qty),k=blNk(o.no);if(k)ON.add(k);
   const SH=sh.map(s=>({id:s.id,date:s.date,qty:+s.qty||0,item:o.item||o.no,orderNo:o.no,memo:s.memo||'',from:s.from||'',dest:s.dest||'',oid:o.id})).sort((a,b)=>a.date.localeCompare(b.date));
-  const S=k?sales.filter(x=>blNk(x.orderNo)===k):[];
+  const S=k?SI.get(k)||[]:[];
   if(S.length&&blSplitBy(o,S)){if(sh.length){const x=S[0];add(o.client,{ref:o.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:SH.reduce((a,s)=>a+s.qty,0),price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,split:1,ships:SH})}return}
   if(S.length){const M=S.filter(x=>blSlYm(x,o)===ym);M.forEach((x,i)=>add(o.client,{ref:S.length===1?o.id:o.id+'|'+x.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:i?[]:SH}));
    if(!M.length&&SH.length)add(o.client,{ref:o.id,shipOnly:1,ships:SH});return}
