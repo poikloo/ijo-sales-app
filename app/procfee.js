@@ -30,15 +30,16 @@ function pfRows(o){const M=pfMatch(o),S=M?pfSlots(M.p):[],used=new Set();let las
  return {M,R,tot:R.reduce((s,r)=>s+(r.amt||0),0),any:R.some(r=>r.amt!=null)}}
 const pfP=v=>{if(v==null)return '';const r=Math.round(v*100)/100;return r.toLocaleString('ko-KR',{maximumFractionDigits:2})};
 function feeCard(o){const F=pfRows(o),M=F.M,u=esc(o.unit||'YD');
- const btn=M?`<button style="float:right" onclick="prOpen('${M.p.id}')" title="${esc(prLabel(M.p))}">단가 열기</button>`:`<button style="float:right" onclick="pfNewPrice('${o.id}')" title="이 오더번호로 단가 관리에 새 단가 추가">+ 단가 연결</button>`;
- const src=M?(M.how==='ono'?`<span class="pfsrc">단가 관리 · 오더번호 일치${M.n>1?` (${M.n}건 중 색상·아이템명이 맞는 행)`:''}: ${esc(prLabel(M.p))}</span>`:`<span class="pfsrc pfest">추정: 단가 관리에 이 오더번호가 없어 ITEM이 같은 행으로 찾음 (${esc(prLabel(M.p))}) — 단가 관리 항목에 오더번호를 넣으면 정확해요</span>`)
-  :`<span class="pfsrc pfest">단가 관리에서 오더번호 ${esc(o.no)}를 찾지 못했어요 — 단가를 직접 넣거나 단가 관리 항목에 오더번호를 넣으세요</span>`;
+  const src=M?(M.how==='ono'?`단가 관리 · 오더번호 일치${M.n>1?` (${M.n}건 중 색상·아이템명이 맞는 행)`:''}: ${prLabel(M.p)}`:`추정: 단가 관리에 이 오더번호가 없어 ITEM이 같은 행으로 찾음 (${prLabel(M.p)}) — 단가 관리 항목에 오더번호를 넣으면 정확해요`)
+  :`단가 관리에서 오더번호 ${o.no}를 찾지 못했어요 — 단가를 직접 넣거나 단가 관리 항목에 오더번호를 넣으세요`;
+ const btn=M?`<button style="float:right" onclick="prOpen('${M.p.id}')" title="${esc(src)}">단가 열기</button>`:`<button style="float:right" onclick="pfNewPrice('${o.id}')" title="${esc(src)} · 이 오더번호로 단가 관리에 새 단가 추가">+ 단가 연결</button>`;
  const row=r=>{const p=r.p,ttl=r.man!=null?`직접 넣은 단가${r.ap!=null?` (자동 ${pfP(r.ap)}원)`:''} — 비우면 자동`:r.a&&r.ap!=null?`단가 관리 ${r.a.slot.l} 칸${r.a.slot.v?' · '+r.a.slot.v:''} (${r.a.how} 기준)`:'단가 없음 — 직접 입력';
-  return `<tr><td>${esc(p.name)||'(공정명 없음)'}${p.vendor?` <span class="muted">(${esc(p.vendor)})</span>`:''}</td><td class="n">${num(r.qty)}</td>
-  <td class="n pfc" title="${esc(ttl)}">${r.man!=null?'<small class="pfm">수동</small>':''}<input class="pfi${r.man!=null?' man':''}" data-pf="${p.id}" inputmode="decimal" value="${r.price!=null?pfP(r.price):''}" placeholder="-" onchange="pfSet('${o.id}','${p.id}',this.value)" onkeydown="if(event.key==='Enter'&&!event.isComposing)this.blur()"></td>
+  const est=r.man==null&&r.ap!=null&&M&&M.how==='item';
+  return `<tr><td${p.vendor?` title="${esc(p.vendor)}"`:''}>${esc(p.name)||'(공정명 없음)'}</td><td class="n">${num(r.qty)}</td>
+  <td class="n pfc" title="${esc(ttl)}">${r.man!=null?'<small class="pfm">수동</small>':est?`<small class="pfm" title="${esc(src)}">추정</small>`:''}<input class="pfi${r.man!=null?' man':''}" data-pf="${p.id}" inputmode="decimal" value="${r.price!=null?pfP(r.price):''}" placeholder="-" onchange="pfSet('${o.id}','${p.id}',this.value)" onkeydown="if(event.key==='Enter'&&!event.isComposing)this.blur()"></td>
   <td class="n">${r.amt!=null?prW(r.amt):'<span class="muted">-</span>'}</td></tr>`};
  return `<div class="card pfcard"><h2>가공료 <small class="muted" style="font-weight:normal;font-size:12px">VAT 별도</small>${btn}</h2>${o.procs.length?`<table class="pft"><colgroup><col><col style="width:110px"><col style="width:130px"><col style="width:120px"></colgroup><thead><tr><th>공정</th><th class="n">수량(${u})</th><th class="n">단가</th><th class="n">금액</th></tr></thead><tbody>${F.R.map(row).join('')}</tbody>
- <tfoot><tr><td><b>합계</b></td><td></td><td></td><td class="n"><b>${F.any?prW(F.tot):'-'}</b></td></tr></tfoot></table><div class="pfnote">${src}</div>`:'<p class="muted">가공 공정이 없습니다.</p>'}</div>`}
+ <tfoot><tr><td><b>합계</b></td><td></td><td></td><td class="n"><b>${F.any?prW(F.tot):'-'}</b></td></tr></tfoot></table>`:'<p class="muted">가공 공정이 없습니다.</p>'}</div>`}
 function pfSet(oid,pid,v){const o=orders.find(x=>x.id===oid);if(!o)return;const n=prNum(v),F=pfRows(o),r=F.R.find(x=>x.p.id===pid);if(!r)return;
  if(String(v).trim()&&n==null){toast('숫자를 넣으세요');render();return}
  const fee={...(o.fee||{})};if(n==null||(r.ap!=null&&Math.abs(n-r.ap)<1e-9))delete fee[pid];else fee[pid]=n;
