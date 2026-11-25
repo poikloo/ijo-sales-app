@@ -2,6 +2,8 @@
 // 다른 카테고리의 첨부 파일(작업의뢰서·발주서·출고 거래명세서·시험성적서·규격서·명함·사업자등록증)은 그 자리에 둔 채 '연결'해서 보여 주고(읽기 전용),
 // 여기서 직접 추가한 서류는 docs 폴더에 복사해 documents[]에 저장. 폴더 없이 태그(종류 · 거래처 · 오더번호)로 찾음.
 let docs=[],dcF={k:'',kind:'',client:'',per:'',view:'list'},dcSizes={};const dcSel=new Set();
+// 많이 쌓여도 빠르게: 종류마다 처음 몇 줄만 그리고 [더보기], 검색은 0.15초 쉬면, 썸네일은 화면에 보이는 카드만 읽음
+let dcLim={},dcVis=[],dcKT=0;const dcColl=new Intl.Collator('ko');
 const DC_K=['성적서','거래명세서','청구서','작업의뢰서','발주서','규격서','계약·인증','명함','사업자등록증','사진','기타'];
 const DC_C={'성적서':'#e3f4ea;color:#16803c','거래명세서':'#e5effb;color:#1d5fa8','청구서':'#fde8e8;color:#b42318','작업의뢰서':'#f1e8fb;color:#7a3db8','발주서':'#efe9fb;color:#5b3fb0','규격서':'#e6f4f1;color:#0f766e','계약·인증':'#e8f0fe;color:#1e4fa3','명함':'#fff3e0;color:#b45309','사업자등록증':'#f3f4f6;color:#374151','사진':'#fdecee;color:#be123c','기타':'#eef0f2;color:#4b5563'};
 const normDoc=x=>({id:String(x&&x.id||uid()),name:String(x&&x.name||''),path:String(x&&x.path||''),size:+(x&&x.size)||0,addedAt:String(x&&x.addedAt||''),kind:DC_K.includes(x&&x.kind)?x.kind:'기타',
@@ -33,27 +35,30 @@ const dcOrg=x=>`<span class="dcorg${x.own?' own':''}" title="${esc(x.org+(x.ref?
 function renderDocs(){const el=$('dc_wrap');if(!el)return;const all=dcItems(),base=dcFilter(all,true),L=dcFilter(all),keys=new Set(all.map(x=>x.key));[...dcSel].forEach(k=>{if(!keys.has(k))dcSel.delete(k)});
  const cnt=k=>base.filter(x=>x.kind===k).length,cls=[...new Set(all.map(x=>x.client).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko')),n=dcSel.size;
  const rail=`<div class="dcrail"><div class="dcrh">종류</div><a class="${!dcF.kind?'on':''}" onclick="dcKind('')">전체<b>${base.length}</b></a>${DC_K.filter(k=>cnt(k)||dcF.kind===k).map(k=>`<a class="${dcF.kind===k?'on':''}" onclick="dcKind('${k}')">${esc(k)}<b>${cnt(k)}</b></a>`).join('')}</div>`;
- const bar=`<div class="filters dcbar"><input id="dck" placeholder="검색" value="${esc(dcF.k)}" oninput="dcF.k=this.value;render()" style="width:200px">
+ const bar=`<div class="filters dcbar"><input id="dck" placeholder="검색" value="${esc(dcF.k)}" oninput="dcF.k=this.value;dcKey()" style="width:200px">
   <label class="dcfl">거래처<select onchange="dcF.client=this.value;render()"><option value="">전체</option>${cls.map(c=>`<option${c===dcF.client?' selected':''}>${esc(c)}</option>`).join('')}</select></label>
   <label class="dcfl">기간<select onchange="dcF.per=this.value;render()">${[['','전체 기간'],['m','이번 달'],['3m','최근 3개월'],['y','올해'],['py','작년']].map(([v,t])=>`<option value="${v}"${dcF.per===v?' selected':''}>${t}</option>`).join('')}</select></label>
   <span style="flex:1"></span><button id="dc_del" class="d" style="${n?'':'display:none'}" onclick="dcBulkDel()">삭제 (${n})</button>
   <span class="dcvt"><button class="${dcF.view==='list'?'on':''}" onclick="dcF.view='list';render()">목록</button><button class="${dcF.view==='card'?'on':''}" onclick="dcF.view='card';render()">카드</button></span><button class="p" onclick="dcPickUp()">+ 서류 추가</button></div>`;
  let body;
- if(dcF.view==='card'){body=`<div class="dcgrid" id="dctb">${L.length?L.sort(dcSort).map(x=>`<div class="dccard" data-k="${esc(x.key)}" onclick="dcOpen(this.dataset.k)"><div class="dcth" data-th="${esc(x.key)}">${/\.pdf$/i.test(x.name)?'PDF':'🖼'}</div><div class="dccn" title="${esc(x.name)}">${esc(x.name)}</div><div>${dcTag(x.kind)} ${x.client?dcCl(x.client):''}</div></div>`).join(''):'<div class="muted">서류가 없어요.</div>'}</div>`}
+ if(dcF.view==='card'){const lim=dcLim.card||120,CL=L.sort(dcSort).slice(0,lim);body=`<div class="dcgrid" id="dctb">${L.length?CL.map(x=>`<div class="dccard" data-k="${esc(x.key)}" onclick="dcOpen(this.dataset.k)"><div class="dcth" data-th="${esc(x.key)}">${/\.pdf$/i.test(x.name)?'PDF':'🖼'}</div><div class="dccn" title="${esc(x.name)}">${esc(x.name)}</div><div>${dcTag(x.kind)} ${x.client?dcCl(x.client):''}</div></div>`).join(''):'<div class="muted">서류가 없어요.</div>'}</div>${L.length>lim?`<div class="dcmorec"><a onclick="dcMore('card')">더보기 › <span class="muted">(${(L.length-lim).toLocaleString()}건 더)</span></a></div>`:''}`}
  else{const G=dcF.kind?[[dcF.kind,L]]:DC_K.map(k=>[k,L.filter(x=>x.kind===k)]).filter(g=>g[1].length);
   const row=x=>`<tr class="r" data-k="${esc(x.key)}" onclick="dcOpen(this.dataset.k)"><td class="lbcc" onclick="event.stopPropagation()"><input type="checkbox" class="dcck" value="${esc(x.key)}"${dcSel.has(x.key)?' checked':''} aria-label="선택" onchange="dcTick(this.value,this.checked)"></td><td><b>${esc(x.name)}</b></td><td>${dcTag(x.kind)}</td><td>${dcCl(x.client)}</td><td>${dcOn(x.orderNo)}</td><td class="c">${x.date||''}</td><td class="r">${dcSz(x)}</td><td>${dcOrg(x)}</td></tr>`;
   body=`<div class="tw"><table class="dct" data-rz="docs_list"><colgroup><col style="width:30px"><col style="width:300px"><col style="width:96px"><col style="width:150px"><col style="width:100px"><col style="width:100px"><col style="width:80px"><col></colgroup><thead><tr><th class="lbcc" data-rzmin="24"><input type="checkbox" id="dc_all" aria-label="전체 선택"${L.length&&L.every(x=>dcSel.has(x.key))?' checked':''} onclick="event.stopPropagation();dcAll(this.checked)"></th><th>파일명</th><th>종류</th><th>거래처</th><th>오더</th><th class="c">날짜</th><th class="r">크기</th><th>출처</th></tr></thead>
-  <tbody id="dctb">${L.length?G.map(([k,l])=>(dcF.kind?'':`<tr class="dcgh"><td colspan="8">${dcTag(k)} <span class="muted">${l.length}</span></td></tr>`)+l.sort(dcSort).map(row).join('')).join(''):`<tr><td colspan="8" class="muted">${all.length?'검색 결과가 없어요.':'서류가 없어요. 파일을 이 화면에 끌어다 놓거나 [+ 서류 추가]를 누르세요.'}</td></tr>`}</tbody></table></div>`}
- el.innerHTML=`<div class="dcw">${rail}<div class="card dcmain">${bar}${body}</div></div>`;if(typeof crInit==='function')crInit();dcSelCount();dcStatFill(all);if(dcF.view==='card')dcThumbFill(all)}
-const dcSort=(a,b)=>(b.date||'').localeCompare(a.date||'')||a.name.localeCompare(b.name,'ko');
-function dcKind(k){dcF.kind=k;render()}
+  <tbody id="dctb">${L.length?G.map(([k,l])=>(dcF.kind?'':`<tr class="dcgh"><td colspan="8">${dcTag(k)} <span class="muted">${l.length}</span></td></tr>`)+(()=>{const lim=dcLim[k]||(dcF.kind?300:50),S=l.sort(dcSort);return S.slice(0,lim).map(row).join('')+(S.length>lim?dcMoreRow(k,S.length-lim):'')})()).join(''):`<tr><td colspan="8" class="muted">${all.length?'검색 결과가 없어요.':'서류가 없어요. 파일을 이 화면에 끌어다 놓거나 [+ 서류 추가]를 누르세요.'}</td></tr>`}</tbody></table></div>`}
+ dcVis=L;el.innerHTML=`<div class="dcw">${rail}<div class="card dcmain">${bar}${body}</div></div>`;if(typeof crInit==='function')crInit();dcSelCount();dcStatFill(all);if(dcF.view==='card')dcThumbFill(all)}
+const dcSort=(a,b)=>(b.date||'').localeCompare(a.date||'')||dcColl.compare(a.name,b.name);
+function dcKind(k){dcF.kind=k;dcLim={};render()}
+function dcKey(){clearTimeout(dcKT);dcKT=setTimeout(()=>{dcKT=0;dcLim={};render()},150)}
+function dcMore(k){dcLim[k]=(dcLim[k]||(k==='card'?120:dcF.kind?300:50))+(k==='card'?240:dcF.kind?500:200);render()}
+const dcMoreRow=(k,n)=>`<tr class="dcmore"><td colspan="8"><a onclick="dcMore('${k}')">더보기 › <span class="muted">(${n.toLocaleString()}건 더)</span></a></td></tr>`;
 // 크기: 연결된 파일은 디스크에서 한 번 읽어 둠
 let dcStatBusy=false;async function dcStatFill(all){if(dcStatBusy||!A.fileStat)return;const need=all.filter(x=>!x.own&&dcSizes[x.key]==null);if(!need.length)return;dcStatBusy=true;
  try{const r=await A.fileStat(need.map(x=>[x.store,x.path]));need.forEach((x,i)=>dcSizes[x.key]=r[i])}finally{dcStatBusy=false}if(page==='docs')render()}
 // ---- 선택 · 삭제 ----
-function dcSelCount(){const n=dcSel.size,b=$('dc_del');if(b){b.style.display=n?'':'none';b.textContent=`삭제 (${n})`}const all=$('dc_all'),c=[...document.querySelectorAll('#dctb input.dcck')];if(all){const k=c.filter(x=>x.checked).length;all.checked=!!c.length&&k===c.length;all.indeterminate=k>0&&k<c.length}}
+function dcSelCount(){const n=dcSel.size,b=$('dc_del');if(b){b.style.display=n?'':'none';b.textContent=`삭제 (${n})`}const all=$('dc_all');if(all){const k=dcVis.filter(x=>dcSel.has(x.key)).length;all.checked=!!dcVis.length&&k===dcVis.length;all.indeterminate=k>0&&k<dcVis.length}}
 function dcTick(k,on){on?dcSel.add(k):dcSel.delete(k);dcSelCount()}
-function dcAll(on){document.querySelectorAll('#dctb input.dcck').forEach(c=>{c.checked=on;on?dcSel.add(c.value):dcSel.delete(c.value)});dcSelCount()}
+function dcAll(on){dcVis.forEach(x=>on?dcSel.add(x.key):dcSel.delete(x.key));document.querySelectorAll('#dctb input.dcck').forEach(c=>c.checked=on);dcSelCount()}
 async function dcBulkDel(){const L=dcItems().filter(x=>dcSel.has(x.key)),own=L.filter(x=>x.own),lk=L.length-own.length;if(!L.length)return;
  if(!own.length)return uiAlert(`고른 ${lk}건은 다른 카테고리(${[...new Set(L.map(x=>x.org))].join(' · ')})의 첨부라 여기서 지울 수 없어요. 그 화면에서 지워 주세요.`);
  if(await uiChoice(`서류 ${own.length}건을 삭제할까요?${lk?`\n\n· 다른 카테고리 첨부 ${lk}건은 여기서 지울 수 없어 그대로 둬요`:''}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,[{t:'삭제',c:'d'}])!==0)return;
@@ -128,9 +133,15 @@ async function dcUpOk(){if(!dcUp.length)return;if(!A.dcAttach)return uiAlert('�
  document.addEventListener('drop',e=>{n=0;const o=$('dcdrop');if(o)o.classList.remove('on');if(!on(e))return;e.preventDefault();const l=[...e.dataTransfer.files].map(f=>A.pathForFile?A.pathForFile(f):'').filter(Boolean);if(l.length){if(!($('dcup')&&$('dcup').open))dcUp=[];dcUpOpen(l)}});
 })();
 // 카드 보기 미리보기 (이미지 · PDF 첫 쪽)
-const dcThumbs={};async function dcThumbFill(all){for(const el of document.querySelectorAll('.dcth[data-th]')){const k=el.dataset.th;if(dcThumbs[k]){el.innerHTML=`<img src="${dcThumbs[k]}">`;continue}const x=all.find(i=>i.key===k);if(!x)continue;
- try{const b=await A.attRead(x.store,x.path);if(!b)continue;let u;if(/\.pdf$/i.test(x.name)){const doc=await pdfjsLib.getDocument({...PDFOPT,data:Uint8Array.from(atob(b),c=>c.charCodeAt(0))}).promise,pg=await doc.getPage(1),v=pg.getViewport({scale:1}),vp=pg.getViewport({scale:220/v.width}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;u=cv.toDataURL('image/jpeg',0.8)}
-  else{const ext=(x.name.match(/\.(\w+)$/)||[])[1].toLowerCase();u=`data:image/${ext==='jpg'?'jpeg':ext};base64,${b}`}dcThumbs[k]=u;if(el.isConnected)el.innerHTML=`<img src="${u}">`}catch(e){}}}
+const dcThumbs=new Map(),DC_TH_MAX=300;let dcThIO=null,dcThQ=[],dcThBusy=false,dcThAll=new Map();
+function dcThumbFill(all){dcThAll=new Map(all.map(x=>[x.key,x]));dcThQ=[];if(dcThIO)dcThIO.disconnect();
+ const els=[...document.querySelectorAll('.dcth[data-th]')];els.forEach(el=>{const u=dcThumbs.get(el.dataset.th);if(u)el.innerHTML=`<img src="${u}">`});
+ dcThIO=new IntersectionObserver(es=>{es.forEach(e=>{if(!e.isIntersecting)return;dcThIO.unobserve(e.target);if(!dcThumbs.has(e.target.dataset.th))dcThQ.push(e.target)});dcThRun()},{rootMargin:'300px'});
+ els.forEach(el=>{if(!dcThumbs.has(el.dataset.th))dcThIO.observe(el)})}
+async function dcThRun(){if(dcThBusy)return;dcThBusy=true;try{while(dcThQ.length){const el=dcThQ.shift();if(!el.isConnected)continue;const k=el.dataset.th,x=dcThAll.get(k);if(!x)continue;
+ try{const b=await A.attRead(x.store,x.path);if(!b)continue;let u;if(/\.pdf$/i.test(x.name)){const doc=await pdfjsLib.getDocument({...PDFOPT,data:Uint8Array.from(atob(b),c=>c.charCodeAt(0))}).promise,pg=await doc.getPage(1),v=pg.getViewport({scale:1}),vp=pg.getViewport({scale:220/v.width}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;u=cv.toDataURL('image/jpeg',0.8);doc.destroy&&doc.destroy()}
+  else{const ext=(x.name.match(/\.(\w+)$/)||[])[1].toLowerCase();u=`data:image/${ext==='jpg'?'jpeg':ext};base64,${b}`}
+  dcThumbs.set(k,u);if(dcThumbs.size>DC_TH_MAX)dcThumbs.delete(dcThumbs.keys().next().value);if(el.isConnected)el.innerHTML=`<img src="${u}">`}catch(e){}}}finally{dcThBusy=false}}
 // ---- 요청함: docs.add (서류 보관함에 직접 추가) ----
 Object.assign(RQ_T,{'docs.add':'서류 추가'});RQ_KEYS['docs.add']=['file','files','image','images','kind','client','orderNo','date','memo'];
 RQ_H['docs.add']=function(a,it,ctx,req,P){const kind=rqS(a.kind),cl=rqS(a.client),no=rqS(a.orderNo),fis=crFiles(a,it,P,true);
@@ -156,6 +167,7 @@ window.addEventListener('load',()=>{if(A.dcGc)A.dcGc(docs.map(d=>d.path)).catch(
 table.dct tr.dcgh td{background:#f6f7f7;padding:5px 8px;font-size:12px}
 .dcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}.dccard{border:1px solid #dcdcde;border-radius:8px;padding:8px;cursor:pointer;background:#fff;font-size:12px}.dccard:hover{border-color:#2271b1;box-shadow:0 2px 6px #0001}
 .dcth{height:120px;background:#f0f0f1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#a7aaad;font-weight:bold;overflow:hidden;margin-bottom:6px}.dcth img{max-width:100%;max-height:100%}.dccn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+tr.dcmore td{padding:6px 10px;font-size:12px}tr.dcmore a,.dcmorec a{color:#2271b1;cursor:pointer;font-weight:600}.dcmorec{text-align:center;padding:12px;font-size:13px}
 dialog.dcpv{width:min(900px,94vw);max-width:none}dialog.dcpv .dh,dialog.dcup .dh,dialog.dced .dh{display:flex;align-items:center}.dcx{margin-left:auto;background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 4px}
 .dcpm{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #eee;font-size:12px}
 .dcpb{background:#e9ebee;margin:10px 14px;border-radius:6px;height:60vh;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0}.dcpb canvas,.dcpb img{box-shadow:0 1px 4px #0003;background:#fff;max-width:calc(100% - 24px)}.dcpb img{object-fit:contain}
