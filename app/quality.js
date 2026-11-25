@@ -66,7 +66,7 @@ function qsRenderList(){const el=$('qslst');if(!el)return;const cats=[...new Set
 function qsPick(id){qsSel=id;qsTab='';qsPat='';qsRecent=[id,...qsRecent.filter(x=>x!==id)].slice(0,5);save();qsRenderList();qsRenderDet()}
 function qsFav(id){const q=qsGet(id);if(!q)return;q.fav=!q.fav;save();qsRenderList()}
 // ---- 상세 ----
-function qsRowsHTML(f){let prev=null;return f.rows.map(r=>{const same=prev!==null&&r.item===prev;prev=r.item;return `<tr class="r" onclick="qsRowEdit('${f.id}','${r.id}')"><td>${same?'':esc(r.item)}</td><td>${esc(r.div)||'-'}</td><td>${esc(r.std)}</td><td>${esc(r.unit)}</td><td>${esc(r.method)}</td><td class="l">${esc(r.memo)}</td></tr>`}).join('')}
+function qsRowsHTML(f){let prev=null;return f.rows.map((r,i)=>{const same=prev!==null&&r.item===prev;prev=r.item;return `<tr class="r" ${dsRow('qs:'+f.id,i)} onclick="qsRowEdit('${f.id}','${r.id}')"><td>${dsH('qs:'+f.id,i,'qsRowMoveTo',[f.id],f.rows.length)}${same?'':esc(r.item)}</td><td>${esc(r.div)||'-'}</td><td>${esc(r.std)}</td><td>${esc(r.unit)}</td><td>${esc(r.method)}</td><td class="l">${esc(r.memo)}</td></tr>`}).join('')}
 const QS_ROWT=(id,body)=>`<table class="qst" data-rz="${id}"><colgroup><col style="width:17%"><col style="width:9%"><col style="width:22%"><col style="width:9%"><col style="width:20%"><col></colgroup><thead><tr><th>항목</th><th>구분</th><th>기준</th><th>단위</th><th>시험방법</th><th>비고</th></tr></thead><tbody>${body}</tbody></table>`;
 function qsRenderDet(){const el=$('qsdet');if(!el)return;const q=qsGet(qsSel);
  if(!q){el.innerHTML=`<div class="qsempty">${qualities.length?'왼쪽 목록에서 품목을 선택하세요.':'등록된 품목이 없습니다.'}</div>`;return}
@@ -117,11 +117,11 @@ function qsRowEdit(fid,rid){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===f
  $('dt').textContent=(rid?'시험항목 수정':'시험항목 추가')+' — '+f.name;
  $('dbody').innerHTML=`<div class="trform"><div class="trg">${inp('item','항목 *',prev?esc(prev.item):'예: 인장강도')}${inp('div','구분','예: 경사')}${inp('std','기준','예: 1,540 이상')}${inp('unit','단위','예: N')}</div>${inp('method','시험방법','예: KS K 0520 그래브법')}
  </div>`;
- $('dfoot').innerHTML=`<button class="p" onclick="qsRowSave('${fid}','${rid||''}')">확인</button><button onclick="dlg.close()">취소</button>${rid?`<span style="flex:1"></span><button onclick="qsRowMove('${fid}','${rid}',-1)">▲</button><button onclick="qsRowMove('${fid}','${rid}',1)">▼</button><button class="d" onclick="qsRowDel('${fid}','${rid}')">삭제</button>`:''}`;if(!dlg.open)dlg.showModal();setTimeout(()=>$('qr_item').focus(),0)}
+ $('dfoot').innerHTML=`<button class="p" onclick="qsRowSave('${fid}','${rid||''}')">확인</button><button onclick="dlg.close()">취소</button>${rid?`<span style="flex:1"></span><button class="d" onclick="qsRowDel('${fid}','${rid}')">삭제</button>`:''}`;if(!dlg.open)dlg.showModal();setTimeout(()=>$('qr_item').focus(),0)}
 function qsRowSave(fid,rid){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===fid);if(!f)return;const o={};['item','div','std','unit','method'].forEach(k=>o[k]=$('qr_'+k).value);
  if(!o.item.trim()&&!rid&&f.rows.length)o.item=f.rows[f.rows.length-1].item;if(!o.item.trim())return uiAlert('항목을 입력하세요.');
  if(rid){const i=f.rows.findIndex(x=>x.id===rid);if(i>=0)f.rows[i]=normQsRow({...f.rows[i],...o})}else f.rows.push(normQsRow(o));q.updated=now();q.example=false;save();dlg.close();render()}
-function qsRowMove(fid,rid,d){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===fid);if(!f)return;const i=f.rows.findIndex(x=>x.id===rid),j=i+d;if(i<0||j<0||j>=f.rows.length)return;[f.rows[i],f.rows[j]]=[f.rows[j],f.rows[i]];save();render()}
+function qsRowMoveTo(fid,from,to){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===fid);if(f&&arrMove(f.rows,from,to)){save();render()}}
 async function qsRowDel(fid,rid){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===fid);if(!f)return;if(!await uiConfirm('이 시험항목을 삭제할까요?'))return;f.rows=f.rows.filter(x=>x.id!==rid);save();if(dlg.open)dlg.close();render()}
 // ---- 품질기준 복사 (다른 품목·원단의 시험항목을 현재 원단으로) ----
 function qsCopy(fid){const q=qsGet(qsSel),f=q&&q.fabrics.find(x=>x.id===fid);if(!f)return;

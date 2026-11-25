@@ -28,13 +28,13 @@ function plAsk(names){const l=plNew(names);if(!l.length)return Promise.resolve([
  const p=plQ.then(run,run);plQ=p.catch(()=>{});return p}
 // ---- 설정 › 공정 목록 ----
 function plSettings(){const el=$('pl_card');if(!el)return;
- el.innerHTML=`<h2>공정 목록</h2><div class="pllist">${procList.map((n,i)=>`<div class="plrow"><span class="n">${i+1}</span><span class="nm">${esc(n)}</span><button onclick="plMv(${i},-1)" ${i?'':'disabled'}>▲</button><button onclick="plMv(${i},1)" ${i<procList.length-1?'':'disabled'}>▼</button><button onclick="plDel(${i})">✕</button></div>`).join('')||'<p class="muted">공정이 없습니다.</p>'}</div>
+ el.innerHTML=`<h2>공정 목록</h2><div class="pllist">${procList.map((n,i)=>`<div class="plrow" ${dsRow('pl',i)}>${dsH('pl',i,'plMvTo',[],procList.length)}<span class="n">${i+1}</span><span class="nm">${esc(n)}</span><button onclick="plDel(${i})">✕</button></div>`).join('')||'<p class="muted">공정이 없습니다.</p>'}</div>
  <div class="rqbar" style="margin-top:8px"><input id="pl_in" placeholder="공정" style="width:200px" onkeydown="if(event.key==='Enter'&&!event.isComposing)plAdd()"><button class="p" onclick="plAdd()">추가</button><span style="flex:1"></span><button onclick="plReset()">기본값으로</button></div>
  ${procDeclined.length?`<h3 style="margin:14px 0 6px;font-size:13px">추가 안 함</h3><div class="pldec">${procDeclined.map((n,i)=>`<span class="pldc">${esc(n)} <button title="목록에 추가" onclick="plRestore(${i},true)">추가</button><button title="다시 묻기" onclick="plRestore(${i},false)">✕</button></span>`).join('')}</div><div class="rqbar" style="margin-top:6px"><button onclick="plClearDec()">모두 다시 묻기</button></div>`:''}`}
 function plSave(){plDatalist();save();plSettings()}
 function plAdd(){const i=$('pl_in'),v=String(i.value||'').trim().replace(/\s+/g,' ');if(!v)return;if(plHas(procList,v)){toast('이미 있는 공정이에요');return}
  procList.push(v);procDeclined=procDeclined.filter(x=>plKey(x)!==plKey(v));plSave();const n=$('pl_in');if(n)n.focus()}
-function plMv(i,k){const j=i+k;if(j<0||j>=procList.length)return;[procList[i],procList[j]]=[procList[j],procList[i]];plSave()}
+function plMvTo(from,to){if(arrMove(procList,from,to))plSave()}
 function plDel(i){procList.splice(i,1);plSave()}
 function plRestore(i,add){const n=procDeclined[i];if(n==null)return;procDeclined.splice(i,1);if(add&&!plHas(procList,n))procList.push(n);plSave()}
 async function plClearDec(){if(!await uiConfirm('추가 안 함으로 둔 공정을 모두 지울까요?\n다음에 입력하면 다시 물어봐요.'))return;procDeclined=[];plSave()}

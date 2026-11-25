@@ -4,12 +4,12 @@ const QG={};
 function qgInit(key,cols,rows,ids,hed){QG[key]={cols:cols.slice(),rows:rows.map(r=>cols.map((_,j)=>r[j]??'')),ids:(ids||rows.map(()=>'')).slice(),hed:!!hed}}
 function qgHTML(key){const g=QG[key],ea=s=>esc(String(s??''));
  return `<div class="qgw"><table class="qg"><thead><tr><th class="qgn"></th>${g.cols.map((c,j)=>`<th>${g.hed?`<input value="${ea(c)}" oninput="QG['${key}'].cols[${j}]=this.value" aria-label="머리글 ${j+1}"><button class="qgx" title="열 삭제" onclick="qgColDel('${key}',${j})">✕</button>`:ea(c)}</th>`).join('')}${g.hed?`<th class="qgn"><button title="열 추가" onclick="qgColAdd('${key}')">＋</button></th>`:''}<th class="qgn"></th></tr></thead>
- <tbody>${g.rows.map((r,i)=>`<tr><td class="qgn"><button title="위로" onclick="qgMove('${key}',${i},-1)"${i?'':' disabled'}>▲</button><button title="아래로" onclick="qgMove('${key}',${i},1)"${i<g.rows.length-1?'':' disabled'}>▼</button></td>${r.map((v,j)=>`<td><input value="${ea(v)}" oninput="QG['${key}'].rows[${i}][${j}]=this.value"></td>`).join('')}${g.hed?'<td></td>':''}<td class="qgn"><button title="행 삭제" onclick="qgDel('${key}',${i})">✕</button></td></tr>`).join('')}</tbody></table>
+ <tbody>${g.rows.map((r,i)=>`<tr ${dsRow('qg:'+key,i)}><td class="qgn">${dsH('qg:'+key,i,'qgMoveTo',[key],g.rows.length)}</td>${r.map((v,j)=>`<td><input value="${ea(v)}" oninput="QG['${key}'].rows[${i}][${j}]=this.value"></td>`).join('')}${g.hed?'<td></td>':''}<td class="qgn"><button title="행 삭제" onclick="qgDel('${key}',${i})">✕</button></td></tr>`).join('')}</tbody></table>
  <button onclick="qgAdd('${key}')">＋ 행</button></div>`}
 function qgRe(key){const el=document.querySelector(`[data-qg="${key}"]`);if(el)el.innerHTML=qgHTML(key)}
 function qgAdd(key){const g=QG[key];g.rows.push(g.cols.map(()=>''));g.ids.push('');qgRe(key);const l=[...document.querySelectorAll(`[data-qg="${key}"] tbody tr:last-child input`)];if(l[0])l[0].focus()}
 function qgDel(key,i){const g=QG[key];g.rows.splice(i,1);g.ids.splice(i,1);qgRe(key)}
-function qgMove(key,i,d){const g=QG[key],j=i+d;if(j<0||j>=g.rows.length)return;[g.rows[i],g.rows[j]]=[g.rows[j],g.rows[i]];[g.ids[i],g.ids[j]]=[g.ids[j],g.ids[i]];qgRe(key)}
+function qgMoveTo(key,from,to){const g=QG[key];if(!g||!arrMove(g.rows,from,to))return;arrMove(g.ids,from,to);qgRe(key)}
 function qgColAdd(key){const g=QG[key];g.cols.push('');g.rows.forEach(r=>r.push(''));qgRe(key)}
 function qgColDel(key,j){const g=QG[key];if(g.cols.length<=1)return;g.cols.splice(j,1);g.rows.forEach(r=>r.splice(j,1));qgRe(key)}
 const qgBox=key=>`<div data-qg="${key}">${qgHTML(key)}</div>`;
