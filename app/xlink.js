@@ -10,8 +10,8 @@ const xlU=s=>String(s??'').trim().toUpperCase().replace(/\s+/g,' ');
 const XL_K={
  price:{t:'단가',unit:'품목',keyDesc:'ITEM+색상+부위',nosheet:'CODE·ITEM 머리글이 있는 단가 시트를 찾지 못함 — 데이터는 그대로',
   arr:()=>prices,set:a=>{prices=a},isL:x=>x.src==='xl',tag:x=>{x.src='xl'},untag:x=>{x.src=''},
-  key:x=>[x.item,x.color,x.part].map(piU).join('|'),fields:({id,src,example,...o})=>JSON.stringify(o),
-  mk:(x,id)=>({...x,id,src:'xl'})},
+  key:x=>[x.item,x.color,x.part].map(piU).join('|'),fields:({id,src,example,ono,...o})=>JSON.stringify(o), // 오더번호는 앱에서 넣을 수 있어 비교에서 뺌
+  mk:(x,id,old)=>({...x,id,src:'xl',ono:x.ono||(old&&old.ono)||''})},
  sales:{t:'매출',unit:'매출',keyDesc:'오더번호+매출일+거래처+품목+색상 등',nosheet:'거래처·단가 머리글이 있는 시트를 찾지 못함 — 데이터는 그대로',
   arr:()=>sales,set:a=>{sales=a},isL:x=>x.source==='xl',tag:x=>{x.source='xl'},untag:x=>{x.source='import'},
   key:x=>[x.orderNo,x.date||x.year,x.client,x.item,x.fabric,x.color,x.process].map(xlU).join('|'),fields:({id,source,qtyMan,...o})=>{if(slLinked(o)){delete o.qty;delete o.supply;delete o.total}return JSON.stringify(o)}, // 생산 연동 행은 수량·금액 차이 무시

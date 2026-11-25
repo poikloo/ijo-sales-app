@@ -196,7 +196,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
            "p1V": "(예시)C가공", "p1D": "PU 코팅", "p1": 400, "m": 0.13 } }
 ```
 
-`item`(ITEM) 또는 `code`(CODE) 필수. `cat` 구분, `part` 파트, `color`, `width` 폭,
+`item`(ITEM) 또는 `code`(CODE) 필수. `ono` 오더번호(여러 개는 쉼표로 — 생산 관리 오더 상세의 가공료가 이 행의 단가를 씀), `cat` 구분, `part` 파트, `color`, `width` 폭,
 `gV` 생지 공장 · `gCur` 생지 통화(`KRW`/`USD`) · `g` 생지 가격,
 `dV` 염색 공장 · `d` 염색 가격 · `dS` 염색 축,
 `p1V`/`p2V` 가공소 · `p1D`/`p2D` 가공내역 · `p1`/`p2` 가공 가격 · `p1S`/`p2S` 가공 축,

@@ -15,7 +15,7 @@ function snapBuild(){
   proc1:{vendor:p.p1V,desc:p.p1D,shrink:r2(c.s1),price:r2(p.p1),cumulative:r2(c.c2)},proc2:{vendor:p.p2V,desc:p.p2D,shrink:r2(c.s2),price:r2(p.p2),cumulative:r2(c.c3)},
   processingFee:r2((+p.p1||0)+(+p.p2||0)),etc:{desc:p.eD,price:r2(p.e)},trans:r2(p.t),marginRate:r2(c.m),
   net:r2(c.net),netPerM:r2(c.netM),margin:r2(c.mg),offer:r2(c.off),offerPerM:r2(c.offM),offerVat:r2(c.offV),offerVatPerM:r2(c.offVM),
-  memo:p.memo,example:!!p.example,search:snapS([p.cat,p.part,p.code,p.item,p.color,p.width,p.gV,p.dV,p.p1V,p.p1D,p.p2V,p.p2D,p.eD,p.memo])}});
+  memo:p.memo,orderNos:p.ono||'',example:!!p.example,search:snapS([p.ono,p.cat,p.part,p.code,p.item,p.color,p.width,p.gV,p.dV,p.p1V,p.p1D,p.p2V,p.p2D,p.eD,p.memo])}});
  const SL=sales.map(x=>({id:x.id,date:x.date,year:x.year,client:x.client,orderNo:x.orderNo,item:x.item,fabric:x.fabric,process:x.process,color:x.color,unitPrice:x.unitPrice,qty:x.qty,supply:x.supply,total:x.total,memo:x.memo,
   search:snapS([x.client,x.orderNo,x.item,x.fabric,x.process,x.color,x.memo])}));
  const O=orders.map(o=>{const wf=WFO.get(o.id)||[];return {id:o.id,no:o.no,item:o.item,fabric:o.fabric,client:o.client,date:o.date,due:o.due,delivered:!!o.delivered,note:o.note||'',
@@ -23,7 +23,7 @@ function snapBuild(){
   processes:o.procs.map((p,i)=>({step:i+1,name:p.name,vendor:p.vendor,shrink:p.shrink,shippedQty:p.ships.reduce((s,x)=>s+(+x.qty||0),0),
    shipments:p.ships.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:ssN(x.id)}))})),
   finalDelivery:(o.dlv||[]).length?{totalQty:dlvSum(o),stock:progress(o).stock,rows:o.dlv.map(x=>({date:x.date,qty:x.qty,memo:x.memo,statementFiles:ssN(x.id)}))}:null,completedQty:(o.dlv||[]).length?dlvSum(o):(o.procs.length?sum(o.procs[o.procs.length-1]):0),
-  workOrderFiles:fnames(wf,f=>f.kind==='wo'),purchaseOrderFiles:fnames(wf,f=>f.kind==='po'),example:!!o.example,
+  processingFees:typeof pfSnap==='function'?pfSnap(o):null,workOrderFiles:fnames(wf,f=>f.kind==='wo'),purchaseOrderFiles:fnames(wf,f=>f.kind==='po'),example:!!o.example,
   search:snapS([o.no,o.item,o.fabric,o.client,o.note,...o.lines.map(l=>l.color),...o.procs.flatMap(p=>[p.name,p.vendor])])}});
  const ST=stmts.map(s=>{const lots=s.lots.map(l=>{const rolls=l.rolls.filter(v=>v!=='');return {lotNo:l.lotNo,color:l.color,rolls,qty:r2(rolls.reduce((a,b)=>a+(+b||0),0))}});
   return {id:s.id,no:s.no,date:s.date,orderNo:s.orderNo,item:s.item,spec:s.spec,customer:{...s.cust},supplier:s.sup?s.sup.name||'':'',dest:s.dest,contact:s.contact,unitPrice:s.price===''?null:s.price,note:s.note,

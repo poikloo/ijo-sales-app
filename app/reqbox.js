@@ -15,7 +15,7 @@ const RQ_ATT_K={statement:'거래명세서',workOrder:'작업의뢰서',purchase
 const rqSize=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
 const RQ_ORDER_KEYS=['no','item','fabric','client','date','due','lines','procs','delivered'],RQ_SET_KEYS=['item','fabric','client','date','due','lines'];
 const RQ_SALES_KEYS=['date','year','client','orderNo','item','fabric','process','color','unitPrice','qty','supply','total','memo'];
-const RQ_PRICE_KEYS=['cat','part','code','item','color','width','gV','gCur','g','dV','dS','d','p1V','p1D','p1S','p1','p2V','p2D','p2S','p2','eD','e','t','m','memo'];
+const RQ_PRICE_KEYS=['ono','cat','part','code','item','color','width','gV','gCur','g','dV','dS','d','p1V','p1D','p1S','p1','p2V','p2D','p2S','p2','eD','e','t','m','memo'];
 const rqS=v=>v==null?'':String(v).trim();
 const rqDateOk=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&ymd(new Date(v+'T00:00'))===v;
 const rqN=v=>typeof v==='number'?(isFinite(v)?v:NaN):typeof v==='string'&&v.trim()!==''?+v.replace(/[,\s]/g,''):NaN;
