@@ -5,7 +5,8 @@
 let bills={},billInfo={},blYm='',blSel=null,blF={k:'',st:''},blDraft=null;
 const BL_INFO=[['name','청구인 (상호)'],['ceo','대표'],['addr','주소'],['bank','은행'],['holder','예금주'],['account','계좌번호']];
 const blKey=(ym,c)=>ym+'|'+c;
-const f10=n=>{n=+n||0;return n<0?-Math.floor(-n/10)*10:Math.floor(n/10)*10};
+// 금액: 1원 단위 (반올림, 음수는 대칭). 부가세 = 공급가액의 정확히 10% (원 단위 반올림) — 청구서 · 매출 관리 · 내보내기 공통
+const won1=n=>{n=+n||0;return n<0?-Math.round(-n):Math.round(n)};const vat10=s=>won1((+s||0)/10);
 const blWon=n=>(Math.round(+n||0)).toLocaleString('ko-KR');
 const blNk=s=>String(s||'').replace(/\s+/g,'').toLowerCase();
 const blCurYm=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
@@ -44,7 +45,7 @@ function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
   const p=blPrice(o);add(o.client,{ref:o.id,orderNo:o.no,item:o.item||o.no,spec:blSpec(o),unit:o.unit||'YD',qty:SH.reduce((a,s)=>a+s.qty,0),price:p.price,priceSrc:p.src,ships:SH})});
  sales.forEach(x=>{if(!x.client||(x.orderNo&&ON.has(blNk(x.orderNo)))||blSlYm(x)!==ym)return;
   add(x.client,{ref:'s:'+x.id,orderNo:x.orderNo,item:x.item||x.fabric||'-',spec:x.color,unit:'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:[]})});return R}
-function blCalc(l){if(l.vat==='inc')return {sup:0,vat:0,tot:f10(l.total)};const s=f10((+l.qty||0)*(+l.price||0)),v=f10(s/10);return {sup:s,vat:v,tot:s+v}}
+function blCalc(l){if(l.vat==='inc')return {sup:0,vat:0,tot:won1(l.total)};const s=won1((+l.qty||0)*(+l.price||0)),v=vat10(s);return {sup:s,vat:v,tot:s+v}}
 // ---- 여러 장 청구서 ----
 const blIsPrim=b=>b.id===blKey(b.ym,b.client);
 const blBase=r=>String(r||'').split('|')[0];
