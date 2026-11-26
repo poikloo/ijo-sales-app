@@ -221,10 +221,9 @@ async function rqApply(file){const P0=rqPend.find(x=>x.file===file);if(!P0||rqBu
   catch(e){rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n'+(e&&e.message||e));return}
   // 첨부 파일 복사 (앱의 원래 첨부 저장소로). 하나라도 실패하면 복사한 파일을 지우고 데이터도 되돌림
   const added=[];
-  try{for(const x of R.ctx.attach){const r=x.kind==='doc'?await A.dcAttach(x.abs):x.kind==='contact'?await A.brAttach(x.abs):x.kind==='statement'?await A.ssAttach(x.oid,x.abs):x.kind==='testReport'?await A.wfAttach('tr-'+x.tid,x.abs):x.kind==='quality'?await A.wfAttach('qs-'+x.qid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
-  catch(e){for(const {x,r} of added){try{x.kind==='doc'?0:x.kind==='contact'?await A.brDelete(r.path):x.kind==='statement'?await A.ssDelete(r.path):await A.wfDelete(r.path)}catch(_){}}rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n첨부 실패: '+(e&&e.message||e));return}
+  try{for(const x of R.ctx.attach){const r=x.kind==='contact'?await A.brAttach(x.abs):x.kind==='statement'?await A.ssAttach(x.oid,x.abs):x.kind==='testReport'?await A.wfAttach('tr-'+x.tid,x.abs):x.kind==='quality'?await A.wfAttach('qs-'+x.qid,x.abs):await A.wfAttach(x.oid,x.abs);if(!r)throw new Error(`'${x.name}' 파일을 복사하지 못했어요`);added.push({x,r})}}
+  catch(e){for(const {x,r} of added){try{x.kind==='contact'?await A.brDelete(r.path):x.kind==='statement'?await A.ssDelete(r.path):await A.wfDelete(r.path)}catch(_){}}rqRestore(snap);await uiAlert('적용하지 못했어요. 데이터는 바뀌지 않았습니다.\n첨부 실패: '+(e&&e.message||e));return}
   const oldF=[];for(const {x,r} of added){if(x.kind==='statement'){const o=shipFiles.find(f=>f.shipId===x.sid);if(o){oldF.push(o);shipFiles=shipFiles.filter(f=>f.id!==o.id)}shipFiles.push(normSs({...r,orderId:x.oid,processId:x.pid,shipId:x.sid,addedAt:now()}))}
-   else if(x.kind==='doc')docs.push(normDoc({...r,...x.meta,addedAt:now()}))
    else if(x.kind==='contact'){const c=contacts.find(k=>k.id===x.cid);if(c){c.cards.push({id:r.id,name:r.name,path:r.path,addedAt:now()});c.updated=now()}}
    else if(x.kind==='quality')wfFiles.push(normWf({...r,orderId:x.qid,addedAt:now(),kind:'qs'}))
    else if(x.kind==='testReport')wfFiles.push(normWf({...r,orderId:x.tid,addedAt:now(),kind:'tr'}))

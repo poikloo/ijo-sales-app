@@ -1,4 +1,4 @@
-const ST=['진행중','개찰완료','낙찰','유찰'],PT={gsearch:'통합 검색',dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',bill:'청구서',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',docs:'서류 보관함',settings:'설정'};
+const ST=['진행중','개찰완료','낙찰','유찰'],PT={gsearch:'통합 검색',dash:'대시보드',check:'체크리스트',prod:'생산 관리',bids:'공고 일정',work:'작업의뢰서',outwork:'외주작업의뢰서',stmt:'거래명세서',sales:'매출 관리',price:'단가 관리',bill:'청구서',testrpt:'TEST REPORT',quality:'품질 기준',reqs:'요청함',contacts:'거래처 정보',settings:'설정'};
 const A=window.api||{load:()=>JSON.parse(localStorage.getItem('ijo')||'null'),save:async d=>localStorage.setItem('ijo',JSON.stringify(d)),info:async()=>({file:'(브라우저)',backups:'-'}),openFolder:()=>{},saveFile:async()=>null,openFile:async()=>null};
 let orders=[],pv=null,data=[],cl=[],cur=new Date(),dcur=new Date(),ccur=new Date(),csel='',bt='sched',page='dash',dataVer=0; // dataVer: 저장·불러오기마다 +1 → 검색 색인 등 캐시를 다시 만듦
 const PR=['높음','보통','낮음'];
@@ -84,7 +84,6 @@ function _render(){
  if(page==='testrpt')renderTr();
  if(page==='quality')renderQuality();
  if(page==='contacts')renderContacts();
- if(page==='docs')renderDocs();
  if(page==='settings'){setNav();renderSupplier();plSettings();rqSettings();snapSettings();blSettings()}
  if(page==='reqs')renderReqs();
  if(page==='check'){$('cym').textContent=`${ccur.getFullYear()}년 ${ccur.getMonth()+1}월`;$('ccal').innerHTML=calHTML(ccur.getFullYear(),ccur.getMonth(),false,'cl');
@@ -126,7 +125,7 @@ const ATT_MIME={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'im
 const attMime=p=>ATT_MIME[(String(p).match(/\.(\w+)$/)||[])[1]?.toLowerCase()]||'application/octet-stream';
 async function bkFiles(k,l){if(!A.attRead)return l;return Promise.all(l.map(async f=>{const b=await A.attRead(k,f.path).catch(()=>null);return b?{...f,mime:attMime(f.path),data:b}:f}))}
 async function bkRestore(k,l){if(!A.attWrite||!Array.isArray(l))return 0;let n=0;for(const f of l)if(f&&f.path&&typeof f.data==='string'){try{await A.attWrite(k,f.path,f.data);n++}catch(e){}}return n}
-// 백업 = 데이터만 (첨부 파일 내용은 넣지 않음 — 서류 보관함 등 파일이 많으면 저장 창이 뜨기 전에 몇 분씩 멈추거나 너무 커서 조용히 실패했음. 파일은 데이터 폴더에 그대로 있음)
+// 백업 = 데이터만 (첨부 파일 내용은 넣지 않음 — 첨부 파일이 많으면 저장 창이 뜨기 전에 몇 분씩 멈추거나 너무 커서 조용히 실패했음. 파일은 데이터 폴더에 그대로 있음)
 async function exportJSON(){try{
  const p=await A.saveFile(`LEEJO영업관리_백업_${stamp()}.json`,JSON.stringify({app:'ijo-sales',version:1,savedAt:new Date().toISOString(),bids:data,checklist:cl,orders,...stPayload(),...ctPayload(),...pcPayload(),...owPayload(),...wfPayload(),...ssPayload(),...brPayload(),...crPayload(),...lsPayload(),...cmPayload(),...ivPayload(),...dlPayload(),...slPayload(),...prPayload(),...sllPayload(),...xlPayload(),...rqPayload(),...trPayload(),...qsPayload(),...blPayload(),...dcPayload()},null,2));if(p)toast('저장됨: '+p)}catch(e){uiAlert('백업 파일을 저장하지 못했어요.\n'+(e&&e.message||e))}}
 async function importJSON(){const t=await A.openFile();if(t==null)return;let d;try{d=normalize(JSON.parse(t.replace(/^\uFEFF/,'')))}catch(e){d=null}

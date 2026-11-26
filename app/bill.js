@@ -373,7 +373,7 @@ async function blShDel(key){const S=blTakeS(key);if(!S.length)return;const R=S.m
  if(G.proc.length)L.push(`· 생산 관리 공정 출고 ${G.proc.length}건 (${ls(G.proc)}): ${[...new Set(G.proc.map(x=>x.src.o.no+' '+(x.src.p.name||'공정')))].join(', ')} 출고 기록이 지워져요`);
  if(G.m.length)L.push(`· 수동 줄 출고 ${G.m.length}건: 그 수동 줄의 일자를 비워 출고 내역에서만 빼요 (청구 내역 줄 · 금액은 그대로)`);
  if(G.b.length)L.push(`· 청구서 전용 출고 ${G.b.length}건: 지워져요`);if(G.x.length)L.push(`· 원본이 없어진 출고 ${G.x.length}건은 건너뛰어요`);
- const nf=typeof ssOf==='function'?[...G.dlv,...G.proc].filter(x=>ssOf(x.s.id)).length:0;if(nf)L.push(`· 첨부된 거래명세서 파일 ${nf}건은 남겨 둬요 (서류 보관함에서 지울 수 있어요)`);
+ const nf=typeof ssOf==='function'?[...G.dlv,...G.proc].filter(x=>ssOf(x.s.id)).length:0;if(nf)L.push(`· 첨부된 거래명세서 파일 ${nf}건은 남겨 둬요 (생산 관리 출고 줄의 거래명세서 칸에서 지울 수 있어요)`);
  if(bills[key]&&bills[key].locked)L.push('· 청구완료 잠금이 풀려요');
  if(await uiChoice(`선택한 출고 ${S.length}건을 삭제할까요?\n\n${L.join('\n')}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,[{t:'삭제',c:'d'}])!==0)return;
  blUnlockNow(key);const b=blGet(key);let n=0;

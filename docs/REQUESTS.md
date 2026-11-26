@@ -478,24 +478,9 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
   ] }
 ```
 
-### 3.16 서류 보관함 — `docs.add`
+### 3.16 (없어짐) 서류 보관함 — `docs.add`
 
-서류 보관함에 파일을 **직접 추가**합니다 (앱의 docs 폴더로 복사). 다른 카테고리의 첨부(작업의뢰서 · 발주서 · 출고 거래명세서 · 시험성적서 · 규격서 · 명함 · 사업자등록증)는 서류 보관함에 자동으로 보이니 따로 보낼 필요가 없습니다.
-
-| 필드 | 설명 |
-|---|---|
-| `file`/`image` 또는 `files`/`images` | 파일 경로 (3.8과 같은 규칙 — `inbox\files\…` 상대 경로, PDF·이미지 20MB까지). 파일마다 서류 1건 |
-| `kind` (필수) | `성적서` · `거래명세서` · `청구서` · `작업의뢰서` · `발주서` · `규격서` · `계약·인증` · `명함` · `사업자등록증` · `사진` · `기타` |
-| `client` | 거래처 (태그). 비우고 `orderNo`가 있으면 그 오더의 거래처. 처음 보는 이름이면 ⚠ |
-| `orderNo` | 오더번호 (태그). 없는 오더면 ⚠ (태그로만 저장) |
-| `date` | 날짜 `YYYY-MM-DD` (선택) |
-| `memo` | 메모 (선택) |
-
-같은 종류 · 거래처 · 파일 이름의 서류가 이미 있으면 ⚠ 건너뜁니다. 적용 한 번 = Ctrl+Z 한 번.
-
-```json
-{ "type": "docs.add", "file": "files/(예시)인증서_EX-0001.pdf", "kind": "계약·인증", "orderNo": "EX-0001", "date": "2026-11-20" }
-```
+서류 보관함 화면은 없앴습니다(2026-11-26). `docs.add`는 더 이상 받지 않습니다(「지원하지 않습니다」 오류). 첨부는 각 카테고리로 보내세요: 생산 관리 `production.attachFile`, TEST REPORT `testReport.attachFile`, 품질 기준 `quality.attachFile`, 거래처 명함·사업자등록증 `contact.attachImage`.
 
 ## 4. 전체 예시 파일
 
@@ -566,7 +551,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 | `readOnly` | 항상 `true` |
 | `priceSettings` | 단가 계산 설정: `fx` 환율(USD→KRW), `yd2m`(0.9144), `vat`(0.1), `defaultDyeShrink`/`defaultProc1Shrink`/`defaultProc2Shrink`/`defaultMargin` (비율, 0.05 = 5%) |
 | `counts` | 각 목록의 건수 |
-| `prices` `sales` `orders` `statements` `testReports` `contacts` `qualityStandards` `bills` `documents` | 아래 표 |
+| `prices` `sales` `orders` `statements` `testReports` `contacts` `qualityStandards` `bills` | 아래 표 |
 
 ### `prices[]` — 단가 관리 (YD당, 원)
 
@@ -612,10 +597,6 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### `contacts[]` — 거래처 정보 (명함)
 
 `id`(고정 — 요청의 `contactId`로 사용. 예전 데이터의 id 없는 명함은 앱을 열 때 한 번 매겨 저장) `company` `name` `team` `title` `email` `web` `addrs[]` `tels[]` `faxes[]` `mobiles[]` `memo` `cards[]`(명함 이미지 파일 이름) `hasCard`(명함 이미지 있음 true) `cardCount`(장 수) `businessReg`
-
-### `documents[]` — 서류 보관함 (연결된 첨부 + 직접 추가)
-
-`key`(`dc:`직접 추가 · `wf:` `ss:` `br:` `nc:` 다른 카테고리 첨부) `name` `kind` `client` `orderNo` `date` `source`(출처 카테고리 · `직접 추가`) `own`(직접 추가 true)
 
 ### `bills[]` — 청구서 (월 · 거래처별, 나눈 청구서는 따로 한 항목)
 
