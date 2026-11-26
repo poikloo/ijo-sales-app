@@ -1,6 +1,6 @@
 // ===== 설정 › 구글 계정 연결 + 구글 드라이브 파일 선택 창 =====
 // Client Secret·로그인 정보는 메인 프로세스(gdrive.js)가 암호화해 따로 보관하고, 화면에는 이메일·상태만 보여 줌.
-const G_GUIDE='https://github.com/poikloo/ijo-sales-app/blob/main/docs/GOOGLE_LOGIN.md';
+const G_GUIDE='https://github.com/poikloo/leejo-sales-app/blob/main/docs/GOOGLE_LOGIN.md';
 let gSt=null,gEdit=false,gLogging=false;
 function gErrMsg(r){const c=r&&r.code;return c==='NOLOGIN'||c==='NOCLIENT'?'먼저 설정 › 구글 계정 연결에서 로그인하세요.':c==='AUTH'?'구글 로그인이 만료됐어요. 설정 › 구글 계정 연결에서 다시 로그인하세요.':c==='OFFLINE'?'인터넷에 연결되어 있지 않아요. 연결을 확인한 뒤 다시 시도하세요.':
  c==='TIMEOUT'?'구글 드라이브 응답이 너무 늦어요. 잠시 후 다시 시도하세요.':c==='ENOENT'?'구글 드라이브에서 파일을 찾을 수 없어요.':c==='DENIED'?'이 파일을 읽을 권한이 없어요.':c==='BADCLIENT'?'Client ID 또는 Client Secret이 맞지 않아요. 구글 클라우드 콘솔에서 다시 확인하세요.':

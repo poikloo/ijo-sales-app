@@ -1,6 +1,6 @@
 # 새 버전 배포 방법 (LEEJO 영업관리)
 
-설치된 앱은 실행할 때 GitHub Releases(poikloo/ijo-sales-app)의 `latest.yml`을 확인해 자동 업데이트합니다.
+설치된 앱은 실행할 때 GitHub Releases(poikloo/leejo-sales-app)의 `latest.yml`을 확인해 자동 업데이트합니다.
 
 ```bash
 # 1) 버전 올리기 (예: 1.1.0 -> 1.2.0)
@@ -12,11 +12,11 @@ npm ci && npm run dist        # = electron-builder --win --x64 --publish never
 # 3) 커밋 후 릴리스 생성 (세 파일 모두 반드시 업로드)
 V=$(node -p "require('./package.json').version")
 git commit -am "v$V" && git tag "v$V" && git push && git push --tags
-gh release create "v$V" --repo poikloo/ijo-sales-app --title "v$V" --notes "변경 내용" \
+gh release create "v$V" --repo poikloo/leejo-sales-app --title "v$V" --notes "변경 내용" \
   "dist/leejo-sales-Setup-$V.exe" "dist/leejo-sales-Setup-$V.exe.blockmap" dist/latest.yml
 
 # 4) 확인
-curl -sL https://github.com/poikloo/ijo-sales-app/releases/latest/download/latest.yml
+curl -sL https://github.com/poikloo/leejo-sales-app/releases/latest/download/latest.yml
 ```
 
 주의
@@ -29,4 +29,4 @@ curl -sL https://github.com/poikloo/ijo-sales-app/releases/latest/download/lates
   - `executableName`(이조영업관리): 설치 폴더·exe 이름. 업데이트 때 기존 바로가기는 이름만 바뀌고(중복 없음) 이 exe를 계속 가리킴
   - `name`(ijo-sales): 업데이트 캐시 폴더 이름
   - 데이터 폴더는 main.js에서 `%APPDATA%\이조 영업관리`로 고정
-  - 저장소 poikloo/ijo-sales-app (publish)
+  - 저장소 poikloo/leejo-sales-app (publish, 2026-11-26 ijo-sales-app에서 이름 변경. 예전 주소는 GitHub가 자동 연결)
