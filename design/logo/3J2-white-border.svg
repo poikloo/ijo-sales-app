@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 3-J2: 3-J + 아주 연한 회색 테두리 #d9dde3 (밝은 작업표시줄에서 흰 바탕이 묻히지 않게) -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="13"/></clipPath></defs>
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="#ffffff"/>
+  <g clip-path="url(#r)" fill="#6aa0d8" stroke="#ffffff" stroke-width="2">
+    <rect x="-2" y="12" width="70" height="8"/><rect x="-2" y="26" width="70" height="8"/>
+    <rect x="32" y="-2" width="8" height="45"/><rect x="46" y="-2" width="8" height="45"/>
+    <!-- 씨실이 위로 오는 교차점 -->
+    <rect x="30" y="26" width="12" height="8" stroke="none"/><path d="M30 26h12M30 34h12" fill="none"/>
+    <rect x="44" y="12" width="12" height="8" stroke="none"/><path d="M44 12h12M44 20h12" fill="none"/>
+  </g>
+  <path d="M12 8h11v35h33v11H12z" fill="#111111" stroke="#ffffff" stroke-width="2"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="12.25" fill="none" stroke="#d9dde3" stroke-width="1.5"/>
+</svg>
