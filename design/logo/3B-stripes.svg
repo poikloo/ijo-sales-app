@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 3-B 로고 두 줄 L: 남색 바탕, 흰 L(세로획 + 첫 줄) 아래에 로고 밑줄 같은 둘째 줄, 날실 1개가 첫 줄 위·둘째 줄 아래로 엇갈림 -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="10"/></clipPath></defs>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="#003876"/><g clip-path="url(#r)">
+  <rect x="39" y="-2" width="8" height="70" fill="#4a78b0"/>
+  <path d="M12 8h11v32h34v9H12z" fill="#fff" stroke="#003876" stroke-width="2.2"/>
+  <rect x="39" y="36" width="8" height="15" fill="#4a78b0" stroke="#003876" stroke-width="2.2"/>  <rect x="12" y="52" width="45" height="6" fill="#fff" stroke="#003876" stroke-width="2.2"/>
+  </g>
+</svg>

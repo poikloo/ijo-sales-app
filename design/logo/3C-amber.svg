@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 3-C 앰버 실 L: 남색 바탕 + 흰 L, 홈페이지 히어로의 앰버 #e39c36 실 2가닥이 교차 -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="10"/></clipPath></defs>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="#003876"/><g clip-path="url(#r)"><rect x="-2" y="16" width="70" height="7" fill="#e39c36"/><rect x="40" y="-2" width="7" height="46" fill="#e39c36" stroke="#003876" stroke-width="2.2" paint-order="stroke"/><path d="M12 8h11v36h33v11H12z" fill="#fff" stroke="#003876" stroke-width="2.2" stroke-linejoin="miter"/></g>
+</svg>

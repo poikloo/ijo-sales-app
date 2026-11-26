@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 3-E 밝은 L: 흰 바탕(얇은 테두리) + 검정 L(홈페이지 제목 글자색), 앰버 #e39c36 씨실·핑크 #e58aa8 날실 -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="12"/></clipPath></defs>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#fff"/><g clip-path="url(#r)"><rect x="-2" y="16" width="70" height="7" fill="#e39c36"/><rect x="40" y="-2" width="7" height="46" fill="#e58aa8" stroke="#fff" stroke-width="2.2" paint-order="stroke"/><path d="M12 8h11v36h33v11H12z" fill="#111" stroke="#fff" stroke-width="2.2" stroke-linejoin="miter"/></g><rect x="2.75" y="2.75" width="58.5" height="58.5" rx="11.25" fill="none" stroke="#cfd4dc" stroke-width="1.5"/>
+</svg>

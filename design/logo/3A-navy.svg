@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 3-A 남색 짜임 L: 홈페이지 아이콘의 남색 #003876 바탕 + 흰 L, 날실 1·씨실 1 (날실이 위) -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="10"/></clipPath></defs>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="#003876"/><g clip-path="url(#r)"><rect x="-2" y="15" width="70" height="8" fill="#4a78b0"/><rect x="39" y="-2" width="8" height="46" fill="#4a78b0" stroke="#003876" stroke-width="2.2" paint-order="stroke"/><path d="M12 8h11v36h33v11H12z" fill="#fff" stroke="#003876" stroke-width="2.2" stroke-linejoin="miter"/></g>
+</svg>
