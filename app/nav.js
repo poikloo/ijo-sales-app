@@ -18,7 +18,8 @@
  const sigOf=o=>JSON.stringify([o.page,o.pv,o.bl,o.st,o.ow,o.set,o.tc?1:0]);
  const snap=()=>{const o=st();o.sig=sigOf(o);const c=C();o.top=c?c.scrollTop:0;return o};
  // '◀ 목록'(data-back)으로 닫은 것은 '뒤로'라서 기록하지 않음 (기록의 직전 화면과 같으면 그 기록을 씀) → Esc를 다시 눌러도 상세로 되돌아가지 않음
- function check(){T=0;if(busy)return;const s=snap(),b=bk;bk=false;if(!cur){cur=s;return}if(s.sig===cur.sig)return;
+ function check(){T=0;if(busy){bk=false;return} // Esc 처리 중에 눌린 '◀ 목록'은 navBack이 정리 — 표시를 남기면 다음 이동이 '뒤로'로 잘못 처리돼 기록이 빠짐
+ const s=snap(),b=bk;bk=false;if(!cur){cur=s;return}if(s.sig===cur.sig)return;
   const top=S[S.length-1];if(b){if(top&&top.sig===s.sig)S.pop();cur=s;return}
   if(!(top&&top.sig===cur.sig))S.push(cur);if(S.length>NAV_MAX)S.shift();cur=s}
  const sched=()=>{if(!T)T=setTimeout(check,0)};
@@ -42,7 +43,7 @@
  // Esc에서 부름: 처리했으면 true. back = 지금 화면의 '◀ 목록' 버튼(없으면 null)
  window.navBack=function(back){if(T){clearTimeout(T);check()}if(!S.length){if(back)back.click();return !!back}
   if(!back){restore(S.pop());return true}
-  (async()=>{const before=snap().sig;busy=true;try{back.click();await settle()}finally{busy=false}
+  (async()=>{const before=snap().sig;busy=true;try{back.click();await settle()}finally{busy=false;bk=false;if(T){clearTimeout(T);T=0}}
    const now=snap();if(now.sig===before){cur=now;return} // 저장 안 한 변경 확인에서 취소 → 그대로
    const t=S.pop();if(!t){cur=now;return}if(now.sig===t.sig){cur=now;const c=C(),y=t.top||0;if(c)requestAnimationFrame(()=>requestAnimationFrame(()=>{c.scrollTop=y;cur.top=y}));return}
    restore(t)})();return true};
