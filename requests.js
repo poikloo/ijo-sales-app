@@ -69,7 +69,7 @@ function scan(){ensure();const pending=[],errors=[];let waiting=0;let names=[];t
     if(reason){try{moveTo('error',name,{reason,id:req&&typeof req.id==='string'?req.id:''},req&&typeof req==='object'?req:null);errors.push({file:name,reason})}catch(e){}continue}
     pending.push({file:name,hash,mtime:st.mtimeMs,req,files:attMap(req)})}
   return {pending,errors,waiting}}
-const SNAP_README=`이조 영업관리 — 조회용 스냅샷 (읽기 전용)
+const SNAP_README=`LEEJO 영업관리 — 조회용 스냅샷 (읽기 전용)
 =========================================
 snapshot.json 은 앱이 시작할 때와 저장할 때마다(약 2초 뒤) 자동으로 다시 만드는 '조회용' 파일입니다.
 Grok Bot(업무 요청)이 단가·매출·생산·거래명세서·TEST REPORT·거래처 정보를 찾아볼 때 읽습니다.

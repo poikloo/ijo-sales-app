@@ -2,6 +2,8 @@ const {app,BrowserWindow,WebContentsView,ipcMain,dialog,Menu,shell}=require('ele
 app.commandLine.appendSwitch('lang','ko-KR');
 const {autoUpdater}=require('electron-updater');
 const fs=require('fs'),path=require('path');
+// 사용자 데이터 폴더 고정: 앱 이름을 'LEEJO 영업관리'로 바꿔도 예전 폴더(%APPDATA%\이조 영업관리 — data.json·백업·첨부·요청함)를 그대로 씀
+app.setPath('userData',path.join(app.getPath('appData'),'이조 영업관리'));
 const DIR=()=>app.getPath('userData'),FILE=()=>path.join(DIR(),'data.json'),BK=()=>path.join(DIR(),'backups');
 function readData(){for(const f of [FILE(),FILE()+'.tmp']){try{return JSON.parse(fs.readFileSync(f,'utf8'))}catch(e){}}return null}
 // 저장: data.json은 매번 쓰고, 자동 백업 사본은 1분에 한 번만 (저장할 때마다 사본을 쓰면 디스크·백신 검사로 창이 버벅일 수 있음)
@@ -275,7 +277,7 @@ let win;
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus()}});
 app.whenReady().then(()=>{
   Menu.setApplicationMenu(null);
-  win=new BrowserWindow({width:1400,height:900,minWidth:1000,minHeight:650,title:'이조 영업관리',icon:path.join(__dirname,'app','icon.png'),
+  win=new BrowserWindow({width:1400,height:900,minWidth:1000,minHeight:650,title:'LEEJO 영업관리',icon:path.join(__dirname,'app','icon.png'),
     backgroundColor:'#f3f5f9',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false}});
   setupUpdater();
   win.loadFile(path.join(__dirname,'app','index.html'));

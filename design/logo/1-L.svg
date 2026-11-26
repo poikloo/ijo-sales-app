@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 1. L 모노그램: 지금 파란 둥근 사각 그대로, 굵은 L 하나 + 아래 남색 띠(원단 끝단·셀비지) -->
+  <defs><clipPath id="r"><rect x="2" y="2" width="60" height="60" rx="13"/></clipPath></defs>
+  <g clip-path="url(#r)"><rect x="2" y="2" width="60" height="60" fill="#2b6cb0"/><rect x="2" y="53" width="60" height="9" fill="#1f3a5f"/>
+  <g fill="#5b93cf"><rect x="8" y="56.5" width="5" height="2"/><rect x="17" y="56.5" width="5" height="2"/><rect x="26" y="56.5" width="5" height="2"/><rect x="35" y="56.5" width="5" height="2"/><rect x="44" y="56.5" width="5" height="2"/><rect x="53" y="56.5" width="5" height="2"/></g></g>
+  <path d="M19 10h11v29h18v10H19z" fill="#fff"/>
+</svg>

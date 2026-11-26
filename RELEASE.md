@@ -1,4 +1,4 @@
-# 새 버전 배포 방법 (이조 영업관리)
+# 새 버전 배포 방법 (LEEJO 영업관리)
 
 설치된 앱은 실행할 때 GitHub Releases(poikloo/ijo-sales-app)의 `latest.yml`을 확인해 자동 업데이트합니다.
 
@@ -13,7 +13,7 @@ npm ci && npm run dist        # = electron-builder --win --x64 --publish never
 V=$(node -p "require('./package.json').version")
 git commit -am "v$V" && git tag "v$V" && git push && git push --tags
 gh release create "v$V" --repo poikloo/ijo-sales-app --title "v$V" --notes "변경 내용" \
-  "dist/ijo-sales-Setup-$V.exe" "dist/ijo-sales-Setup-$V.exe.blockmap" dist/latest.yml
+  "dist/leejo-sales-Setup-$V.exe" "dist/leejo-sales-Setup-$V.exe.blockmap" dist/latest.yml
 
 # 4) 확인
 curl -sL https://github.com/poikloo/ijo-sales-app/releases/latest/download/latest.yml
@@ -21,6 +21,12 @@ curl -sL https://github.com/poikloo/ijo-sales-app/releases/latest/download/lates
 
 주의
 - 저장소는 공개(public)입니다. 사용자 데이터(data.json), 토큰, dist/ 결과물은 절대 커밋하지 마세요(.gitignore 처리됨).
-- 설치 파일 이름은 ASCII(`ijo-sales-Setup-x.y.z.exe`)로 유지하세요. 한글 파일명은 GitHub에서 바뀌어 업데이트가 깨집니다.
+- 설치 파일 이름은 ASCII(`leejo-sales-Setup-x.y.z.exe`)로 유지하세요. 한글 파일명은 GitHub에서 바뀌어 업데이트가 깨집니다.
 - 릴리스는 Draft/Pre-release가 아닌 일반 릴리스여야 `latest`로 인식됩니다.
 - 코드 서명이 없어 첫 설치 시 SmartScreen 경고가 뜹니다(추가 정보 → 실행).
+- 이름 변경(v1.10.2~, 'LEEJO 영업관리'): 자동 업데이트·데이터가 깨지지 않도록 아래는 **바꾸지 마세요**.
+  - `appId`(com.ijoind.sales): 설치 등록·작업표시줄 고정이 이것으로 이어짐
+  - `executableName`(이조영업관리): 설치 폴더·exe 이름. 업데이트 때 기존 바로가기는 이름만 바뀌고(중복 없음) 이 exe를 계속 가리킴
+  - `name`(ijo-sales): 업데이트 캐시 폴더 이름
+  - 데이터 폴더는 main.js에서 `%APPDATA%\이조 영업관리`로 고정
+  - 저장소 poikloo/ijo-sales-app (publish)

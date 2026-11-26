@@ -17,7 +17,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 위치(앱 데이터 폴더 아래):
 
-- **Windows**: `%APPDATA%\이조 영업관리\requests\inbox`
+- **Windows**: `%APPDATA%\이조 영업관리\requests\inbox` (앱 이름은 'LEEJO 영업관리'로 바뀌었지만 데이터 폴더 이름은 예전 그대로)
   (보통 `C:\Users\<사용자>\AppData\Roaming\이조 영업관리\requests\inbox`)
 - macOS: `~/Library/Application Support/이조 영업관리/requests/inbox`
 - Linux: `~/.config/이조 영업관리/requests/inbox`

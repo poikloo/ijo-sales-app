@@ -87,7 +87,7 @@ async function login(getWin){const c=rd(CF);if(!c)throw err('NOCLIENT','먼저 C
   if(u.searchParams.get('state')!==state){send('로그인 실패','요청이 맞지 않아요. 앱에서 다시 로그인하세요.');return}
   const e=u.searchParams.get('error');if(e){send('로그인 취소','앱으로 돌아가 다시 시도하세요.');return fail(err('DENIED',e))}
   const code=u.searchParams.get('code');if(!code){send('로그인 실패','앱에서 다시 로그인하세요.');return}
-  send('로그인 완료','로그인 완료, 창을 닫아도 됩니다. 이조 영업관리로 돌아가세요.');done(code)});
+  send('로그인 완료','로그인 완료, 창을 닫아도 됩니다. LEEJO 영업관리로 돌아가세요.');done(code)});
  try{const url=EP().auth+'?'+new URLSearchParams({client_id:c.clientId,redirect_uri:redirect,response_type:'code',scope:SCOPES,code_challenge:chal,code_challenge_method:'S256',state,access_type:'offline',prompt:'consent'});
   await shell.openExternal(url);const code=await got;
   const {status,j}=await tokenPost({code,client_id:c.clientId,client_secret:c.clientSecret,redirect_uri:redirect,grant_type:'authorization_code',code_verifier:ver});

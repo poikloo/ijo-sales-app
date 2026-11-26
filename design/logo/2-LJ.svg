@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 2. LJ 모노그램: 남색 둥근 사각, 흰 L + 밝은 파랑 J (같은 굵기·같은 높이, J 꼬리가 L 쪽으로 감김) -->
+  <rect x="2" y="2" width="60" height="60" rx="13" fill="#1f3a5f"/>
+  <path d="M11 12h8.5v28h12.5v8.5H11z" fill="#fff"/>
+  <path d="M43.5 12h8.5v24.5q0 12-12 12h-4v-8.5h3.5q4 0 4-4z" fill="#4d9be6"/>
+</svg>

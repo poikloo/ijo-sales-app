@@ -1,8 +1,8 @@
 {
   "name": "ijo-sales",
-  "productName": "이조 영업관리",
+  "productName": "LEEJO 영업관리",
   "version": "1.10.1",
-  "description": "이조아이엔디 영업관리",
+  "description": "LEEJO 영업관리",
   "author": "이조아이엔디",
   "main": "main.js",
   "scripts": {
@@ -11,9 +11,9 @@
   },
   "build": {
     "appId": "com.ijoind.sales",
-    "productName": "이조 영업관리",
+    "productName": "LEEJO 영업관리",
     "executableName": "이조영업관리",
-    "artifactName": "ijo-sales-Setup-${version}.${ext}",
+    "artifactName": "leejo-sales-Setup-${version}.${ext}",
     "directories": {
       "output": "dist"
     },
@@ -47,7 +47,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "이조 영업관리"
+      "shortcutName": "LEEJO 영업관리"
     },
     "electronLanguages": [
       "ko",

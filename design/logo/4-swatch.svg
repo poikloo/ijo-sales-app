@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 4. 원단 견본 L: 능직(사선) 무늬 바탕 + 오른쪽 위 접힌 모서리 + 흰 L -->
+  <defs>
+    <pattern id="tw" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="6" height="6" fill="#2b6cb0"/><rect width="2.2" height="6" fill="#3576bb"/></pattern>
+    <clipPath id="c"><path d="M15 2h47v0 0L62 49 62 49V49 49q0 13-13 13H15Q2 62 2 49V15Q2 2 15 2z"/></clipPath>
+  </defs>
+  <path d="M15 2h33l14 14v33q0 13-13 13H15Q2 62 2 49V15Q2 2 15 2z" fill="url(#tw)"/>
+  <path d="M48 2v10q0 4 4 4h10z" fill="#1f3a5f"/>
+  <path d="M18 13h11v27h20v11H18z" fill="#fff"/>
+</svg>
