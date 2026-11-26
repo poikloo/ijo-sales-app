@@ -249,9 +249,12 @@ ipcMain.on('load',e=>{e.returnValue=readData()});
 ipcMain.handle('save',(e,d)=>writeData(d));
 ipcMain.handle('info',()=>({file:FILE(),backups:BK(),version:app.getVersion()}));
 ipcMain.handle('openFolder',()=>shell.openPath(DIR()));
-ipcMain.handle('saveFile',async(e,name,content)=>{const r=await dialog.showSaveDialog({defaultPath:path.join(app.getPath('documents'),name)});
-  if(r.canceled)return null;fs.writeFileSync(r.filePath,content,'utf8');return r.filePath});
-ipcMain.handle('openFile',async()=>{const r=await dialog.showOpenDialog({filters:[{name:'JSON 백업',extensions:['json']}],properties:['openFile']});
+// 저장·열기 창은 앱 창에 붙여 띄움(부모 없이 띄우면 Windows에서 창 뒤에 숨어 '아무것도 안 뜨는' 것처럼 보일 수 있음)
+const dlgParent=e=>BrowserWindow.fromWebContents(e.sender)||win;
+ipcMain.handle('saveFile',async(e,name,content)=>{const ext=path.extname(String(name)).slice(1).toLowerCase();
+  const r=process.env.IJO_SHOT&&process.env.IJO_SAVEAS?{filePath:process.env.IJO_SAVEAS}:await dialog.showSaveDialog(dlgParent(e),{defaultPath:path.join(app.getPath('documents'),name),filters:ext?[{name:ext==='json'?'JSON 백업':ext.toUpperCase(),extensions:[ext]}]:[]});
+  if(r.canceled||!r.filePath)return null;fs.writeFileSync(r.filePath,content,'utf8');return r.filePath});
+ipcMain.handle('openFile',async(e)=>{const r=process.env.IJO_SHOT&&process.env.IJO_OPEN?{filePaths:[process.env.IJO_OPEN]}:await dialog.showOpenDialog(dlgParent(e),{filters:[{name:'JSON 백업',extensions:['json']}],properties:['openFile']});
   if(r.canceled||!r.filePaths[0])return null;return fs.readFileSync(r.filePaths[0],'utf8')});
 // ===== Ctrl+F 찾기 막대: 별도 WebContentsView(오른쪽 위)에 띄워서 입력란 글자가 검색 결과에 섞이지 않게 =====
 let fbv=null,fbOn=false;
