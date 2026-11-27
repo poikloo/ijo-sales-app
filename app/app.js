@@ -7,8 +7,8 @@ const won=n=>n?Number(n).toLocaleString('ko-KR')+'원':'',fdt=s=>s?String(s).rep
 const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const now=()=>{const d=new Date();return ymd(d)+'T'+d.toTimeString().slice(0,5)};
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2200)}
-function examples(){return [{id:'ex1',example:true,name:'(예시) 2026년 군(육군·해병대) 개인전투용천막 제조',no:'R26BK01619258-000',org:'육군군수사령부',pub:'2026-07-07T10:54',open:'2026-11-03T11:00',price:1250000000,rep:'(예시)가나섬유',cos:[{n:'(예시)가나섬유',s:60},{n:'(예시)다라텍스',s:40}],status:'진행중',result:'',memo:'예시 데이터입니다. 가격·개찰일시는 임의 값입니다.',updated:now()},
- {id:'ex2',example:true,name:'(예시) 2026년 해군 방한복 원단 구매',no:'R26BK00000000-000',org:'해군군수사령부',pub:'2026-10-10T09:00',open:'2026-10-23T10:00',price:480000000,rep:'(예시)이조아이엔디',cos:[{n:'(예시)이조아이엔디',s:100}],status:'진행중',result:'',memo:'예시 데이터입니다.',updated:now()}]}
+function examples(){return [{id:'ex1',example:true,name:'(예시) 2026년 예시 원단 A 제조 입찰',no:'EX-BID-0001',org:'(예시)기관 A',pub:'2026-07-07T10:54',open:'2026-11-03T11:00',price:1250000000,rep:'예시상사 A',cos:[{n:'예시상사 A',s:60},{n:'예시상사 B',s:40}],status:'진행중',result:'',memo:'예시 데이터입니다. 가격·개찰일시는 임의 값입니다.',updated:now()},
+ {id:'ex2',example:true,name:'(예시) 2026년 예시 원단 B 구매 입찰',no:'EX-BID-0002',org:'(예시)기관 B',pub:'2026-10-10T09:00',open:'2026-10-23T10:00',price:480000000,rep:'예시상사 C',cos:[{n:'예시상사 C',s:100}],status:'진행중',result:'',memo:'예시 데이터입니다.',updated:now()}]}
 function normalize(d){const arr=Array.isArray(d)?d:(d&&Array.isArray(d.bids)?d.bids:null);if(!arr)return null;
  return arr.filter(x=>x&&typeof x==='object').map(x=>({id:String(x.id||Date.now().toString(36)+Math.random().toString(36).slice(2,6)),example:!!x.example,name:x.name||'',no:x.no||'',org:x.org||'',pub:x.pub||'',open:x.open||'',price:+x.price||0,rep:x.rep||'',cos:Array.isArray(x.cos)?x.cos.map(c=>({n:c.n||'',s:+c.s||0})):[],status:ST.includes(x.status)?x.status:'진행중',result:x.result||'',memo:x.memo||'',updated:x.updated||''}))}
 function exCl(){const t=new Date(),d=k=>ymd(new Date(t.getFullYear(),t.getMonth(),t.getDate()+k)),u=now();
@@ -19,9 +19,9 @@ function exCl(){const t=new Date(),d=k=>ymd(new Date(t.getFullYear(),t.getMonth(
 function normalizeCl(arr){return (Array.isArray(arr)?arr:[]).filter(x=>x&&typeof x==='object'&&x.title).map(x=>({id:String(x.id||uid()),example:!!x.example,title:String(x.title),due:/^\d{4}-\d{2}-\d{2}$/.test(x.due||'')?x.due:'',pri:PR.includes(x.pri)?x.pri:'보통',cat:x.cat||'',memo:x.memo||'',done:!!x.done,updated:x.updated||''}))}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function exOrders(){let k=0;const P=(name,vendor,shrink,sh)=>({id:'xp'+(++k),name,vendor,shrink,ships:sh.map(([d,q])=>({id:'xs'+(++k),date:d,qty:q,memo:''}))});
- return [{id:'xo1',example:true,no:'2509-0328',item:'지휘소용 다기능천막 외피',color:'진국방',qty:2650,unit:'YD',client:'(예시)가나상사',date:'2025-09-09',due:'',fabric:'',updated:now(),procs:[
-  P('생지','(예시)A직물',null,[['2025-09-29',1200],['2025-10-01',2000],['2025-10-05',1120]]),P('염색','(예시)B염색',13,[['2025-10-06',883],['2025-10-08',1000],['2025-10-10',1000]]),
-  P('FR PU','(예시)C가공',3,[['2025-10-20',1889],['2025-10-24',1000]]),P('FR LAMI','(예시)D라미',3,[['2025-10-31',2862]])]}]}
+ return [{id:'xo1',example:true,no:'EX-0001',item:'예시 원단 A',color:'네이비',qty:2600,unit:'YD',client:'예시상사 A',date:'2025-09-09',due:'',fabric:'',updated:now(),procs:[
+  P('생지','예시직물 A',null,[['2025-09-29',1200],['2025-10-01',1000],['2025-10-05',600]]),P('염색','예시염색 A',5,[['2025-10-06',1000],['2025-10-08',1000],['2025-10-10',600]]),
+  P('가공','예시가공 A',2,[['2025-10-20',1500],['2025-10-24',1000]]),P('코팅','예시가공 B',2,[['2025-10-31',2500]])]}]}
 const numOrNull=v=>v===''||v==null||isNaN(+v)?null:+v;
 const UNITS=['YD','M','KG','EA'];
 function normLines(o){const L=Array.isArray(o.lines)&&o.lines.length?o.lines:[{color:o.color,qty:o.qty,unit:o.unit}];return L.map(l=>({color:String(l&&l.color||'').trim(),qty:+(l&&l.qty)||0,unit:UNITS.includes(l&&l.unit)?l.unit:'YD'}))}
@@ -106,7 +106,7 @@ async function del(id){if(await uiConfirm('삭제하시겠습니까?')){data=dat
 function coRow(n='',s=''){return `<div class="cr"><input placeholder="업체명" value="${esc(n)}" class="cn"><input class="sh cs" type="number" step="0.01" placeholder="지분 %" value="${esc(s)}" oninput="chk()"><button type="button" onclick="this.parentNode.remove();chk()">✕</button></div>`}
 function chk(){const v=[...document.querySelectorAll('.cs')].map(i=>+i.value||0),t=Math.round(v.reduce((a,b)=>a+b,0)*100)/100,w=$('sw');if(w){w.className=t===100?'ok':'warn';w.textContent=`지분율 합계: ${t}%`+(t===100?' ✓':' — 100%가 아닙니다!')}}
 function openForm(id){const x=id?data.find(e=>e.id===id):{status:'진행중',cos:[]};$('dt').textContent=id?'공고 수정':'새 공고';
- $('dbody').innerHTML=`<div class="g"><label class="w">공고명 *<input id="f_name" value="${esc(x.name)}"></label><label>입찰공고번호<input id="f_no" value="${esc(x.no)}" placeholder="R26BK01619258-000"></label><label>수요기관<input id="f_org" list="orgs" value="${esc(x.org)}"></label>
+ $('dbody').innerHTML=`<div class="g"><label class="w">공고명 *<input id="f_name" value="${esc(x.name)}"></label><label>입찰공고번호<input id="f_no" value="${esc(x.no)}" placeholder="EX-BID-0001"></label><label>수요기관<input id="f_org" list="orgs" value="${esc(x.org)}"></label>
  <label>게시일시<input id="f_pub" type="datetime-local" value="${esc(x.pub)}"></label><label>개찰일시 *<input id="f_open" type="datetime-local" value="${esc(x.open)}"></label>
  <label>가격 (원)<input id="f_price" inputmode="numeric" value="${x.price?Number(x.price).toLocaleString('ko-KR'):''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')"></label><label>계약대표업체<input id="f_rep" value="${esc(x.rep)}"></label>
  <div class="w"><div style="font-size:12px;color:#555">계약업체 / 지분율</div><div id="cos">${(x.cos.length?x.cos:[{n:'',s:''}]).map(c=>coRow(c.n,c.s)).join('')}</div><button type="button" onclick="$('cos').insertAdjacentHTML('beforeend',coRow());chk()">+ 업체 추가</button> <span id="sw"></span></div>
@@ -293,7 +293,7 @@ function lineRows(){$('flines').innerHTML=flines.map((l,i)=>`<div class="lrow"><
 function openOrder(id){const o=id?orders.find(x=>x.id===id):{no:'',item:'',lines:[{color:'',qty:0,unit:'YD'}],client:'',date:ymd(new Date()),procs:[]};if(!o)return;flines=o.lines.map(l=>({...l}));if(!flines.length)flines=[{color:'',qty:0,unit:'YD'}];
  fprocs=o.procs.map(p=>({...p}));if(!id)fprocs=[{id:uid(),name:'',vendor:'',shrink:null,ships:[]}];
  $('dt').textContent=id?'생산 오더 수정':'생산 오더 추가';
- $('dbody').innerHTML=`<div class="fsec">기본 정보</div><div class="g"><label>오더번호 *<input id="o_no" value="${esc(o.no)}" placeholder="예: 2509-0328"></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>발주일<input id="o_date" type="date" value="${esc(o.date)}"></label><label>납기일<input id="o_due" type="date" value="${esc(o.due||'')}"></label></div>
+ $('dbody').innerHTML=`<div class="fsec">기본 정보</div><div class="g"><label>오더번호 *<input id="o_no" value="${esc(o.no)}" placeholder="예: EX-0001"></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label>발주일<input id="o_date" type="date" value="${esc(o.date)}"></label><label>납기일<input id="o_due" type="date" value="${esc(o.due||'')}"></label></div>
  <div class="w" style="display:grid;grid-template-columns:1fr 2fr;gap:8px"><label>거래처<input id="o_client" value="${esc(o.client)}"></label><label>품목<input id="o_item" value="${esc(o.item)}" placeholder="예: 야전배낭 몸체"></label></div><label class="w">아이템명<input id="o_fabric" value="${esc(o.fabric||'')}" placeholder="원단 아이템명"></label>
  <div class="w"><div class="lrow lhead"><span>색상</span><span>발주량</span><span>단위</span><span></span></div><div id="flines"></div><button type="button" onclick="flines.push({color:'',qty:0,unit:(flines[flines.length-1]||{}).unit||'YD'});lineRows();const i=$('flines').querySelectorAll('input');i[i.length-2].focus()">+ 추가</button></div></div>
  <div class="fsec" style="margin-top:16px">비고</div><textarea id="o_note" rows="3" style="display:block;width:100%;min-height:0;resize:vertical;line-height:1.5" oninput="this.style.height='auto';this.style.height=Math.min(240,this.scrollHeight+2)+'px'">${esc(o.note||'')}</textarea>

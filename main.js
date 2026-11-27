@@ -325,7 +325,7 @@ ipcMain.handle('trImportPick',async()=>{let f=process.env.IJO_TR_XLSX;if(!f){con
   const rd=ws=>{const rows=[];ws.eachRow({includeEmpty:false},row=>{const a=[];for(let i=1;i<=ws.columnCount;i++)a.push(cv(row.getCell(i).value).replace(/\u3000/g,' ').trim());rows.push(a)});return rows};
   const all=wb.worksheets.map(ws=>({sheet:ws.name,rows:rd(ws)})),hit=all.find(x=>x.rows.slice(0,15).some(r=>r.some(c=>/시험기관|접수번호|품\s*명/.test(c))))||all[0];
   return hit?{name:name+(all.length>1?` [${hit.sheet}]`:''),rows:hit.rows}:{name,rows:[]}});
-ipcMain.handle('ctTemplate',async(e,h)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('거래처');ws.addRow(h);ws.addRow(['(예시)가나상사','홍길동','영업팀','과장','(예시) 서울시 ○○구 ○○로 00','02-000-0000','02-000-0001','010-0000-0000 / 010-0000-0001','example@example.com','www.example.com','예시 행 — 지우고 입력하세요']);
+ipcMain.handle('ctTemplate',async(e,h)=>{const ExcelJS=require('exceljs');const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('거래처');ws.addRow(h);ws.addRow(['예시상사 A','홍길동','영업팀','과장','(예시) 서울시 ○○구 ○○로 00','02-000-0000','02-000-0001','010-0000-0000 / 010-0000-0001','example@example.com','www.example.com','예시 행 — 지우고 입력하세요']);
   ws.getRow(1).font={bold:true};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8F0FE'}};ws.columns.forEach((c,i)=>c.width=[18,10,12,10,36,16,16,28,26,22,30][i]||14);ws.views=[{state:'frozen',ySplit:1}];
   let p=process.env.IJO_XLSX;if(!p){const rr=await dialog.showSaveDialog(win,{defaultPath:path.join(app.getPath('documents'),'거래처_가져오기_양식.xlsx'),filters:[{name:'Excel',extensions:['xlsx']}]});if(rr.canceled)return null;p=rr.filePath}
   await wb.xlsx.writeFile(p);return p});

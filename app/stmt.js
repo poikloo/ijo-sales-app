@@ -27,10 +27,10 @@ function supMigrate(o){if(Array.isArray(o.suppliers)){sups=o.suppliers.map(normS
 function stAssignSup(){const d=defSup();let ch=false;if(d)stmts.forEach(s=>{if(!s.sup){s.supplierId=d.id;s.sup=supSnap(d);ch=true}});return ch}
 function normCust(c){return {id:String(c.id||sid()),example:!!c.example,...party(c),dest:c.dest||'',contact:c.contact||'',memo:c.memo||''}}
 function normSup(s){s=s&&typeof s==='object'?s:{};return {...party(s),contacts:String(s.contacts||''),notice:s.notice==null?DEF_NOTICE:String(s.notice)}}
-function exStmt(){const c={id:'xc1',example:true,reg:'000-00-00000',name:'예시거래처',ceo:'홍길동',addr:'(예시) 주소',biz:'제조',type:'섬유',dest:'(예시) 납품 창고',contact:'(예시) 담당자',memo:'예시 데이터입니다.'};
+function exStmt(){const c={id:'xc1',example:true,reg:'000-00-00000',name:'예시상사 A',ceo:'홍길동',addr:'(예시) 주소',biz:'제조',type:'섬유',dest:'(예시) 납품 창고',contact:'(예시) 담당자',memo:'예시 데이터입니다.'};
  const r1=[55,54,56,55,53,57,55,54,56,55,54,55,56,53,55,54,57,55,56,54],r2=[54,56,55,53,55,57,54,55,56,55,54,53];
- return {c,s:{id:'xs1',example:true,no:1,date:'2025-11-03',orderId:'xo1',orderNo:'2509-0328',item:'지휘소용 다기능천막 외피',spec:'',customerId:'xc1',cust:party(c),dest:c.dest,contact:c.contact,price:'',note:'예시',
-  lots:[normLot({lotNo:'A-2510-01',color:'진국방',rolls:r1}),normLot({lotNo:'A-2510-02',color:'진국방',rolls:r2})],linkShip:false,shipId:'',updated:now()}}}
+ return {c,s:{id:'xs1',example:true,no:1,date:'2025-11-03',orderId:'xo1',orderNo:'EX-0001',item:'예시 원단 A',spec:'',customerId:'xc1',cust:party(c),dest:c.dest,contact:c.contact,price:'',note:'예시',
+  lots:[normLot({lotNo:'A-2510-01',color:'네이비',rolls:r1}),normLot({lotNo:'A-2510-02',color:'네이비',rolls:r2})],linkShip:false,shipId:'',updated:now()}}}
 function stLoad(r){const o=r&&!Array.isArray(r)?r:{};
  const mig=supMigrate(o);custs=Array.isArray(o.customers)?o.customers.map(normCust):[];stmts=Array.isArray(o.statements)?o.statements.map(normStmt):[];
  if(!Array.isArray(o.statements)){if(!r||(Array.isArray(r.bids)&&r.bids.some(x=>x.example))||(Array.isArray(r.orders)&&r.orders.some(x=>x.example))){const e=exStmt();custs.push(normCust(e.c));stmts.push(normStmt(e.s))}setTimeout(save,0)}

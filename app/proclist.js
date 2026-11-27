@@ -1,7 +1,7 @@
 // ===== 가공 공정 목록 (공정 입력칸 자동 목록) =====
 // 저장 데이터(procList)에 보관 → 백업·동기화·실행 취소에 함께 포함. 처음 보는 공정은 저장 후 목록에 추가할지 물어봄.
 // 거절한 이름(procDeclined)은 다시 묻지 않음 — 설정 › 공정 목록에서 되살리기.
-const PL_DEF=['생지','염색','FR PU','FR LAMI','코팅','라미네이팅','봉제'];
+const PL_DEF=['생지','염색','가공','코팅','라미네이팅','검사','봉제'];
 let procList=PL_DEF.slice(),procDeclined=[];
 const plKey=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
 const plClean=a=>{const seen=new Set(),out=[];(Array.isArray(a)?a:[]).forEach(x=>{const v=String(x==null?'':x).trim().replace(/\s+/g,' ');const k=plKey(v);if(v&&!seen.has(k)){seen.add(k);out.push(v)}});return out};

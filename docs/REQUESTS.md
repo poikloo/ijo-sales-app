@@ -92,7 +92,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ```json
 { "type": "production.addOrder",
   "order": {
-    "no": "2610-0101", "client": "(예시)가나상사", "item": "(예시) 방수 원단", "fabric": "(예시) NY 210D",
+    "no": "EX-0002", "client": "예시상사 A", "item": "(예시) 방수 원단", "fabric": "(예시) NY 210D",
     "date": "2026-10-20", "due": "2026-11-30",
     "lines": [ { "color": "카키", "qty": 1500, "unit": "YD" } ],
     "procs": [ { "name": "생지", "vendor": "(예시)A직물" },
@@ -116,8 +116,8 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### 3.2 `production.updateOrder` — 오더 정보 바꾸기
 
 ```json
-{ "type": "production.updateOrder", "orderNo": "2509-0328",
-  "set": { "due": "2026-12-15", "client": "(예시)가나상사" } }
+{ "type": "production.updateOrder", "orderNo": "EX-0001",
+  "set": { "due": "2026-12-15", "client": "예시상사 A" } }
 ```
 
 `set`에 넣을 수 있는 것: `item`, `fabric`, `client`, `date`, `due`, `lines`(통째로 바꿈). 카드에 바뀌기 전 → 후가 보입니다.
@@ -125,7 +125,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### 3.3 `production.addShipment` — 공정에 출고 행 추가
 
 ```json
-{ "type": "production.addShipment", "orderNo": "2610-0101", "process": "염색",
+{ "type": "production.addShipment", "orderNo": "EX-0002", "process": "염색",
   "ships": [ { "date": "2026-10-28", "qty": 800, "memo": "2차" } ] }
 ```
 
@@ -141,7 +141,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 ### 3.4 `production.setDone` — 오더 완료 표시
 
 ```json
-{ "type": "production.setDone", "orderNo": "2509-0328", "done": true }
+{ "type": "production.setDone", "orderNo": "EX-0001", "done": true }
 ```
 
 `done`을 빼면 `true`. `false`면 완료 해제.
@@ -152,8 +152,8 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 (오더번호·품명·규격·거래처를 오더에서 가져오고, 번호·공급자는 자동).
 
 ```json
-{ "type": "statement.createFromOrder", "orderNo": "2610-0101", "date": "2026-10-28",
-  "customer": "(예시)가나상사", "price": 3500, "note": "(예시) 1차분",
+{ "type": "statement.createFromOrder", "orderNo": "EX-0002", "date": "2026-10-28",
+  "customer": "예시상사 A", "price": 3500, "note": "(예시) 1차분",
   "lots": [ { "lotNo": "A-2610-01", "color": "카키", "rolls": [55, 54, 56] } ],
   "linkShip": true, "open": true }
 ```
@@ -179,7 +179,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ```json
 { "type": "sales.addRow",
-  "row": { "date": "2026-10-28", "client": "(예시)가나상사", "orderNo": "2610-0101", "item": "(예시) 방수 원단",
+  "row": { "date": "2026-10-28", "client": "예시상사 A", "orderNo": "EX-0002", "item": "(예시) 방수 원단",
            "fabric": "(예시) NY 210D", "process": "염색", "color": "카키", "unitPrice": 3500, "qty": 426,
            "supply": 1491000, "total": 1640100, "memo": "" } }
 ```
@@ -209,7 +209,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 절대 경로(`C:\...`, `/...`), `..`, 심볼릭 링크, inbox 밖을 가리키는 경로는 카드에서 ⛔ 오류로 막힙니다. base64로 JSON에 넣는 방식은 지원하지 않습니다 (요청 JSON 2MB 제한 그대로).
 
 ```json
-{ "type": "production.attachFile", "orderNo": "2610-0101", "kind": "statement",
+{ "type": "production.attachFile", "orderNo": "EX-0002", "kind": "statement",
   "file": "files/sample_statement.pdf" }
 ```
 
@@ -240,9 +240,9 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
   "version": 1, "id": "ex-attach-001", "createdAt": "2026-10-29T14:00:00+09:00", "source": "grokbot",
   "note": "(예시) 염색 출고 + 거래명세서 첨부",
   "actions": [
-    { "type": "production.addShipment", "orderNo": "2610-0101", "process": "염색",
+    { "type": "production.addShipment", "orderNo": "EX-0002", "process": "염색",
       "ships": [ { "date": "2026-10-29", "qty": 1200, "memo": "(예시) 1차 출고" } ] },
-    { "type": "production.attachFile", "orderNo": "2610-0101", "kind": "statement",
+    { "type": "production.attachFile", "orderNo": "EX-0002", "kind": "statement",
       "file": "files/sample_statement_2610-0101.pdf", "comment": "방금 추가한 출고 줄에 붙임" }
   ]
 }
@@ -281,7 +281,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 ```json
 { "type": "quality.addItem", "item": {
-  "name": "(예시) 다목적 방수포", "category": "국방규격", "specNo": "EX-QS-001", "revised": "2026-03-15",
+  "name": "(예시) 다목적 방수포", "category": "사내규격", "specNo": "EX-QS-001", "revised": "2026-03-15",
   "org": "(예시)관리기관", "drawing": "(예시) 도면 EX-D-01", "memo": "(예시) 봉제·포장·표시 요약",
   "types": [ { "type": "1형", "stockNo": "EX-0000-00-000-0001", "color": "녹색" } ],
   "fabrics": [
@@ -376,7 +376,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 - 청구서마다 **자동 줄 켜짐/꺼짐**(`autoLines`)이 있습니다. 꺼진 청구서(수동 청구서)에는 자동 줄이 들어오지 않고, 자동 데이터가 없는 달에도 그대로 남습니다. 그 달 그 거래처의 자동 줄은 자동 줄이 켜진 기본 청구서로 갑니다 — 기본 청구서가 꺼져 있으면 자동 줄이 있을 때만 `"YYYY-MM|거래처#auto"` 청구서(구분 '자동')가 생깁니다.
 
 ```json
-{ "type": "bill.split", "month": "2026-10", "client": "(예시)가나상사",
+{ "type": "bill.split", "month": "2026-10", "client": "예시상사 A",
   "lines": [ { "orderNo": "EX-2610-13" } ], "label": "(예시)2차분" }
 ```
 
@@ -401,23 +401,23 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 #### 예시 시나리오 (모두 (예시) 이름 · 가짜 숫자)
 
-**A) 10월 청구완료 청구서를 9월 선청구(수동 청구서)로 — 수주 수량 기준 6줄.** 사용자가 "청구완료된 10월 (예시)가나상사 청구서를 9월 선청구로 바꿔 줘"라고 분명히 말했을 때만 `allowLocked`.
+**A) 10월 청구완료 청구서를 9월 선청구(수동 청구서)로 — 수주 수량 기준 6줄.** 사용자가 "청구완료된 10월 예시상사 A 청구서를 9월 선청구로 바꿔 줘"라고 분명히 말했을 때만 `allowLocked`.
 
 ```json
 { "version": 1, "id": "ex-prebill-a", "createdAt": "2026-11-20T06:00:00Z", "source": "grokbot",
   "note": "(예시) 10월 청구서를 9월 선청구로",
   "actions": [
-    { "type": "bill.update", "month": "2026-10", "client": "(예시)가나상사",
+    { "type": "bill.update", "month": "2026-10", "client": "예시상사 A",
       "set": { "month": "2026-09", "autoLines": false, "issueDate": "2026-09-30", "label": "(예시)선청구" },
       "convertAuto": false, "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구",
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구",
       "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "color": "카키", "qty": 2000, "unitPrice": 3000,
       "memo": "(예시) 수주 수량 기준 선청구", "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2000, "unitPrice": 4000, "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "orderNo": "EX-2610-23", "item": "(예시) 메쉬원단 C", "qty": 2000, "unitPrice": 2500, "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 난연원단 D", "qty": 2000, "unitPrice": 3500, "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 투습원단 E", "qty": 2000, "unitPrice": 3200, "allowLocked": true },
-    { "type": "bill.addLine", "month": "2026-09", "client": "(예시)가나상사", "billLabel": "(예시)선청구", "item": "(예시) 보강원단 F", "qty": 2000, "unitPrice": 2800, "allowLocked": true }
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2000, "unitPrice": 4000, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구", "orderNo": "EX-2610-23", "item": "(예시) 메쉬원단 C", "qty": 2000, "unitPrice": 2500, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구", "item": "(예시) 원단 D", "qty": 2000, "unitPrice": 3500, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구", "item": "(예시) 투습원단 E", "qty": 2000, "unitPrice": 3200, "allowLocked": true },
+    { "type": "bill.addLine", "month": "2026-09", "client": "예시상사 A", "billLabel": "(예시)선청구", "item": "(예시) 보강원단 F", "qty": 2000, "unitPrice": 2800, "allowLocked": true }
   ] }
 ```
 결과: 9월 '(예시)선청구'(청구완료 유지 · 자동 줄 꺼짐 · 발행 일자 2026-09-30 · 수동 6줄). 원래 10월의 자동 줄(실제 출고)은 10월 기본 청구서(미청구)로 다시 나타납니다. 잠금 유지를 원치 않으면 앱에서 잠금을 풀고 고치세요.
@@ -425,17 +425,17 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 **B) 11월 '최종 납품' 청구서 — 최종 납품 수량으로 (수동 청구서).**
 
 ```json
-{ "type": "bill.create", "month": "2026-11", "client": "(예시)가나상사", "label": "(예시)최종 납품", "autoLines": false, "issueDate": "2026-11-30" },
-{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": 1950, "unitPrice": 3000 },
-{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2080, "unitPrice": 4000 }
+{ "type": "bill.create", "month": "2026-11", "client": "예시상사 A", "label": "(예시)최종 납품", "autoLines": false, "issueDate": "2026-11-30" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "예시상사 A", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": 1950, "unitPrice": 3000 },
+{ "type": "bill.addLine", "month": "2026-11", "client": "예시상사 A", "billLabel": "(예시)최종 납품", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 2080, "unitPrice": 4000 }
 ```
 
 **C) 11월 '차액' 청구서 — 선청구와 최종 납품의 차이 (+/− 줄).**
 
 ```json
-{ "type": "bill.create", "month": "2026-11", "client": "(예시)가나상사", "label": "(예시)차액", "autoLines": false, "issueDate": "2026-11-30" },
-{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)차액", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": -50, "unitPrice": 3000, "memo": "(예시) 선청구 2,000 − 최종 1,950" },
-{ "type": "bill.addLine", "month": "2026-11", "client": "(예시)가나상사", "billLabel": "(예시)차액", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 80, "unitPrice": 4000, "memo": "(예시) 최종 2,080 − 선청구 2,000" }
+{ "type": "bill.create", "month": "2026-11", "client": "예시상사 A", "label": "(예시)차액", "autoLines": false, "issueDate": "2026-11-30" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "예시상사 A", "billLabel": "(예시)차액", "orderNo": "EX-2610-21", "item": "(예시) 방수원단 A", "qty": -50, "unitPrice": 3000, "memo": "(예시) 선청구 2,000 − 최종 1,950" },
+{ "type": "bill.addLine", "month": "2026-11", "client": "예시상사 A", "billLabel": "(예시)차액", "orderNo": "EX-2610-22", "item": "(예시) 코팅원단 B", "qty": 80, "unitPrice": 4000, "memo": "(예시) 최종 2,080 − 선청구 2,000" }
 ```
 결과: −50 × 3,000 = 공급가액 −150,000 / 부가세 −15,000, +80 × 4,000 = 320,000 / 32,000 → 차액 청구서 총액 187,000. (B·C는 `actions` 배열 안에 넣으세요. 같은 달에 자동 줄이 생기면 그 줄은 자동 줄이 켜진 기본 청구서로 가고 B·C에는 섞이지 않습니다.)
 
@@ -443,7 +443,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 
 별칭: `contact.addContact` = `contact.add`, `contact.updateContact` = `contact.update` (같은 동작). 파일 칸 별칭: `image` = `file`, `images` = `files`.
 
-**명함 찾기** (`attachImage` · `update`): `contactId`(스냅샷 `contacts[].id`) 또는 `company` + `name`. 회사명 · 성함은 **띄어쓰기 · `(주)` · `㈜` · `주식회사` · 대소문자를 무시**하고 비교합니다 (`(주)(예시)가나상사` = `(예시) 가나상사`). 맞는 명함이 없거나 2장 이상이면 ⛔ 오류 — 여러 장이면 카드에 후보 id가 나오니 `contactId`로 다시 보내세요. `contactId`를 적으면 그것만 봅니다.
+**명함 찾기** (`attachImage` · `update`): `contactId`(스냅샷 `contacts[].id`) 또는 `company` + `name`. 회사명 · 성함은 **띄어쓰기 · `(주)` · `㈜` · `주식회사` · 대소문자를 무시**하고 비교합니다 (`(주)예시상사 A` = `예시상사A`). 맞는 명함이 없거나 2장 이상이면 ⛔ 오류 — 여러 장이면 카드에 후보 id가 나오니 `contactId`로 다시 보내세요. `contactId`를 적으면 그것만 봅니다.
 
 **명함 이미지 파일**: `file`(또는 `image`) 하나, 또는 `files`(또는 `images`) 배열(앞/뒤 등, 한 동작에 10장까지). 넷 중 하나만 적습니다. 경로 규칙은 3.8과 같음 — 요청 JSON보다 먼저 `inbox\files\…`에 넣고 inbox 기준 상대 경로(`files/cards/card_001.jpg`). JPG · PNG · WEBP · GIF · PDF, 20MB까지. 적용할 때 앱의 첨부 저장소로 복사하고, 원본은 요청 파일과 함께 `done\<요청이름>.files\`로 옮깁니다. 복사가 하나라도 실패하면 전부 되돌립니다. 명함 한 장에 이미지를 여러 장 붙일 수 있고, 거래처 정보 상세 창에 미리보기(누르면 크게 보기), 목록에 📎 N으로 보입니다.
 
@@ -462,7 +462,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 { "version": 1, "id": "ex-cards-001", "createdAt": "2026-11-20T07:00:00Z", "source": "grokbot",
   "note": "(예시) 명함 스캔 1차 (1/4)",
   "actions": [
-    { "type": "contact.attachImage", "company": "(예시)가나상사", "name": "김예시",
+    { "type": "contact.attachImage", "company": "예시상사 A", "name": "김예시",
       "files": ["files/cards/ga_front.jpg", "files/cards/ga_back.png"] },
     { "type": "contact.attachImage", "contactId": "ct_0001", "image": "files/cards/card_002.jpg" },
     { "type": "contact.attachImage", "company": "(예시)마바산업", "name": "박테스트",
@@ -495,14 +495,14 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
   "note": "(예시) 새 오더 등록 + 생지 출고 + 거래명세서",
   "actions": [
     { "type": "production.addOrder",
-      "order": { "no": "2610-0101", "client": "(예시)가나상사", "item": "(예시) 방수 원단", "fabric": "(예시) NY 210D",
+      "order": { "no": "EX-0002", "client": "예시상사 A", "item": "(예시) 방수 원단", "fabric": "(예시) NY 210D",
                  "date": "2026-10-20", "due": "2026-11-30",
                  "lines": [ { "color": "카키", "qty": 1500, "unit": "YD" }, { "color": "블랙", "qty": 800, "unit": "YD" } ],
                  "procs": [ { "name": "생지", "vendor": "(예시)A직물" }, { "name": "염색", "vendor": "(예시)B염색", "shrink": 5 } ] } },
-    { "type": "production.addShipment", "orderNo": "2610-0101", "process": "생지",
+    { "type": "production.addShipment", "orderNo": "EX-0002", "process": "생지",
       "ships": [ { "date": "2026-10-25", "qty": 1200, "memo": "1차" }, { "date": "2026-10-27", "qty": 1100, "memo": "2차" } ] },
-    { "type": "statement.createFromOrder", "orderNo": "2610-0101", "date": "2026-10-28",
-      "customer": "(예시)가나상사", "price": 3500, "note": "(예시) 1차분",
+    { "type": "statement.createFromOrder", "orderNo": "EX-0002", "date": "2026-10-28",
+      "customer": "예시상사 A", "price": 3500, "note": "(예시) 1차분",
       "lots": [ { "lotNo": "A-2610-01", "color": "카키", "rolls": [55, 54, 56, 55, 53] },
                 { "lotNo": "A-2610-02", "color": "블랙", "rolls": [52, 51, 50] } ],
       "open": true }
@@ -510,7 +510,7 @@ Grok Bot 같은 외부 도우미가 **JSON 파일**을 정해진 폴더에 넣�
 }
 ```
 
-적용하면: 오더 2610-0101 생성 → 생지 공정에 출고 2건 → 거래명세서 1건(총 426 YD, 금액 1,491,000원) 저장,
+적용하면: 오더 EX-0002 생성 → 생지 공정에 출고 2건 → 거래명세서 1건(총 426 YD, 금액 1,491,000원) 저장,
 `linkShip` 기본값 때문에 오더의 최종 납품에 2026-10-28 / 426 YD 줄이 연결되어 생기고(오더 완료·매출·청구서 수량이 이 줄 기준이 됨), 거래명세서 편집 화면이 열립니다.
 
 ## 5. 저장 위치 (데이터 파일)
