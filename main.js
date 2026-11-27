@@ -140,8 +140,11 @@ ipcMain.handle('owXlsx',async(e,q,sup,name)=>{const ExcelJS=require('exceljs');c
   const box=r=>{const [a,b]=r.split(':');const s1=ws.getCell(a),s2=ws.getCell(b||a);for(let R=s1.row;R<=s2.row;R++)for(let C=s1.col;C<=s2.col;C++)ws.getCell(R,C).border=B};
   const mg=(r,v,o={})=>{if(r.includes(':'))ws.mergeCells(r);cell(r.split(':')[0],v,o);if(!o.nb)box(r)};
   mg('A1:O1','작 업 의 뢰 서',{nb:1,font:{size:22,bold:true,color:{argb:'FF0B2A6F'}}});ws.getRow(1).height=40;
-  mg('A3:B4',q.vendor||'',{nb:1,font:{size:16},h:'left'});mg('C3:C4','귀하',{nb:1,font:{size:14},h:'left'});
-  mg('I3:I4','결재');['담당','과장','부장','상무','사장'].forEach((x,i)=>{const c=String.fromCharCode(74+i);if(i===4){mg('N3:O3',x,{font:{size:9}});mg('N4:O4','')}else{mg(c+'3',x,{font:{size:9}});mg(c+'4','')}});ws.getRow(4).height=30;
+  mg('A3:B4',q.vendor||'',{nb:1,font:{size:16}});mg('C3:C4','귀하',{nb:1,font:{size:14},h:'left'});
+  {const sg=(Array.isArray(q.sign)&&q.sign.length?q.sign:['담당','과장','부장','상무','사장']).slice(0,7).map(x=>String(x==null?'':x)),n=sg.length,L=c=>String.fromCharCode(c);
+   // 결재 칸: 오른쪽 끝(O열)에 맞춰 배치, 5칸이면 예전과 같이 J~M + N:O
+   if(n===5){mg('I3:I4','결재');sg.forEach((x,i)=>{const c=L(74+i);if(i===4){mg('N3:O3',x,{font:{size:9}});mg('N4:O4','')}else{mg(c+'3',x,{font:{size:9}});mg(c+'4','')}})}
+   else{const s0=79-n+1;mg(L(s0-1)+'3:'+L(s0-1)+'4','결재');sg.forEach((x,i)=>{const c=L(s0+i);mg(c+'3',x,{font:{size:9}});mg(c+'4','')})}}ws.getRow(4).height=30;
   mg('A5:B5',q.date||'',{nb:1,font:{size:12}});
   mg('A7','LI NO.',H);mg('B7',q.liNo||'');mg('C7','원발주처',H);mg('D7',q.client||'');mg('E7:F7','납기일',H);mg('G7',q.due||'');mg('H7:J8','납품처',H);mg('K7:O8',q.dest||'');
   mg('A8','PO NO.',H);mg('B8',q.poNo||'');mg('C8','담당자',H);mg('D8',q.manager||'');mg('E8:F8','참조',H);mg('G8',q.ref||'');
