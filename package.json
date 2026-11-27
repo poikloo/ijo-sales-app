@@ -1,9 +1,9 @@
 {
   "name": "ijo-sales",
   "productName": "LEEJO 영업관리",
-  "version": "1.10.3",
+  "version": "1.10.4",
   "description": "LEEJO 영업관리",
-  "author": "이조아이엔디",
+  "author": "LEEJO Chris",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

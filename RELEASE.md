@@ -30,3 +30,4 @@ curl -sL https://github.com/poikloo/leejo-sales-app/releases/latest/download/lat
   - `name`(ijo-sales): 업데이트 캐시 폴더 이름
   - 데이터 폴더는 main.js에서 `%APPDATA%\이조 영업관리`로 고정
   - 저장소 poikloo/leejo-sales-app (publish, 2026-11-26 ijo-sales-app에서 이름 변경. 예전 주소는 GitHub가 자동 연결)
+  - `author`(LEEJO Chris, v1.10.4~)는 설치 정보의 '게시자' 표시에만 쓰임. 코드 서명이 없어 app-update.yml에 publisherName이 없으므로 electron-updater 서명/게시자 검사가 건너뛰어짐 → 바꿔도 업데이트 영향 없음. 코드 서명을 도입하면 게시자 이름을 고정할 것
