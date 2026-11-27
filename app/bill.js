@@ -50,7 +50,8 @@ function blAuto(ym){const R={},add=(c,e)=>(R[c]=R[c]||[]).push(e),ON=new Set();
   if(S.length&&blSplitBy(o,S)){if(sh.length){const x=S[0];add(o.client,{ref:o.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:SH.reduce((a,s)=>a+s.qty,0),price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,split:1,ships:SH})}return}
   if(S.length){const M=S.filter(x=>blSlYm(x,o)===ym);M.forEach((x,i)=>add(o.client,{ref:S.length===1?o.id:o.id+'|'+x.id,orderNo:o.no,item:x.item||o.item||o.no,spec:x.color||blSpec(o),unit:o.unit||'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:i?[]:SH}));
    if(!M.length&&SH.length)add(o.client,{ref:o.id,shipOnly:1,ships:SH});return}
-  if(!sh.length){if((o.date||'').slice(0,7)===ym)(R[o.client]=R[o.client]||[]);return}
+  // 이 달 발주 · 출고 없음: 줄 없이 '출고 없음' 청구서로만 보이게 하는 자리표(ref 'n:오더'). 삭제 시 제외되어 사라지고 '제외됨'에서 되돌림
+  if(!sh.length){if((o.date||'').slice(0,7)===ym)add(o.client,{ref:'n:'+o.id,noShip:1,shipOnly:1,orderNo:o.no,item:o.item||o.no,qty:0,ships:[]});return}
   const p=blPrice(o);add(o.client,{ref:o.id,orderNo:o.no,item:o.item||o.no,spec:blSpec(o),unit:o.unit||'YD',qty:SH.reduce((a,s)=>a+s.qty,0),price:p.price,priceSrc:p.src,ships:SH})});
  sales.forEach(x=>{if(!x.client||(x.orderNo&&ON.has(blNk(x.orderNo)))||blSlYm(x)!==ym)return;
   add(x.client,{ref:'s:'+x.id,orderNo:x.orderNo,item:x.item||x.fabric||'-',spec:x.color,unit:'YD',qty:+x.qty||0,price:x.sample?0:+x.unitPrice||0,sample:!!x.sample,priceSrc:x.sample?'샘플':'매출 관리',sl:1,ships:[]})});return R}
@@ -71,7 +72,7 @@ const blLabel=b=>b.label||(blIsPrim(b)?'':/#auto$/.test(b.id)?'자동':'나눔')
 function blView(key,A0){const b=blBill(key),ym=b.ym,client=b.client,Am=A0||blAuto(ym),auto=b.auto?(Am[client]||[]).filter(a=>blOwner(ym,client,a.ref)===key):[],warn=[],ex=[];let lines=[],ships=[];
  if(b.locked&&b.frozen){lines=b.frozen.lines||[];ships=b.frozen.ships||[];const ids=new Set(ships.map(s=>s.id)),extra=auto.flatMap(a=>a.ships).filter(s=>!ids.has(s.id));
   if(extra.length)warn.push({t:`청구완료 후 출고 ${extra.length}건 (${extra.reduce((x,s)=>x+s.qty,0).toLocaleString('ko-KR')}) 미포함`,c:'wn'})}
- else{auto.forEach(a=>{const s=b.lines.find(l=>l.src==='auto'&&l.ref===a.ref);if(s&&s.removed&&s.excl){ex.push({id:s.id,ref:a.ref,item:a.item||s.item,orderNo:a.orderNo||s.orderNo,qty:a.shipOnly?a.ships.reduce((x,y)=>x+y.qty,0):a.qty,why:s.excl,at:s.exclAt||''});return}
+ else{auto.forEach(a=>{const s=b.lines.find(l=>l.src==='auto'&&l.ref===a.ref);if(s&&s.removed&&s.excl){ex.push({id:s.id,ref:a.ref,noShip:!!a.noShip,item:a.item||s.item,orderNo:a.orderNo||s.orderNo,qty:a.shipOnly?a.ships.reduce((x,y)=>x+y.qty,0):a.qty,why:s.excl,at:s.exclAt||''});return}
    if(a.shipOnly){ships.push(...a.ships);return}
    if(s&&s.removed){warn.push({t:`청구서 미포함 출고: ${a.item} ${a.qty.toLocaleString('ko-KR')}`,c:'wn'});return}
    let L;if(s&&s.edited){L={...s,badge:'m',auto:a};if(s.autoQty!==a.qty||s.autoPrice!==a.price)L.changed=true}else L={id:'a_'+a.ref,src:'auto',ref:a.ref,item:a.item,spec:a.spec,qty:a.qty,price:a.price,vat:'ex',total:0,memo:'',badge:a.sl?'s':'a',auto:a,priceSrc:a.priceSrc,sample:a.sample};
@@ -106,8 +107,8 @@ async function blDupExcl(key,ref){const v=blView(key),l=v.lines.find(x=>x.src===
 // 제외됨 목록 (key 있으면 그 청구서, 없으면 그 달 전체)
 function blExclList(ym,key){return blMonthAll(ym).filter(v=>!key||v.key===key).flatMap(v=>v.excl.map(e=>({...e,key:v.key,client:v.client,label:v.label})))}
 function blExclUi(ym,key){const L=blExclList(ym,key);$('dt').textContent=`제외된 자동 줄 — ${blYmTxt(ym)}`;
- $('dbody').innerHTML=`<div style="min-width:560px"><div class="muted" style="font-size:12.5px;margin-bottom:8px">다른 달에 청구했거나 청구하지 않기로 한 자동 줄이에요. 매출 관리 · 생산 관리 데이터는 그대로이고, 이 달 청구 · 누락 경고에서만 빠져 있어요.</div>
- <table class="blt"><thead><tr><th>거래처</th><th>품명</th><th>오더</th><th class="r">수량</th><th>사유</th><th></th></tr></thead><tbody>${L.map(e=>`<tr><td>${esc(e.client)}${e.label?' · '+esc(e.label):''}</td><td>${esc(e.item)}</td><td>${esc(e.orderNo)}</td><td class="r">${(+e.qty||0).toLocaleString('ko-KR')}</td><td>${e.why==='dup'?'중복 제외':'삭제(제외)'}</td><td><button class="blrb" onclick="blExclBack('${esc(ym)}','${esc(key||'')}',[['${esc(e.key)}','${esc(e.id)}']])">되돌리기</button></td></tr>`).join('')||'<tr><td colspan="6" class="muted">제외된 줄이 없습니다.</td></tr>'}</tbody></table></div>`;
+ $('dbody').innerHTML=`<div style="min-width:560px">
+ <table class="blt"><thead><tr><th>거래처</th><th>품명</th><th>오더</th><th class="r">수량</th><th>사유</th><th></th></tr></thead><tbody>${L.map(e=>`<tr><td>${esc(e.client)}${e.label?' · '+esc(e.label):''}</td><td>${esc(e.item)}</td><td>${esc(e.orderNo)}</td><td class="r">${e.noShip?'-':(+e.qty||0).toLocaleString('ko-KR')}</td><td>${e.why==='dup'?'중복 제외':'삭제(제외)'}</td><td><button class="blrb" onclick="blExclBack('${esc(ym)}','${esc(key||'')}',[['${esc(e.key)}','${esc(e.id)}']])">되돌리기</button></td></tr>`).join('')||'<tr><td colspan="6" class="muted">제외된 줄이 없습니다.</td></tr>'}</tbody></table></div>`;
  $('dfoot').innerHTML=`${L.length>1?`<button onclick="blExclBack('${esc(ym)}','${esc(key||'')}',${esc(JSON.stringify(L.map(e=>[e.key,e.id])))})">모두 되돌리기</button>`:''}<button class="p" onclick="dlg.close()">닫기</button>`;if(!dlg.open)dlg.showModal()}
 function blExclBack(ym,key,P){let n=0;P.forEach(([k,id])=>{const b=bills[k];if(!b)return;const i=b.lines.findIndex(l=>l.id===id&&l.excl);if(i>=0){b.lines.splice(i,1);n++}});if(!n)return;save();render();
  if(blExclList(ym,key||'').length)blExclUi(ym,key||'');else dlg.close();toast(`${n}줄을 되돌렸어요 — 다시 청구 대상이에요`)}
@@ -154,20 +155,14 @@ function blCopyCore(v){const used=new Set(blGroup(v.ym,v.client).map(b=>blLabel(
  const b=blNewSplit(v.ym,v.client,lb,v.b);b.auto=false;b.manual=true;b.memo=v.b.memo;
  b.lines=v.lines.map(l=>blNormLine({src:'manual',item:l.item,spec:l.spec,orderNo:l.orderNo||'',qty:l.qty,price:l.price,vat:l.vat,total:l.total,memo:l.memo,date:l.src==='manual'?l.date:'',sFrom:l.src==='manual'?l.sFrom:'',sDest:l.src==='manual'?l.sDest:'',sMemo:l.src==='manual'?l.sMemo:''}));b.ships=(v.b.ships||[]).map(x=>blNormShip({...x,id:''}));return b}
 function blBulkCopy(){const V=blLsViews();if(!V.length)return;V.forEach(blCopyCore);blLs.clear();save();render();toast(`${V.length}건을 복사했습니다`)}
-// 삭제: 확인 창([삭제] 왼쪽 · [취소] 오른쪽). 청구완료 · 줄 있음 · 다시 생기는 자동 줄을 알려 줌. 한 번 저장 → Ctrl+Z 한 번으로 되돌림
+// 삭제: 짧은 확인 → 저장된 청구서는 지우고, 자동 줄(출고 없음 자리표 포함)은 이 달 청구에서 제외('제외됨'에서 되돌림). 한 번 저장 → Ctrl+Z 한 번으로 되돌림
 async function blBulkDel(){const V=blLsViews();if(!V.length)return;
- const lk=V.filter(v=>v.b.locked),man=V.map(v=>[v,v.lines.filter(l=>l.src==='manual'||l.badge==='m').length]).filter(x=>x[1]),AR=new Map(V.map(v=>[v.key,blAutoRefs(v.key)])),nA=[...AR.values()].reduce((a,x)=>a+x.length,0),
-  virt=V.filter(v=>!bills[v.key]),dead=virt.filter(v=>!AR.get(v.key).length);
- const L=[];if(lk.length)L.push(`· 청구완료(잠금) 청구서 ${lk.length}건: ${lk.map(v=>v.client+(v.label?' · '+v.label:'')).join(', ')} — 청구완료 기록과 그때 고정된 내용도 함께 지워져요`);
- if(man.length)L.push(`· 수동 줄 · 고친 줄 ${man.reduce((a,x)=>a+x[1],0)}개가 함께 지워져요`);
- if(nA)L.push(`· 자동 줄 ${nA}개 (${[...new Set([...AR.values()].flat().map(a=>a.orderNo||a.item))].slice(0,5).join(', ')}${nA>5?' …':''}): 매출 관리 · 생산 관리(최종 납품) 데이터가 남아 있어 그대로 두면 다시 생겨요.\n  [삭제 + 자동 줄 제외]: 이 달 청구에서 제외 — 청구서가 사라지고 누락 경고 · 이전 달 미청구 알림도 안 나요 (다른 달에 청구했을 때). 목록의 '제외됨'에서 되돌릴 수 있어요.\n  [삭제만]: 자동 줄은 기본 청구서로 다시 생겨요.`);
- const B=nA?[{t:'삭제 + 자동 줄 제외',c:'d'},{t:'삭제만'}]:[{t:'삭제',c:'d'}];
- const c=await uiChoice(`선택한 청구서 ${V.length}건을 삭제할까요?${L.length?'\n\n'+L.join('\n'):''}\n\n(Ctrl+Z로 되돌릴 수 있어요)`,B);if(c<0)return;const ex=nA&&c===0;
- let n=0;V.forEach(v=>{if(blRemoveCore(v.key))n++});
- if(ex){const G=new Map();V.forEach(v=>{const A=AR.get(v.key);if(!A.length)return;const h=blHome(v.ym,v.client);G.set(h,[...(G.get(h)||[]),...A])});G.forEach((A,h)=>blExclPut(blGet(h),A,'del'))}
+ const lk=V.filter(v=>v.b.locked).length,AR=new Map(V.map(v=>[v.key,blAutoRefs(v.key)]));
+ if(!await uiConfirm(`청구서 ${V.length}건을 삭제할까요?${lk?`\n(청구완료 ${lk}건 포함)`:''}`,'삭제'))return;
+ V.forEach(v=>blRemoveCore(v.key));
+ const G=new Map();V.forEach(v=>{const A=AR.get(v.key);if(!A.length)return;const h=blHome(v.ym,v.client);G.set(h,[...(G.get(h)||[]),...A])});G.forEach((A,h)=>blExclPut(blGet(h),A,'del'));
  V.forEach(v=>blLs.delete(v.key));if(V.some(v=>v.key===blSel))blSel=null;
- if(!n&&!ex)return render(),uiAlert('지울 저장된 청구서가 없습니다 — 자동 줄로만 보이는 청구서는 [삭제 + 자동 줄 제외]로 지우세요.');
- save();render();toast(`${V.length-dead.length}건을 삭제했습니다${ex?` (자동 줄 ${nA}개 제외 — '제외됨'에서 되돌림)`:''}${dead.length?` · 출고 없는 ${dead.length}건은 오더 데이터로 다시 보여요`:''}`)}
+ save();render();toast(`${V.length}건을 삭제했습니다`)}
 function blOpen(key){blYm=key.slice(0,7);blSel=key;if(page!=='bill')go('bill');else render()}
 function blDetailHTML(v){const lk=v.b.locked,P=blParty(),dest=v.b.dest||v.client;
  return `<div class="blhd"><button data-back onclick="blSel=null;render()">‹ 목록</button><h2>${+v.ym.slice(5)}월 청구내역서 · ${esc(v.client)}</h2>${v.label||blGroup(v.ym,v.client).length>1?`<span class="bllb${v.prim?' p':''}">${esc(v.label||'기본')}</span>`:''}${lk?'<span class="blst d">청구완료</span>':'<span class="blst n">미청구</span>'}${v.b.auto?'':'<span class="blst e" title="이 청구서에는 자동 줄이 들어오지 않아요 (수동 줄만)">수동 청구서</span>'}<span style="flex:1"></span>
